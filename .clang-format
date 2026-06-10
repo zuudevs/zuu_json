@@ -1,0 +1,46 @@
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 100
+
+BreakBeforeBraces: Attach
+
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+
+BinPackArguments: false
+BinPackParameters: false
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+
+IndentCaseLabels: true
+IndentPPDirectives: BeforeHash
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyBlock: false
+
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+
+SortIncludes: true
+IncludeBlocks: Preserve
+
+ReflowComments: true
+Cpp11BracedListStyle: true
+
+FixNamespaceComments: true
+NamespaceIndentation: None
+
+RemoveBracesLLVM: false
+
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
+AlwaysBreakTemplateDeclarations: Yes
+IndentWrappedFunctionNames: false
+PackConstructorInitializers: Never
+ConstructorInitializerIndentWidth: 4
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma

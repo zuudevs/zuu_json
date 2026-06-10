@@ -1,0 +1,38 @@
+[
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O0 -g -Xclang -gcodeview -std=c++23 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -o CMakeFiles\\cpp_json_lib.dir\\src\\models\\json.cpp.obj -c D:\\Project\\zuu_json\\src\\models\\json.cpp",
+  "file": "D:/Project/zuu_json/src/models/json.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/models/json.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O0 -g -Xclang -gcodeview -std=c++23 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -o CMakeFiles\\cpp_json_lib.dir\\src\\models\\storage.cpp.obj -c D:\\Project\\zuu_json\\src\\models\\storage.cpp",
+  "file": "D:/Project/zuu_json/src/models/storage.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/models/storage.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O0 -g -Xclang -gcodeview -std=c++23 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -o CMakeFiles\\cpp_json_lib.dir\\src\\models\\value.cpp.obj -c D:\\Project\\zuu_json\\src\\models\\value.cpp",
+  "file": "D:/Project/zuu_json/src/models/value.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/models/value.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O0 -g -Xclang -gcodeview -std=c++23 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -o CMakeFiles\\cpp_json_lib.dir\\src\\parser\\parser.cpp.obj -c D:\\Project\\zuu_json\\src\\parser\\parser.cpp",
+  "file": "D:/Project/zuu_json/src/parser/parser.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/parser/parser.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O0 -g -Xclang -gcodeview -std=c++23 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -o CMakeFiles\\cpp_json_lib.dir\\src\\tokenizer\\tokenizer.cpp.obj -c D:\\Project\\zuu_json\\src\\tokenizer\\tokenizer.cpp",
+  "file": "D:/Project/zuu_json/src/tokenizer/tokenizer.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/tokenizer/tokenizer.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O0 -g -Xclang -gcodeview -std=c++23 -D_DEBUG -D_DLL -D_MT -Xclang --dependent-lib=msvcrtd -o CMakeFiles\\zuu_json.dir\\src\\main.cpp.obj -c D:\\Project\\zuu_json\\src\\main.cpp",
+  "file": "D:/Project/zuu_json/src/main.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/zuu_json.dir/src/main.cpp.obj"
+}
+]
