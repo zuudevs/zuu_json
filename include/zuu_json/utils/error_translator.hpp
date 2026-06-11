@@ -50,8 +50,10 @@ namespace zuu::utils {
             return "Root is not array";
         case core::JsonError::RootNotObjectType:
             return "Root is not object";
-        case core::JsonError::Unknown:
-            return "Unknown error";
+        case core::JsonError::InvalidUnicode:
+            return "Invalid unicode sequence";
+        case core::JsonError::InvalidSurrogate:
+            return "Invalid unicode surrogate pair";
         default:
             return "Unknown error";
     }

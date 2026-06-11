@@ -3,12 +3,13 @@
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
  * @version 0.1.0
- * @date 2026-06-06
+ * @date 2026-06-10
  *
  * @copyright Copyright (c) 2026
  */
 
 #include "parser/parser.hpp"
+#include "utils/strings.hpp"
 #include <charconv>
 
 namespace zuu::parser {
@@ -72,6 +73,115 @@ void Parser::advance() noexcept {
     idx_++;
 }
 
+// =====================================================================
+// MESIN DECODER UNICODE & ESCAPE CHARACTER
+// =====================================================================
+std::string Parser::parseStringToken(const Token& token) noexcept {
+    std::string result;
+    result.reserve(token.size_); // Optimasi memori
+
+    const char* ptr = token.ptr_;
+    const size_t len = token.size_;
+
+    for (size_t i = 0; i < len; ++i) {
+        if (ptr[i] == '\\') {
+            if (i + 1 >= len) {
+                status_ = core::JsonError::UnescapedCharacter;
+                return "";
+            }
+            i++; // Lewati backslash
+
+            switch (ptr[i]) {
+                case '"':
+                    result.push_back('"');
+                    break;
+                case '\\':
+                    result.push_back('\\');
+                    break;
+                case '/':
+                    result.push_back('/');
+                    break;
+                case 'b':
+                    result.push_back('\b');
+                    break;
+                case 'f':
+                    result.push_back('\f');
+                    break;
+                case 'n':
+                    result.push_back('\n');
+                    break;
+                case 'r':
+                    result.push_back('\r');
+                    break;
+                case 't':
+                    result.push_back('\t');
+                    break;
+                case 'u': {
+                    if (i + 4 >= len) {
+                        status_ = core::JsonError::InvalidUnicode;
+                        return "";
+                    }
+
+                    // Baca 4 digit hex (\uXXXX)
+                    uint32_t cp = 0;
+                    for (int j = 1; j <= 4; ++j) {
+                        int hex = utils::hex_to_int(ptr[i + j]);
+                        if (hex < 0) {
+                            status_ = core::JsonError::InvalidUnicode;
+                            return "";
+                        }
+                        cp = (cp << 4) | hex;
+                    }
+                    i += 4;
+
+                    // Validasi Surrogate Pair (Kombinasi 2 codepoint untuk karakter > 16-bit
+                    // seperti Emoji)
+                    if (cp >= 0xD800 && cp <= 0xDBFF) { // High Surrogate
+                        if (i + 6 >= len || ptr[i + 1] != '\\' || ptr[i + 2] != 'u') {
+                            status_ = core::JsonError::InvalidSurrogate;
+                            return "";
+                        }
+
+                        uint32_t cp2 = 0;
+                        for (int j = 3; j <= 6; ++j) {
+                            int hex = utils::hex_to_int(ptr[i + j]);
+                            if (hex < 0) {
+                                status_ = core::JsonError::InvalidSurrogate;
+                                return "";
+                            }
+                            cp2 = (cp2 << 4) | hex;
+                        }
+
+                        if (cp2 < 0xDC00 || cp2 > 0xDFFF) { // Low Surrogate
+                            status_ = core::JsonError::InvalidSurrogate;
+                            return "";
+                        }
+
+                        // Gabungkan menjadi codepoint aslinya
+                        cp = 0x10000 + (((cp - 0xD800) << 10) | (cp2 - 0xDC00));
+                        i += 6;
+                    } else if (cp >= 0xDC00 && cp <= 0xDFFF) {
+                        // Low Surrogate yg berdiri sendirian itu terlarang
+                        status_ = core::JsonError::InvalidSurrogate;
+                        return "";
+                    }
+
+                    // Tulis Codepoint menjadi bytes UTF-8 ke dalam string
+                    utils::encode_utf8(cp, result);
+                    break;
+                }
+                default:
+                    status_ = core::JsonError::UnescapedCharacter;
+                    return "";
+            }
+        } else {
+            // Karakter ASCII normal atau UTF-8 mentah (passthrough)
+            result.push_back(ptr[i]);
+        }
+    }
+    return result;
+}
+
 Parser::JsonValue Parser::buildNull() noexcept {
     advance();
     return Parser::JsonValue::Null();
@@ -108,7 +218,12 @@ Parser::JsonValue Parser::buildDouble() noexcept {
 }
 
 Parser::JsonValue Parser::buildString() noexcept {
-    const auto index = res_.addString(raw_[idx_].ptr_);
+    // Jalankan mesin unescape untuk nilai String
+    auto parsed_str = parseStringToken(raw_[idx_]);
+    if (has_error())
+        return Parser::JsonValue::Null();
+
+    const auto index = res_.addString(parsed_str);
     advance();
     return Parser::JsonValue::String(index);
 }
@@ -187,7 +302,12 @@ Parser::JsonValue Parser::buildObject() noexcept {
             return Parser::JsonValue::Null();
         }
 
-        const auto key_index = res_.addString(raw_[idx_].ptr_);
+        // Jalankan mesin unescape untuk Kunci (Key) Object
+        auto parsed_key = parseStringToken(raw_[idx_]);
+        if (has_error())
+            return Parser::JsonValue::Null();
+
+        const auto key_index = res_.addString(parsed_key);
         advance();
 
         if (idx_ >= raw_.size() || peek() != TokenType::Colon) {

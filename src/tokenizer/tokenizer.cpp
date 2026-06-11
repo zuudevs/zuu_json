@@ -12,51 +12,12 @@
 #include "constants/general.hpp"
 #include "utils/strings.hpp"
 
-#ifdef CPP_JSON_DEBUG
-    #include <format>
-    #include <print>
-
-    #include "utils/filesystem.hpp"
-    #include "utils/timer.hpp"
-
-static inline zuu::utils::Timer __timer__;
-static inline std::string __message__;
-
-    #define START_CAPTURE()                                                                        \
-        do {                                                                                       \
-            __timer__.start();                                                                     \
-        } while (false)
-
-    #define END_CAPTURE(subject, filepath)                                                         \
-        do {                                                                                       \
-            __message__ = std::format("{}: {}", subject, __timer__.duration());                    \
-                                                                                                   \
-            auto __result__ = zuu::utils::FileSystem::WriteFile(                                   \
-                filepath, std::span<const char>(__message__.data(), __message__.size()), true);    \
-                                                                                                   \
-            if (!__result__) {                                                                     \
-                std::print(stderr, "Error: {}\n", static_cast<int>(__result__.error()));           \
-            }                                                                                      \
-        } while (false)
-
-#else
-
-    #define START_CAPTURE() ((void)0)
-    #define END_CAPTURE(subject, filepath) ((void)0)
-
-#endif
-
 namespace zuu::tokenizer {
 
 Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
     : raw_(json_content) {
 
-    START_CAPTURE();
-
     res_.reserve(json_content.size() / 4);
-
-    END_CAPTURE("tokenizer construction time", "result/report.txt");
-
     tokenize();
 }
 
@@ -124,12 +85,15 @@ void Tokenizer::readNumeric() noexcept {
 
     if (idx_ < raw_.size() && raw_[idx_] == '0') {
         advance();
-        if (idx_ < raw_.size() && utils::is_numeric(raw_[idx_])) {
+        if (idx_ < raw_.size() &&
+            (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
             status_ = Error::LeadingZero;
             return;
         }
-    } else if (idx_ < raw_.size() && utils::is_numeric(raw_[idx_])) {
-        while (idx_ < raw_.size() && utils::is_numeric(raw_[idx_])) {
+    } else if (idx_ < raw_.size() &&
+               (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
+        while (idx_ < raw_.size() &&
+               (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
             advance();
         }
     } else {
@@ -141,12 +105,14 @@ void Tokenizer::readNumeric() noexcept {
         type = Token::Type::Double;
         advance();
 
-        if (idx_ >= raw_.size() || (static_cast<unsigned char>(raw_[idx_]) - '0' >= constants::digit)) {
+        if (idx_ >= raw_.size() ||
+            (static_cast<unsigned char>(raw_[idx_] - '0') >= constants::digit)) {
             status_ = Error::InvalidValue;
             return;
         }
 
-        while (idx_ < raw_.size() && (static_cast<unsigned char>(raw_[idx_]) - '0' < constants::digit)) {
+        while (idx_ < raw_.size() &&
+               (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
             advance();
         }
     }
@@ -159,12 +125,14 @@ void Tokenizer::readNumeric() noexcept {
             advance();
         }
 
-        if (idx_ >= raw_.size() || (static_cast<unsigned char>(raw_[idx_]) - '0' >= constants::digit)) {
+        if (idx_ >= raw_.size() ||
+            (static_cast<unsigned char>(raw_[idx_] - '0') >= constants::digit)) {
             status_ = Error::InvalidValue;
             return;
         }
 
-        while (idx_ < raw_.size() && (static_cast<unsigned char>(raw_[idx_]) - '0' < constants::digit)) {
+        while (idx_ < raw_.size() &&
+               (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
             advance();
         }
     }
@@ -178,7 +146,7 @@ void Tokenizer::readAlphabet() noexcept {
     const auto rem = raw_.size() - idx_;
     switch (raw_[idx_]) {
         case 'n': {
-			const auto size = sizeof("null") - 1;
+            const auto size = sizeof("null") - 1;
             if (rem >= size && raw_[idx_ + 1] == 'u' && raw_[idx_ + 2] == 'l' &&
                 raw_[idx_ + 3] == 'l') {
                 res_.emplace_back(Token::Type::Null, raw_.data() + idx_, size);
@@ -188,7 +156,7 @@ void Tokenizer::readAlphabet() noexcept {
             break;
         }
         case 't': {
-			const auto size = sizeof("true") - 1;
+            const auto size = sizeof("true") - 1;
             if (rem >= size && raw_[idx_ + 1] == 'r' && raw_[idx_ + 2] == 'u' &&
                 raw_[idx_ + 3] == 'e') {
                 res_.emplace_back(Token::Type::Boolean, raw_.data() + idx_, size);
@@ -198,7 +166,7 @@ void Tokenizer::readAlphabet() noexcept {
             break;
         }
         case 'f': {
-			const auto size = sizeof("false") - 1;
+            const auto size = sizeof("false") - 1;
             if (rem >= size && raw_[idx_ + 1] == 'a' && raw_[idx_ + 2] == 'l' &&
                 raw_[idx_ + 3] == 's' && raw_[idx_ + 4] == 'e') {
                 res_.emplace_back(Token::Type::Boolean, raw_.data() + idx_, size);

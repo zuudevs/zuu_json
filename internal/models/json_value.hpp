@@ -41,9 +41,9 @@ class JsonValue {
     };
 
     [[nodiscard]] static inline JsonValue Null() noexcept {
-        return JsonValue{0, Type::Null};
+        return JsonValue{0ull, Type::Null};
     };
-    [[nodiscard]] static inline JsonValue Boolean(long long value) noexcept {
+    [[nodiscard]] static inline JsonValue Boolean(bool value) noexcept {
         return JsonValue{value};
     };
     [[nodiscard]] static inline JsonValue Integer(long long value) noexcept {

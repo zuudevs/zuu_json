@@ -3,7 +3,7 @@
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
  * @version 0.1.0
- * @date 2026-06-06
+ * @date 2026-06-10
  *
  * @copyright Copyright (c) 2026
  */
@@ -15,6 +15,7 @@
 #include "zuu_json/core/error.hpp"
 #include <expected>
 #include <span>
+#include <string>
 
 namespace zuu::parser {
 
@@ -48,6 +49,8 @@ class Parser {
 
     [[nodiscard]] Token::Type peek() const noexcept;
     void advance() noexcept;
+
+    [[nodiscard]] std::string parseStringToken(const Token& token) noexcept;
 
     [[nodiscard]] JsonValue buildNull() noexcept;
     [[nodiscard]] JsonValue buildBoolean() noexcept;
