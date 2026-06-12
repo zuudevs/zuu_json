@@ -47,9 +47,6 @@ class Parser {
     [[nodiscard]] size_t getArrayCount() const noexcept;
     [[nodiscard]] size_t getObjectCount() const noexcept;
 
-    [[nodiscard]] Token::Type peek() const noexcept;
-    void advance() noexcept;
-
     [[nodiscard]] std::string parseStringToken(const Token& token) noexcept;
 
     [[nodiscard]] JsonValue buildNull() noexcept;

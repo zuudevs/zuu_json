@@ -79,7 +79,7 @@ std::string Parser::parseStringToken(const Token& token) noexcept {
                 status_ = core::JsonError::UnescapedCharacter;
                 return "";
             }
-            i++; // Lewati backslash
+            i++;
 
             switch (ptr[i]) {
                 case '"':
@@ -112,7 +112,6 @@ std::string Parser::parseStringToken(const Token& token) noexcept {
                         return "";
                     }
 
-                    // Baca 4 digit hex (\uXXXX)
                     uint32_t cp = 0;
                     for (int j = 1; j <= 4; ++j) {
                         int hex = utils::hex_to_int(ptr[i + j]);
@@ -124,8 +123,6 @@ std::string Parser::parseStringToken(const Token& token) noexcept {
                     }
                     i += 4;
 
-                    // Validasi Surrogate Pair (Kombinasi 2 codepoint untuk karakter > 16-bit
-                    // seperti Emoji)
                     if (cp >= 0xD800 && cp <= 0xDBFF) { // High Surrogate
                         if (i + 6 >= len || ptr[i + 1] != '\\' || ptr[i + 2] != 'u') {
                             status_ = core::JsonError::InvalidSurrogate;
@@ -165,7 +162,6 @@ std::string Parser::parseStringToken(const Token& token) noexcept {
                     return "";
             }
         } else {
-            // Karakter ASCII normal atau UTF-8 mentah (passthrough)
             result.push_back(ptr[i]);
         }
     }
@@ -173,13 +169,13 @@ std::string Parser::parseStringToken(const Token& token) noexcept {
 }
 
 Parser::JsonValue Parser::buildNull() noexcept {
-    advance();
+    current_++;
     return Parser::JsonValue::Null();
 }
 
 Parser::JsonValue Parser::buildBoolean() noexcept {
     const auto value = current_->value()[0] == 't';
-    advance();
+    current_++;
     return Parser::JsonValue::Boolean(value);
 }
 
@@ -191,7 +187,7 @@ Parser::JsonValue Parser::buildInteger() noexcept {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
-    advance();
+    current_++;
     return Parser::JsonValue::Integer(value);
 }
 
@@ -203,7 +199,7 @@ Parser::JsonValue Parser::buildDouble() noexcept {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
-    advance();
+    current_++;
     return Parser::JsonValue::Double(value);
 }
 
@@ -214,26 +210,26 @@ Parser::JsonValue Parser::buildString() noexcept {
         return Parser::JsonValue::Null();
 
     const auto index = res_.addString(parsed_str);
-    advance();
+    current_++;
     return Parser::JsonValue::String(index);
 }
 
 Parser::JsonValue Parser::buildArray() noexcept {
     const auto array_index = res_.addArray();
-    advance();
+    current_++;
 
     if (current_ >= end_) {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
 
-    if (peek() == TokenType::RightSquareBracket) {
-        advance();
+    if (current_->type_ == TokenType::RightSquareBracket) {
+        current_++;
         return Parser::JsonValue::Array(array_index);
     }
 
     while (current_ < end_) {
-        if (peek() == TokenType::RightSquareBracket || peek() == TokenType::Comma) {
+        if (current_->type_ == TokenType::RightSquareBracket || current_->type_ == TokenType::Comma) {
             status_ = core::JsonError::EmptyValue;
             return Parser::JsonValue::Null();
         }
@@ -250,17 +246,17 @@ Parser::JsonValue Parser::buildArray() noexcept {
             return Parser::JsonValue::Null();
         }
 
-        if (peek() == TokenType::Comma) {
-            advance();
-            if (current_ < end_ && peek() == TokenType::RightSquareBracket) {
+        if (current_->type_ == TokenType::Comma) {
+            current_++;
+            if (current_ < end_ && current_->type_ == TokenType::RightSquareBracket) {
                 status_ = core::JsonError::TrailingComma;
                 return Parser::JsonValue::Null();
             }
             continue;
         }
 
-        if (peek() == TokenType::RightSquareBracket) {
-            advance();
+        if (current_->type_ == TokenType::RightSquareBracket) {
+            current_++;
             return Parser::JsonValue::Array(array_index);
         }
 
@@ -274,20 +270,20 @@ Parser::JsonValue Parser::buildArray() noexcept {
 
 Parser::JsonValue Parser::buildObject() noexcept {
     const auto object_index = res_.addObject();
-    advance();
+    current_++;
 
     if (current_ >= end_) {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
 
-    if (peek() == TokenType::RightCurlyBracket) {
-        advance();
+    if (current_->type_ == TokenType::RightCurlyBracket) {
+        current_++;
         return Parser::JsonValue::Object(object_index);
     }
 
     while (current_ < end_) {
-        if (peek() != TokenType::String) {
+        if (current_->type_ != TokenType::String) {
             status_ = core::JsonError::UnquotedKey;
             return Parser::JsonValue::Null();
         }
@@ -298,20 +294,20 @@ Parser::JsonValue Parser::buildObject() noexcept {
             return Parser::JsonValue::Null();
 
         const auto key_index = res_.addString(parsed_key);
-        advance();
+        current_++;
 
-        if (current_ >= end_ || peek() != TokenType::Colon) {
+        if (current_ >= end_ || current_->type_ != TokenType::Colon) {
             status_ = core::JsonError::InvalidType;
             return Parser::JsonValue::Null();
         }
-        advance();
+        current_++;
 
         if (current_ >= end_) {
             status_ = core::JsonError::EmptyValue;
             return Parser::JsonValue::Null();
         }
 
-        if (peek() == TokenType::RightCurlyBracket || peek() == TokenType::Comma) {
+        if (current_->type_ == TokenType::RightCurlyBracket || current_->type_ == TokenType::Comma) {
             status_ = core::JsonError::EmptyValue;
             return Parser::JsonValue::Null();
         }
@@ -329,17 +325,17 @@ Parser::JsonValue Parser::buildObject() noexcept {
             return Parser::JsonValue::Null();
         }
 
-        if (peek() == TokenType::Comma) {
-            advance();
-            if (current_ < end_ && peek() == TokenType::RightCurlyBracket) {
+        if (current_->type_ == TokenType::Comma) {
+            current_++;
+            if (current_ < end_ && current_->type_ == TokenType::RightCurlyBracket) {
                 status_ = core::JsonError::TrailingComma;
                 return Parser::JsonValue::Null();
             }
             continue;
         }
 
-        if (peek() == TokenType::RightCurlyBracket) {
-            advance();
+        if (current_->type_ == TokenType::RightCurlyBracket) {
+            current_++;
             return Parser::JsonValue::Object(object_index);
         }
 
@@ -357,7 +353,7 @@ Parser::JsonValue Parser::buildValue() noexcept {
         return Parser::JsonValue::Null();
     }
 
-    switch (peek()) {
+    switch (current_->type_) {
         case TokenType::Null:
             return buildNull();
         case TokenType::Boolean:
