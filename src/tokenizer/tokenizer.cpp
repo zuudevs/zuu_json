@@ -160,15 +160,16 @@ void Tokenizer::readAlphabet() noexcept {
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
-        while (current_ < end_ && utils::is_whitespace(*current_)) {
-			current_++;
-		}
-
-        if (current_ >= end_) {
-            break;
-        }
-
         switch (*current_) {
+			case '\t':
+			case '\n':
+			case '\v':
+			case '\f':
+			case '\r': 
+			case ' ': {
+				current_++;
+				continue;
+			}
             case '{': {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
                 current_++;
