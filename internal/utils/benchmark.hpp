@@ -147,7 +147,7 @@ class Benchmark {
         for (auto _ : state) {
             auto json = zuu::Json::parse(std::string_view(raw.data(), raw.size()));
             if (!json) {
-                state.SkipWithError("Full Pipeline failed!");
+                state.SkipWithError(std::format("Full Pipeline failed!, Error code: {}", utils::TranslateError(json.error())));
                 break;
             }
             benchmark::DoNotOptimize(json);

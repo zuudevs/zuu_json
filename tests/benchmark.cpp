@@ -42,7 +42,6 @@ void Benchmark::LiteralTokenizer(benchmark::State& state) {
 
 // ── BENCHMARK 2: Parser murni ──
 void Benchmark::SmallParser(benchmark::State& state) {
-    Benchmark::Initialize();
     Benchmark::Parser(state, std::span<const char>(Benchmark::small));
 }
 void Benchmark::MediumParser(benchmark::State& state) {
