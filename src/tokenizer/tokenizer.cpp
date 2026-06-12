@@ -36,32 +36,22 @@ bool Tokenizer::is_error() const noexcept {
     return status_ != Error::None;
 }
 
-void Tokenizer::advance() noexcept {
-    idx_++;
-}
-
-void Tokenizer::skip_whitespace() noexcept {
-    while (idx_ < raw_.size() && utils::is_whitespace(raw_[idx_])) {
-        advance();
-    }
-}
-
 void Tokenizer::readString() noexcept {
-    advance();
+    idx_++;
     size_t start = idx_;
 
     while (idx_ < raw_.size()) {
         if (raw_[idx_] == '\\') {
-            advance();
+            idx_++;
             if (idx_ < raw_.size()) {
-                advance();
+                idx_++;
             }
             continue;
         }
         if (raw_[idx_] == '\"') {
             break;
         }
-        advance();
+        idx_++;
     }
 
     if (idx_ >= raw_.size() || raw_[idx_] != '\"') {
@@ -71,7 +61,7 @@ void Tokenizer::readString() noexcept {
 
     res_.emplace_back(Token::Type::String, raw_.data() + start, idx_ - start);
 
-    advance();
+    idx_++;
 }
 
 void Tokenizer::readNumeric() noexcept {
@@ -79,11 +69,11 @@ void Tokenizer::readNumeric() noexcept {
     auto type = Token::Type::Integer;
 
     if (idx_ < raw_.size() && raw_[idx_] == '-') {
-        advance();
+        idx_++;
     }
 
     if (idx_ < raw_.size() && raw_[idx_] == '0') {
-        advance();
+        idx_++;
         if (idx_ < raw_.size() &&
             (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
             status_ = Error::LeadingZero;
@@ -93,7 +83,7 @@ void Tokenizer::readNumeric() noexcept {
                (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
         while (idx_ < raw_.size() &&
                (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
-            advance();
+            idx_++;
         }
     } else {
         status_ = Error::InvalidValue;
@@ -102,7 +92,7 @@ void Tokenizer::readNumeric() noexcept {
 
     if (idx_ < raw_.size() && raw_[idx_] == '.') {
         type = Token::Type::Double;
-        advance();
+        idx_++;
 
         if (idx_ >= raw_.size() ||
             (static_cast<unsigned char>(raw_[idx_] - '0') >= constants::digit)) {
@@ -112,16 +102,16 @@ void Tokenizer::readNumeric() noexcept {
 
         while (idx_ < raw_.size() &&
                (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
-            advance();
+            idx_++;
         }
     }
 
     if (idx_ < raw_.size() && (raw_[idx_] == 'e' || raw_[idx_] == 'E')) {
         type = Token::Type::Double;
-        advance();
+        idx_++;
 
         if (idx_ < raw_.size() && (raw_[idx_] == '+' || raw_[idx_] == '-')) {
-            advance();
+            idx_++;
         }
 
         if (idx_ >= raw_.size() ||
@@ -132,7 +122,7 @@ void Tokenizer::readNumeric() noexcept {
 
         while (idx_ < raw_.size() &&
                (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
-            advance();
+            idx_++;
         }
     }
 
@@ -175,52 +165,53 @@ void Tokenizer::readAlphabet() noexcept {
             break;
         }
         default: {
-            break;
+            status_ = Error::InvalidValue;
         }
     }
-
-    status_ = Error::InvalidValue;
 }
 
 void Tokenizer::tokenize() noexcept {
     while (idx_ < raw_.size()) {
-        skip_whitespace();
-
-        if (idx_ >= raw_.size()) {
-            break;
-        }
-
         char c = raw_[idx_];
 
         switch (c) {
+			case '\t':
+			case '\n':
+			case '\v':
+			case '\f':
+			case '\r': 
+			case ' ': {
+				idx_++;
+				continue;
+			}
             case '{': {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
-                advance();
+                idx_++;
                 continue;
             }
             case '}': {
                 res_.emplace_back(Token::Type::RightCurlyBracket);
-                advance();
+                idx_++;
                 continue;
             }
             case '[': {
                 res_.emplace_back(Token::Type::LeftSquareBracket);
-                advance();
+                idx_++;
                 continue;
             }
             case ']': {
                 res_.emplace_back(Token::Type::RightSquareBracket);
-                advance();
+                idx_++;
                 continue;
             }
             case ':': {
                 res_.emplace_back(Token::Type::Colon);
-                advance();
+                idx_++;
                 continue;
             }
             case ',': {
                 res_.emplace_back(Token::Type::Comma);
-                advance();
+                idx_++;
                 continue;
             }
             case '\"': {

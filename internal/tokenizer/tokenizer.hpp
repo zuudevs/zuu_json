@@ -38,8 +38,6 @@ class Tokenizer {
     Error status_{Error::None};
 
     [[nodiscard]] bool is_error() const noexcept;
-    void advance() noexcept;
-    void skip_whitespace() noexcept;
     void readString() noexcept;
     void readNumeric() noexcept;
     void readAlphabet() noexcept;
