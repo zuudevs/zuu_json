@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "../constants/general.hpp"
+#include "constants/general.hpp"
 #include <string>
 
 namespace zuu::utils {

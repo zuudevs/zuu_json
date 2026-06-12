@@ -10,18 +10,27 @@
 
 #pragma once
 
-#include "parser/parser.hpp"
-#include "tokenizer/tokenizer.hpp"
-#include "zuu_json/json.hpp"
 #include <benchmark/benchmark.h>
 #include <expected>
+#include <filesystem>
+#include <format>
 #include <fstream>
-#include <print>
+#include "parser/parser.hpp"
+#include "tokenizer/tokenizer.hpp"
 #include <span>
 #include <string>
 #include <system_error>
+#include "zuu_json/json.hpp"
+#include "zuu_json/utils/error_translator.hpp"
 
 namespace zuu::utils {
+
+[[nodiscard]] inline std::string 
+getSamplePath(const std::string& filename) {
+    std::filesystem::path current_file_path = __FILE__;
+    std::filesystem::path project_root = current_file_path.parent_path().parent_path();
+    return (project_root / "samples" / filename).string();
+}
 
 class Benchmark {
   public:
@@ -30,37 +39,43 @@ class Benchmark {
             return;
         }
 
-        if (auto res = loadFile("samples/github_events.json"); res) {
+        if (auto res = loadFile(getSamplePath("github_events.json")); res) {
             small = *res;
         }
-        if (auto res = loadFile("samples/twitter.json"); res) {
+        if (auto res = loadFile(getSamplePath("twitter.json")); res) {
             medium = *res;
         }
-        if (auto res = loadFile("samples/citm_catalog.json"); res) {
+        if (auto res = loadFile(getSamplePath("citm_catalog.json")); res) {
             big = *res;
         }
-        if (auto res = loadFile("samples/jeopardy.json"); res) {
+        if (auto res = loadFile(getSamplePath("jeopardy.json")); res) {
             huge = *res;
         }
-        if (auto res = loadFile("samples/canada.json"); res) {
+        if (auto res = loadFile(getSamplePath("canada.json")); res) {
             numeric = *res;
         }
-        if (auto res = loadFile("samples/twitter.json"); res) {
+        if (auto res = loadFile(getSamplePath("twitter.json")); res) {
             string = *res;
         }
-        if (auto res = loadFile("samples/github_events.json"); res) {
+        if (auto res = loadFile(getSamplePath("github_events.json")); res) {
             array = *res;
         }
-        if (auto res = loadFile("samples/citm_catalog.json"); res) {
+        if (auto res = loadFile(getSamplePath("citm_catalog.json")); res) {
             object = *res;
         }
-        if (auto res = loadFile("samples/literal.json"); res) {
+        if (auto res = loadFile(getSamplePath("literal.json")); res) {
             literal = *res;
         }
+        was_init = true;
     }
 
     static void Tokenizer(benchmark::State& state, std::span<const char> raw) {
         const size_t bytes_processed = raw.size();
+
+        if (raw.empty()) {
+            state.SkipWithError("File JSON kosong atau path salah! (Tokenizer)");
+            return;
+        }
 
         for (auto _ : state) {
             auto tokens = zuu::tokenizer::Tokenizer::Tokenize(raw);
@@ -84,6 +99,11 @@ class Benchmark {
     static void LiteralTokenizer(benchmark::State& state);
 
     static void Parser(benchmark::State& state, std::span<const char> raw) {
+        if (raw.empty()) {
+            state.SkipWithError("File JSON kosong atau path salah! (Parser)");
+            return;
+        }
+
         auto tokens_result = zuu::tokenizer::Tokenizer::Tokenize(raw);
 
         if (!tokens_result) {
@@ -97,7 +117,7 @@ class Benchmark {
             auto parsed = std::move(parser).result();
 
             if (!parsed) {
-                state.SkipWithError("Parser failed!");
+                state.SkipWithError(std::format("Parser failed!, Error code: {}", utils::TranslateError(parsed.error())));
                 break;
             }
             benchmark::DoNotOptimize(parsed);
@@ -117,13 +137,17 @@ class Benchmark {
     static void LiteralParser(benchmark::State& state);
 
     static void FullPipeline(benchmark::State& state, std::span<const char> raw) {
+        if (raw.empty()) {
+            state.SkipWithError("File JSON kosong atau path salah! (FullPipeline)");
+            return;
+        }
+
         const size_t bytes_processed = raw.size();
 
         for (auto _ : state) {
             auto json = zuu::Json::parse(std::string_view(raw.data(), raw.size()));
             if (!json) {
-                state.
-				SkipWithError("Full Pipeline failed!");
+                state.SkipWithError("Full Pipeline failed!");
                 break;
             }
             benchmark::DoNotOptimize(json);
@@ -141,6 +165,77 @@ class Benchmark {
     static void ObjectFullPipeline(benchmark::State& state);
     static void LiteralFullPipeline(benchmark::State& state);
 
+    static void DomTraversalArray(benchmark::State& state) {
+        if (huge.empty()) {
+            state.SkipWithError("File jeopardy.json kosong!");
+            return;
+        }
+
+        auto json_opt = zuu::Json::parse(huge);
+        if (!json_opt) {
+            state.SkipWithError("Parsing huge gagal saat setup!");
+            return;
+        }
+        auto& doc = json_opt.value(); 
+
+        for (auto _ : state) {
+            auto value = doc.root()[1000]; 
+            benchmark::DoNotOptimize(value);
+        }
+        
+        state.counters["Lookups/s"] = benchmark::Counter(
+            static_cast<double>(state.iterations()), benchmark::Counter::kIsRate);
+    }
+
+    static void DomTraversalObject(benchmark::State& state) {
+        if (big.empty()) {
+            state.SkipWithError("File citm_catalog.json kosong!");
+            return;
+        }
+
+        auto json_opt = zuu::Json::parse(big);
+        if (!json_opt) {
+            state.SkipWithError("Parsing big gagal saat setup!");
+            return;
+        }
+        auto& doc = json_opt.value();
+
+        for (auto _ : state) {
+            auto value1 = doc["events"];
+            auto value2 = doc["performances"];
+            
+            benchmark::DoNotOptimize(value1);
+            benchmark::DoNotOptimize(value2);
+        }
+
+        state.counters["Lookups/s"] = benchmark::Counter(static_cast<double>(state.iterations()) * 2, benchmark::Counter::kIsRate);
+    }
+
+    static void DomTraversalDeep(benchmark::State& state) {
+        if (medium.empty()) {
+            state.SkipWithError("File twitter.json kosong!");
+            return;
+        }
+
+        auto json_opt = zuu::Json::parse(medium);
+        if (!json_opt) {
+            state.SkipWithError("Parsing medium gagal saat setup!");
+            return;
+        }
+        auto& doc = json_opt.value();
+
+        for (auto _ : state) {
+            auto val = doc["statuses"].value()
+                          [0].value()
+                          ["user"].value()
+                          ["screen_name"].value();
+            benchmark::DoNotOptimize(val);
+        }
+        
+        state.counters["Lookups/s"] = benchmark::Counter(
+            static_cast<double>(state.iterations()) * 4, benchmark::Counter::kIsRate);
+    }
+
   private:
     static inline std::string small;
     static inline std::string medium;
@@ -152,6 +247,20 @@ class Benchmark {
     static inline std::string array;
     static inline std::string literal;
     static inline bool was_init{false};
+
+    static inline std::string getSamplePath(std::string_view filename) {
+        std::filesystem::path cwd = std::filesystem::current_path();
+        
+        for (int i = 0; i < 4; ++i) {
+            std::filesystem::path target = cwd / "samples" / filename;
+            if (std::filesystem::exists(target)) {
+                return target.string();
+            }
+            cwd = cwd.parent_path();
+        }
+        
+        return "";
+    }
 
     [[nodiscard]] static std::expected<std::string, std::errc>
     loadFile(std::string_view filepath) noexcept {
