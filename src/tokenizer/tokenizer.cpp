@@ -29,8 +29,7 @@ Tokenizer::Expected Tokenizer::result() && noexcept {
 }
 
 Tokenizer::Expected Tokenizer::Tokenize(Raw json_content) noexcept {
-    auto tokens = Tokenizer(json_content);
-    return std::move(tokens).result();
+    return Tokenizer(json_content).result();
 }
 
 bool Tokenizer::is_error() const noexcept {
@@ -234,20 +233,22 @@ void Tokenizer::tokenize() noexcept {
                 status_ = Error::SingleQuotedString;
                 return;
             }
-        }
+			default: {
+				if (utils::is_numeric(c) || c == '-') {
+					readNumeric();
+				} else if (utils::is_alphabet(c)) {
+					readAlphabet();
+				} else {
+					status_ = Error::Unknown;
+					return;
+				}
 
-        if (utils::is_numeric(c) || c == '-') {
-            readNumeric();
-        } else if (utils::is_alphabet(c)) {
-            readAlphabet();
-        } else {
-            status_ = Error::Unknown;
-            return;
+				if (is_error())
+					return;
+			}
         }
-
-        if (is_error())
-            return;
     }
+	res_.emplace_back(Token::Type::EndOfFile);
 }
 
 } // namespace zuu::tokenizer

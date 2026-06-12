@@ -395,7 +395,7 @@ Parser::JsonValue Parser::buildValue() noexcept {
 }
 
 void Parser::parse() noexcept {
-    if (raw_.empty()) {
+    if (raw_.empty() || raw_[idx_].type_ == TokenType::EndOfFile) {
         status_ = core::JsonError::EmptyValue;
         return;
     }
@@ -406,7 +406,7 @@ void Parser::parse() noexcept {
     }
 
     res_.setRoot(root);
-    if (idx_ < raw_.size()) {
+    if (raw_.empty() || raw_[idx_].type_ != TokenType::EndOfFile) {
         status_ = core::JsonError::InvalidValue;
     }
 }
