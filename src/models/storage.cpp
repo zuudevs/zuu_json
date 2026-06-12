@@ -12,10 +12,10 @@
 
 namespace zuu::models {
 
-Storage::Storage(size_t strings_cap, size_t arrays_cap, size_t objects_cap) noexcept {
-    strings_.reserve(strings_cap);
-    arrays_.reserve(arrays_cap);
-    objects_.reserve(objects_cap);
+Storage::Storage(models::Hint<models::Token> hint) noexcept {
+    strings_.reserve(hint.string_count);
+    arrays_.reserve(hint.array_count);
+    objects_.reserve(hint.object_count);
 }
 
 bool Storage::hasRoot() const noexcept {

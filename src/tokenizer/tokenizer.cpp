@@ -25,7 +25,7 @@ Tokenizer::Expected Tokenizer::result() && noexcept {
     if (is_error()) {
         return std::unexpected{status_};
     }
-    return std::move(res_);
+    return Resource(std::move(res_), hint_);
 }
 
 Tokenizer::Expected Tokenizer::Tokenize(Raw json_content) noexcept {
@@ -36,32 +36,28 @@ bool Tokenizer::is_error() const noexcept {
     return status_ != Error::None;
 }
 
-void Tokenizer::advance() noexcept {
-    idx_++;
-}
-
 void Tokenizer::skip_whitespace() noexcept {
     while (idx_ < raw_.size() && utils::is_whitespace(raw_[idx_])) {
-        advance();
+        idx_++;
     }
 }
 
 void Tokenizer::readString() noexcept {
-    advance();
+    idx_++;
     size_t start = idx_;
 
     while (idx_ < raw_.size()) {
         if (raw_[idx_] == '\\') {
-            advance();
+            idx_++;
             if (idx_ < raw_.size()) {
-                advance();
+                idx_++;
             }
             continue;
         }
         if (raw_[idx_] == '\"') {
             break;
         }
-        advance();
+        idx_++;
     }
 
     if (idx_ >= raw_.size() || raw_[idx_] != '\"') {
@@ -69,21 +65,21 @@ void Tokenizer::readString() noexcept {
         return;
     }
 
-    res_.emplace_back(Token::Type::String, raw_.data() + start, idx_ - start);
+    res_.emplace_back(TokenType::String, raw_.data() + start, idx_ - start);
 
-    advance();
+    idx_++;
 }
 
 void Tokenizer::readNumeric() noexcept {
     size_t start = idx_;
-    auto type = Token::Type::Integer;
+    auto type = TokenType::Integer;
 
     if (idx_ < raw_.size() && raw_[idx_] == '-') {
-        advance();
+        idx_++;
     }
 
     if (idx_ < raw_.size() && raw_[idx_] == '0') {
-        advance();
+        idx_++;
         if (idx_ < raw_.size() &&
             (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
             status_ = Error::LeadingZero;
@@ -93,7 +89,7 @@ void Tokenizer::readNumeric() noexcept {
                (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
         while (idx_ < raw_.size() &&
                (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
-            advance();
+            idx_++;
         }
     } else {
         status_ = Error::InvalidValue;
@@ -101,8 +97,8 @@ void Tokenizer::readNumeric() noexcept {
     }
 
     if (idx_ < raw_.size() && raw_[idx_] == '.') {
-        type = Token::Type::Double;
-        advance();
+        type = TokenType::Double;
+        idx_++;
 
         if (idx_ >= raw_.size() ||
             (static_cast<unsigned char>(raw_[idx_] - '0') >= constants::digit)) {
@@ -112,16 +108,16 @@ void Tokenizer::readNumeric() noexcept {
 
         while (idx_ < raw_.size() &&
                (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
-            advance();
+            idx_++;
         }
     }
 
     if (idx_ < raw_.size() && (raw_[idx_] == 'e' || raw_[idx_] == 'E')) {
-        type = Token::Type::Double;
-        advance();
+        type = TokenType::Double;
+        idx_++;
 
         if (idx_ < raw_.size() && (raw_[idx_] == '+' || raw_[idx_] == '-')) {
-            advance();
+            idx_++;
         }
 
         if (idx_ >= raw_.size() ||
@@ -132,7 +128,7 @@ void Tokenizer::readNumeric() noexcept {
 
         while (idx_ < raw_.size() &&
                (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
-            advance();
+            idx_++;
         }
     }
 
@@ -148,7 +144,7 @@ void Tokenizer::readAlphabet() noexcept {
             const auto size = sizeof("null") - 1;
             if (rem >= size && raw_[idx_ + 1] == 'u' && raw_[idx_ + 2] == 'l' &&
                 raw_[idx_ + 3] == 'l') {
-                res_.emplace_back(Token::Type::Null, raw_.data() + idx_, size);
+                res_.emplace_back(TokenType::Null, raw_.data() + idx_, size);
                 idx_ += size;
                 return;
             }
@@ -158,7 +154,7 @@ void Tokenizer::readAlphabet() noexcept {
             const auto size = sizeof("true") - 1;
             if (rem >= size && raw_[idx_ + 1] == 'r' && raw_[idx_ + 2] == 'u' &&
                 raw_[idx_ + 3] == 'e') {
-                res_.emplace_back(Token::Type::Boolean, raw_.data() + idx_, size);
+                res_.emplace_back(TokenType::Boolean, raw_.data() + idx_, size);
                 idx_ += size;
                 return;
             }
@@ -168,7 +164,7 @@ void Tokenizer::readAlphabet() noexcept {
             const auto size = sizeof("false") - 1;
             if (rem >= size && raw_[idx_ + 1] == 'a' && raw_[idx_ + 2] == 'l' &&
                 raw_[idx_ + 3] == 's' && raw_[idx_ + 4] == 'e') {
-                res_.emplace_back(Token::Type::Boolean, raw_.data() + idx_, size);
+                res_.emplace_back(TokenType::Boolean, raw_.data() + idx_, size);
                 idx_ += size;
                 return;
             }
@@ -194,39 +190,43 @@ void Tokenizer::tokenize() noexcept {
 
         switch (c) {
             case '{': {
-                res_.emplace_back(Token::Type::LeftCurlyBracket);
-                advance();
+                res_.emplace_back(TokenType::LeftCurlyBracket);
+				hint_.object_count++;
+                idx_++;
                 continue;
             }
             case '}': {
-                res_.emplace_back(Token::Type::RightCurlyBracket);
-                advance();
+                res_.emplace_back(TokenType::RightCurlyBracket);
+                idx_++;
                 continue;
             }
             case '[': {
-                res_.emplace_back(Token::Type::LeftSquareBracket);
-                advance();
+                res_.emplace_back(TokenType::LeftSquareBracket);
+				hint_.array_count++;
+                idx_++;
                 continue;
             }
             case ']': {
-                res_.emplace_back(Token::Type::RightSquareBracket);
-                advance();
+                res_.emplace_back(TokenType::RightSquareBracket);
+                idx_++;
                 continue;
             }
             case ':': {
-                res_.emplace_back(Token::Type::Colon);
-                advance();
+                res_.emplace_back(TokenType::Colon);
+                idx_++;
                 continue;
             }
             case ',': {
-                res_.emplace_back(Token::Type::Comma);
-                advance();
+                res_.emplace_back(TokenType::Comma);
+				// hint_.comma_count++;
+                idx_++;
                 continue;
             }
             case '\"': {
                 readString();
                 if (is_error())
                     return;
+				hint_.string_count++;
                 continue;
             }
             case '\'': {
@@ -248,7 +248,7 @@ void Tokenizer::tokenize() noexcept {
 			}
         }
     }
-	res_.emplace_back(Token::Type::EndOfFile);
+	res_.emplace_back(TokenType::EndOfFile);
 }
 
 } // namespace zuu::tokenizer

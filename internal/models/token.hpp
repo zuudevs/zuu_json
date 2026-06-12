@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "models/hint.hpp"
+
 namespace zuu {
 
 namespace tokenizer {
@@ -56,6 +58,14 @@ class Token {
 
     friend class tokenizer::Tokenizer;
     friend class parser::Parser;
+};
+
+template <>
+struct Hint<Token> {
+	size_t string_count{0};
+	size_t array_count{0};
+	size_t object_count{0};
+	// size_t comma_count{0};
 };
 
 } // namespace models

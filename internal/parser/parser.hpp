@@ -10,32 +10,34 @@
 
 #pragma once
 
+#include <expected>
 #include "models/storage.hpp"
 #include "models/token.hpp"
-#include "zuu_json/core/error.hpp"
-#include <expected>
 #include <span>
 #include <string>
+#include "zuu_json/core/error.hpp"
 
 namespace zuu::parser {
 
 class Parser {
   public:
     using Token = models::Token;
+	using Hint = models::Hint<Token>;
     using TokenType = Token::Type;
     using Error = core::JsonError;
     using Storage = models::Storage;
     using JsonValue = models::JsonValue;
     using JsonMember = models::JsonMember;
     using Raw = std::span<const Token>;
+	using Resource = std::pair<Raw, Hint>;
     using Expected = std::expected<Storage, Error>;
 
-    explicit Parser(Raw tokens) noexcept;
+    explicit Parser(Resource resource) noexcept;
 
     [[nodiscard]] Expected result() && noexcept;
     [[nodiscard]] bool has_error() const noexcept;
 
-    [[nodiscard]] static Expected Parse(Raw tokens) noexcept;
+    [[nodiscard]] static Expected Parse(Resource resource) noexcept;
 
   private:
     Raw raw_;

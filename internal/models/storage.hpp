@@ -10,7 +10,9 @@
 
 #pragma once
 
+#include "hint.hpp"
 #include "models/json_member.hpp"
+#include "models/token.hpp"
 #include <string>
 #include <string_view>
 #include <vector>
@@ -29,7 +31,7 @@ class Storage {
     Storage(const Storage&) noexcept = delete;
     Storage& operator=(const Storage&) noexcept = delete;
     ~Storage() noexcept = default;
-    Storage(size_t strings_cap, size_t arrays_cap, size_t objects_cap) noexcept;
+    Storage(models::Hint<models::Token> hint) noexcept;
 
     [[nodiscard]] bool hasRoot() const noexcept;
     void setRoot(JsonValue value) noexcept;

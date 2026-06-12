@@ -110,7 +110,7 @@ class Benchmark {
             state.SkipWithError("Tokenizer failed during setup!");
             return;
         }
-        const size_t nodes_count = tokens_result->size();
+        const size_t nodes_count = tokens_result->first.size();
 
         for (auto _ : state) {
             zuu::parser::Parser parser(tokens_result.value());
