@@ -172,9 +172,7 @@ void Tokenizer::readAlphabet() noexcept {
 
 void Tokenizer::tokenize() noexcept {
     while (idx_ < raw_.size()) {
-        char c = raw_[idx_];
-
-        switch (c) {
+        switch (raw_[idx_]) {
 			case '\t':
 			case '\n':
 			case '\v':
