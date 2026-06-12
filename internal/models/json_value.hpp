@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "scalar_storage.hpp"
+
 namespace zuu::models {
 
 class JsonValue {
@@ -24,62 +26,44 @@ class JsonValue {
         Object,
     };
 
-    union Data {
-        bool b;
-        long long i;
-        long double d;
-        unsigned long long index;
+    constexpr JsonValue() noexcept : data_(0ull), type_(Type::Null) {}
 
-        constexpr Data(bool value) noexcept
-            : b(value) {}
-        constexpr Data(long long value) noexcept
-            : i(value) {}
-        constexpr Data(long double value) noexcept
-            : d(value) {}
-        constexpr Data(unsigned long long index = 0) noexcept
-            : index(index) {}
-    };
+    [[nodiscard]] static inline constexpr JsonValue Null() {
+        return JsonValue{};
+    }
 
-    [[nodiscard]] static inline JsonValue Null() noexcept {
-        return JsonValue{0ull, Type::Null};
-    };
-    [[nodiscard]] static inline JsonValue Boolean(bool value) noexcept {
+    [[nodiscard]] static inline constexpr JsonValue Boolean(long long value) {
         return JsonValue{value};
-    };
-    [[nodiscard]] static inline JsonValue Integer(long long value) noexcept {
+    }
+
+    [[nodiscard]] static inline constexpr JsonValue Integer(long long value) {
         return JsonValue{value};
-    };
-    [[nodiscard]] static inline JsonValue Double(long double value) noexcept {
+    }
+
+    [[nodiscard]] static inline constexpr JsonValue Double(long double value) {
         return JsonValue{value};
-    };
-    [[nodiscard]] static inline JsonValue String(unsigned long long index) noexcept {
+    }
+
+    [[nodiscard]] static inline constexpr JsonValue String(unsigned long long index) {
         return JsonValue{index, Type::String};
-    };
-    [[nodiscard]] static inline JsonValue Array(unsigned long long index) noexcept {
+    }
+
+    [[nodiscard]] static inline constexpr JsonValue Array(unsigned long long index) {
         return JsonValue{index, Type::Array};
-    };
-    [[nodiscard]] static inline JsonValue Object(unsigned long long index) noexcept {
+    }
+
+    [[nodiscard]] static inline constexpr JsonValue Object(unsigned long long index) {
         return JsonValue{index, Type::Object};
-    };
+    }
 
-    Data data_{};
-    Type type_{};
+    ScalarStorage data_;
+    Type type_;
 
-    constexpr JsonValue() noexcept
-        : data_(0ll)
-        , type_(Type::Null) {}
-    constexpr JsonValue(bool value) noexcept
-        : data_(value)
-        , type_(Type::Boolean) {}
-    constexpr JsonValue(long long value) noexcept
-        : data_(value)
-        , type_(Type::Integer) {}
-    constexpr JsonValue(long double value) noexcept
-        : data_(value)
-        , type_(Type::Double) {}
-    constexpr JsonValue(unsigned long long index, Type type) noexcept
-        : data_(index)
-        , type_(type) {}
+  private:
+    constexpr JsonValue(bool value) noexcept : data_(value), type_(Type::Boolean) {}
+    constexpr JsonValue(long long value) noexcept : data_(value), type_(Type::Integer) {}
+    constexpr JsonValue(long double value) noexcept : data_(value), type_(Type::Double) {}
+    constexpr JsonValue(unsigned long long index, Type type) noexcept : data_(index), type_(type) {}
 };
 
 } // namespace zuu::models

@@ -38,9 +38,9 @@ class Parser {
     [[nodiscard]] static Expected Parse(Raw tokens) noexcept;
 
   private:
-    Raw raw_;
     Storage res_;
-    size_t idx_{};
+	const Token* current_;
+    const Token* end_;
     Error status_{core::JsonError::None};
 
     [[nodiscard]] size_t getStringCount() const noexcept;

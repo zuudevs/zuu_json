@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <string_view>
+
 namespace zuu {
 
 namespace tokenizer {
@@ -40,18 +42,20 @@ class Token {
         Integer,
         Double,
         String,
-        EndOfFile,
         Unknown,
     };
 
-    Token(Type type, const char* ptr = "", unsigned size = 0) noexcept
-        : ptr_(ptr)
-        , size_(size)
-        , type_(type) {}
+    constexpr Token(Type type, const char* ptr = nullptr, unsigned size = 0) noexcept : ptr_(ptr), size_(size), type_(type) {}
+	
+	[[nodiscard]] constexpr inline auto 
+	value() const noexcept {
+		return std::string_view(ptr_, size_);
+	}
+
 
   private:
     const char* ptr_;
-    unsigned size_;
+	unsigned size_;
     Type type_;
 
     friend class tokenizer::Tokenizer;

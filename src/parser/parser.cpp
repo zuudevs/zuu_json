@@ -15,7 +15,8 @@
 namespace zuu::parser {
 
 Parser::Parser(Parser::Raw tokens) noexcept
-    : raw_(tokens) {
+    : current_(tokens.data())
+	, end_(tokens.data() + tokens.size()) {
     res_ = Storage(getStringCount(), getArrayCount(), getObjectCount());
     parse();
 }
@@ -37,18 +38,18 @@ Parser::Expected Parser::Parse(Parser::Raw tokens) noexcept {
 
 size_t Parser::getStringCount() const noexcept {
     size_t n{0};
-    for (const auto& token : raw_) {
-        if (token.type_ == TokenType::String) {
+	for (auto it = current_; it != end_; ++it) {
+		if (it->type_ == TokenType::String) {
             n++;
         }
-    }
+	}
     return n;
 }
 
 size_t Parser::getArrayCount() const noexcept {
     size_t n{0};
-    for (const auto& token : raw_) {
-        if (token.type_ == TokenType::LeftSquareBracket) {
+    for (auto it = current_; it != end_; ++it) {
+		if (it->type_ == TokenType::LeftSquareBracket) {
             n++;
         }
     }
@@ -57,28 +58,17 @@ size_t Parser::getArrayCount() const noexcept {
 
 size_t Parser::getObjectCount() const noexcept {
     size_t n{0};
-    for (const auto& token : raw_) {
-        if (token.type_ == TokenType::LeftCurlyBracket) {
+    for (auto it = current_; it != end_; ++it) {
+		if (it->type_ == TokenType::LeftCurlyBracket) {
             n++;
         }
     }
     return n;
 }
 
-Parser::TokenType Parser::peek() const noexcept {
-    return raw_[idx_].type_;
-}
-
-void Parser::advance() noexcept {
-    idx_++;
-}
-
-// =====================================================================
-// MESIN DECODER UNICODE & ESCAPE CHARACTER
-// =====================================================================
 std::string Parser::parseStringToken(const Token& token) noexcept {
     std::string result;
-    result.reserve(token.size_); // Optimasi memori
+    result.reserve(token.size_);
 
     const char* ptr = token.ptr_;
     const size_t len = token.size_;
@@ -188,16 +178,16 @@ Parser::JsonValue Parser::buildNull() noexcept {
 }
 
 Parser::JsonValue Parser::buildBoolean() noexcept {
-    const auto value = raw_[idx_].ptr_[0] == 't';
+    const auto value = current_->value()[0] == 't';
     advance();
     return Parser::JsonValue::Boolean(value);
 }
 
 Parser::JsonValue Parser::buildInteger() noexcept {
     long long value{};
-    auto [ptr, ec] = std::from_chars(raw_[idx_].ptr_, raw_[idx_].ptr_ + raw_[idx_].size_, value);
+    auto [ptr, ec] = std::from_chars(current_->ptr_, current_->ptr_ + current_->size_, value);
 
-    if (ec != std::errc{} || ptr != raw_[idx_].ptr_ + raw_[idx_].size_) {
+    if (ec != std::errc{} || ptr != current_->ptr_ + current_->size_) {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
@@ -207,9 +197,9 @@ Parser::JsonValue Parser::buildInteger() noexcept {
 
 Parser::JsonValue Parser::buildDouble() noexcept {
     long double value{};
-    auto [ptr, ec] = std::from_chars(raw_[idx_].ptr_, raw_[idx_].ptr_ + raw_[idx_].size_, value);
+    auto [ptr, ec] = std::from_chars(current_->ptr_, current_->ptr_ + current_->size_, value);
 
-    if (ec != std::errc{} || ptr != raw_[idx_].ptr_ + raw_[idx_].size_) {
+    if (ec != std::errc{} || ptr != current_->ptr_ + current_->size_) {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
@@ -219,7 +209,7 @@ Parser::JsonValue Parser::buildDouble() noexcept {
 
 Parser::JsonValue Parser::buildString() noexcept {
     // Jalankan mesin unescape untuk nilai String
-    auto parsed_str = parseStringToken(raw_[idx_]);
+    auto parsed_str = parseStringToken(*current_);
     if (has_error())
         return Parser::JsonValue::Null();
 
@@ -232,7 +222,7 @@ Parser::JsonValue Parser::buildArray() noexcept {
     const auto array_index = res_.addArray();
     advance();
 
-    if (idx_ >= raw_.size()) {
+    if (current_ >= end_) {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
@@ -242,7 +232,7 @@ Parser::JsonValue Parser::buildArray() noexcept {
         return Parser::JsonValue::Array(array_index);
     }
 
-    while (idx_ < raw_.size()) {
+    while (current_ < end_) {
         if (peek() == TokenType::RightSquareBracket || peek() == TokenType::Comma) {
             status_ = core::JsonError::EmptyValue;
             return Parser::JsonValue::Null();
@@ -255,14 +245,14 @@ Parser::JsonValue Parser::buildArray() noexcept {
 
         res_.array(array_index).push_back(value);
 
-        if (idx_ >= raw_.size()) {
+        if (current_ >= end_) {
             status_ = core::JsonError::InvalidValue;
             return Parser::JsonValue::Null();
         }
 
         if (peek() == TokenType::Comma) {
             advance();
-            if (idx_ < raw_.size() && peek() == TokenType::RightSquareBracket) {
+            if (current_ < end_ && peek() == TokenType::RightSquareBracket) {
                 status_ = core::JsonError::TrailingComma;
                 return Parser::JsonValue::Null();
             }
@@ -286,7 +276,7 @@ Parser::JsonValue Parser::buildObject() noexcept {
     const auto object_index = res_.addObject();
     advance();
 
-    if (idx_ >= raw_.size()) {
+    if (current_ >= end_) {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
@@ -296,27 +286,27 @@ Parser::JsonValue Parser::buildObject() noexcept {
         return Parser::JsonValue::Object(object_index);
     }
 
-    while (idx_ < raw_.size()) {
+    while (current_ < end_) {
         if (peek() != TokenType::String) {
             status_ = core::JsonError::UnquotedKey;
             return Parser::JsonValue::Null();
         }
 
         // Jalankan mesin unescape untuk Kunci (Key) Object
-        auto parsed_key = parseStringToken(raw_[idx_]);
+        auto parsed_key = parseStringToken(*current_);
         if (has_error())
             return Parser::JsonValue::Null();
 
         const auto key_index = res_.addString(parsed_key);
         advance();
 
-        if (idx_ >= raw_.size() || peek() != TokenType::Colon) {
+        if (current_ >= end_ || peek() != TokenType::Colon) {
             status_ = core::JsonError::InvalidType;
             return Parser::JsonValue::Null();
         }
         advance();
 
-        if (idx_ >= raw_.size()) {
+        if (current_ >= end_) {
             status_ = core::JsonError::EmptyValue;
             return Parser::JsonValue::Null();
         }
@@ -334,14 +324,14 @@ Parser::JsonValue Parser::buildObject() noexcept {
         res_.object(object_index)
             .push_back(Parser::JsonMember{.key_index_ = key_index, .value_ = value});
 
-        if (idx_ >= raw_.size()) {
+        if (current_ >= end_) {
             status_ = core::JsonError::InvalidValue;
             return Parser::JsonValue::Null();
         }
 
         if (peek() == TokenType::Comma) {
             advance();
-            if (idx_ < raw_.size() && peek() == TokenType::RightCurlyBracket) {
+            if (current_ < end_ && peek() == TokenType::RightCurlyBracket) {
                 status_ = core::JsonError::TrailingComma;
                 return Parser::JsonValue::Null();
             }
@@ -362,7 +352,7 @@ Parser::JsonValue Parser::buildObject() noexcept {
 }
 
 Parser::JsonValue Parser::buildValue() noexcept {
-    if (idx_ >= raw_.size()) {
+    if (current_ >= end_) {
         status_ = core::JsonError::EmptyValue;
         return Parser::JsonValue::Null();
     }
@@ -395,7 +385,7 @@ Parser::JsonValue Parser::buildValue() noexcept {
 }
 
 void Parser::parse() noexcept {
-    if (raw_.empty()) {
+    if (current_ == end_) {
         status_ = core::JsonError::EmptyValue;
         return;
     }
@@ -406,7 +396,7 @@ void Parser::parse() noexcept {
     }
 
     res_.setRoot(root);
-    if (idx_ < raw_.size()) {
+    if (current_ < end_) {
         status_ = core::JsonError::InvalidValue;
     }
 }
