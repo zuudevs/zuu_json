@@ -20,16 +20,15 @@ Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
     tokenize();
 }
 
-Tokenizer::Expected Tokenizer::result() noexcept {
+Tokenizer::Expected Tokenizer::result() && noexcept {
     if (is_error()) {
         return std::unexpected{status_};
     }
-    return res_;
+    return std::move(res_);
 }
 
 Tokenizer::Expected Tokenizer::Tokenize(Tokenizer::Raw json_content) noexcept {
-    auto tokens = Tokenizer(json_content);
-    return tokens.result();
+    return Tokenizer(json_content).result();
 }
 
 bool Tokenizer::is_error() const noexcept {
@@ -226,6 +225,7 @@ void Tokenizer::tokenize() noexcept {
             }
         }
     }
+	res_.emplace_back(Token::Type::EndOfFile);
 }
 
 } // namespace zuu::tokenizer

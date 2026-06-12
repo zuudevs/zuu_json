@@ -28,9 +28,9 @@ namespace zuu::utils {
     if (c >= '0' && c <= '9')
         return c - '0';
     if (c >= 'a' && c <= 'f')
-        return c - 'a' + 10;
+        return c - 'a' + constants::digit;
     if (c >= 'A' && c <= 'F')
-        return c - 'A' + 10;
+        return c - 'A' + constants::digit;
     return -1;
 }
 inline void encode_utf8(uint32_t cp, std::string& out) noexcept {

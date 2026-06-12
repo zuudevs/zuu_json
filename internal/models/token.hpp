@@ -42,6 +42,7 @@ class Token {
         Integer,
         Double,
         String,
+		EndOfFile,
         Unknown,
     };
 

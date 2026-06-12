@@ -27,7 +27,7 @@ class Tokenizer {
     using Raw = std::span<const char>;
 
     explicit Tokenizer(Raw json_content) noexcept;
-    Expected result() noexcept;
+    Expected result() && noexcept;
 
     [[nodiscard]] static Expected Tokenize(Tokenizer::Raw json_content) noexcept;
 
