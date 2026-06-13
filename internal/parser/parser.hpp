@@ -45,13 +45,6 @@ class Parser {
     size_t idx_{};
     Error status_{core::JsonError::None};
 
-    [[nodiscard]] size_t getStringCount() const noexcept;
-    [[nodiscard]] size_t getArrayCount() const noexcept;
-    [[nodiscard]] size_t getObjectCount() const noexcept;
-
-    [[nodiscard]] Token::Type peek() const noexcept;
-    void advance() noexcept;
-
     [[nodiscard]] std::string parseStringToken(const Token& token) noexcept;
 
     [[nodiscard]] JsonValue buildNull() noexcept;

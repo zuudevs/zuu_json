@@ -37,31 +37,47 @@ bool Tokenizer::is_error() const noexcept {
 }
 
 void Tokenizer::readString() noexcept {
-    idx_++;
+    idx_++; // skip opening quote
+
     size_t start = idx_;
+    bool has_escape = false;
 
     while (idx_ < raw_.size()) {
-        if (raw_[idx_] == '\\') {
-            idx_++;
-            if (idx_ < raw_.size()) {
-                idx_++;
+        char c = raw_[idx_];
+
+        if (c == '\\') {
+            has_escape = true;
+
+            idx_++; // skip '\'
+
+            if (idx_ >= raw_.size()) {
+                status_ = Error::InvalidValue;
+                return;
             }
+
+            idx_++; // skip escaped character
             continue;
         }
-        if (raw_[idx_] == '\"') {
-            break;
+
+        if (c == '\"') {
+            res_.emplace_back(
+                TokenType::String,
+                std::string_view(raw_.data() + start, idx_ - start),
+                has_escape
+            );
+
+            if (has_escape) {
+                hint_.string_escape_bytes += (idx_ - start);
+            }
+
+            idx_++; // skip closing quote
+            return;
         }
+
         idx_++;
     }
 
-    if (idx_ >= raw_.size() || raw_[idx_] != '\"') {
-        status_ = Error::InvalidValue;
-        return;
-    }
-
-    res_.emplace_back(TokenType::String, raw_.data() + start, idx_ - start);
-
-    idx_++;
+    status_ = Error::InvalidValue;
 }
 
 void Tokenizer::readNumeric() noexcept {
@@ -165,11 +181,10 @@ void Tokenizer::readAlphabet() noexcept {
             break;
         }
         default: {
-            break;
+            status_ = Error::InvalidValue;
+            return;
         }
     }
-
-    status_ = Error::InvalidValue;
 }
 
 void Tokenizer::tokenize() noexcept {
@@ -214,7 +229,7 @@ void Tokenizer::tokenize() noexcept {
             }
             case ',': {
                 res_.emplace_back(TokenType::Comma);
-				// hint_.comma_count++;
+				hint_.comma_count++;
                 idx_++;
                 continue;
             }

@@ -1,6 +1,6 @@
 /**
  * @file token.hpp
- * @author zuudevs (zuudevs@gmail.com)
+ * @author zuu::modelsdevs (zuu::modelsdevs@gmail.com)
  * @brief Brief description
  * @version 0.1.0
  * @date 2026-06-06
@@ -11,25 +11,13 @@
 #pragma once
 
 #include "models/hint.hpp"
+#include <string_view>
 
-namespace zuu {
+namespace zuu::models {
 
-namespace tokenizer {
+struct Token {
+    static constexpr unsigned char layout_required_size = 16;
 
-class Tokenizer;
-
-} // namespace tokenizer
-
-namespace parser {
-
-class Parser;
-
-} // namespace parser
-
-namespace models {
-
-class Token {
-  public:
     enum class Type : unsigned char {
         LeftCurlyBracket,
         RightCurlyBracket,
@@ -46,28 +34,33 @@ class Token {
         Unknown,
     };
 
-    Token(Type type, const char* ptr = "", unsigned size = 0) noexcept
-        : ptr_(ptr)
-        , size_(size)
-        , type_(type) {}
+    Token(Type type, std::string_view value = "", bool has_escape = false) noexcept
+        : ptr_(value.data())
+        , size_(static_cast<uint32_t>(value.size()))
+        , type_(type)
+        , has_escape_(has_escape) {}
 
-  private:
-    const char* ptr_;
-    unsigned size_;
-    Type type_;
+    [[nodiscard]] constexpr std::string_view value() const noexcept {
+        return {ptr_, size_};
+    }
 
-    friend class tokenizer::Tokenizer;
-    friend class parser::Parser;
+    const char* ptr_{nullptr}; // 8 bytes — offset 0
+    uint32_t size_{0};          // 4 bytes — offset 8
+    Type type_;                 // 1 byte  — offset 12
+    bool has_escape_{false};    // 1 byte  — offset 13 (Aman, menempati padding sisa)
+    // 2 bytes padding
+    // sizeof(Token) == 16
 };
+
+static_assert(sizeof(Token) == Token::layout_required_size, "Token layout changed unexpectedly");
 
 template <>
 struct Hint<Token> {
-	size_t string_count{0};
-	size_t array_count{0};
-	size_t object_count{0};
-	// size_t comma_count{0};
+    size_t string_count{0};
+    size_t array_count{0};
+    size_t object_count{0};
+    size_t comma_count{0};
+    size_t string_escape_bytes{0}; // Mencatat total memori maksimal untuk string yang butuh unescaping
 };
 
-} // namespace models
-
-} // namespace zuu
+} // namespace zuu::models

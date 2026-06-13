@@ -34,50 +34,9 @@ Parser::Expected Parser::Parse(Resource resource) noexcept {
     return Parser(resource).result();
 }
 
-size_t Parser::getStringCount() const noexcept {
-    size_t n{0};
-    for (const auto& token : raw_) {
-        if (token.type_ == TokenType::String) {
-            n++;
-        }
-    }
-    return n;
-}
-
-size_t Parser::getArrayCount() const noexcept {
-    size_t n{0};
-    for (const auto& token : raw_) {
-        if (token.type_ == TokenType::LeftSquareBracket) {
-            n++;
-        }
-    }
-    return n;
-}
-
-size_t Parser::getObjectCount() const noexcept {
-    size_t n{0};
-    for (const auto& token : raw_) {
-        if (token.type_ == TokenType::LeftCurlyBracket) {
-            n++;
-        }
-    }
-    return n;
-}
-
-Parser::TokenType Parser::peek() const noexcept {
-    return raw_[idx_].type_;
-}
-
-void Parser::advance() noexcept {
-    idx_++;
-}
-
-// =====================================================================
-// MESIN DECODER UNICODE & ESCAPE CHARACTER
-// =====================================================================
 std::string Parser::parseStringToken(const Token& token) noexcept {
     std::string result;
-    result.reserve(token.size_); // Optimasi memori
+    result.reserve(token.size_); 
 
     const char* ptr = token.ptr_;
     const size_t len = token.size_;
@@ -182,13 +141,13 @@ std::string Parser::parseStringToken(const Token& token) noexcept {
 }
 
 Parser::JsonValue Parser::buildNull() noexcept {
-    advance();
+    idx_++;
     return Parser::JsonValue::Null();
 }
 
 Parser::JsonValue Parser::buildBoolean() noexcept {
     const auto value = raw_[idx_].ptr_[0] == 't';
-    advance();
+    idx_++;
     return Parser::JsonValue::Boolean(value);
 }
 
@@ -200,7 +159,7 @@ Parser::JsonValue Parser::buildInteger() noexcept {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
-    advance();
+    idx_++;
     return Parser::JsonValue::Integer(value);
 }
 
@@ -212,7 +171,7 @@ Parser::JsonValue Parser::buildDouble() noexcept {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
-    advance();
+    idx_++;
     return Parser::JsonValue::Double(value);
 }
 
@@ -222,142 +181,117 @@ Parser::JsonValue Parser::buildString() noexcept {
     if (has_error())
         return Parser::JsonValue::Null();
 
-    const auto index = res_.addString(parsed_str);
-    advance();
+    const auto index = res_.commitString(parsed_str);
+    idx_++;
     return Parser::JsonValue::String(index);
 }
 
 Parser::JsonValue Parser::buildArray() noexcept {
-    const auto array_index = res_.addArray();
-    advance();
+    idx_++;
 
     if (idx_ >= raw_.size()) {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
 
-    if (peek() == TokenType::RightSquareBracket) {
-        advance();
-        return Parser::JsonValue::Array(array_index);
+    if (raw_[idx_].type_ == TokenType::RightSquareBracket) {
+        idx_++;
+        return Parser::JsonValue::Array(res_.sealArray(res_.getArrayOffset()));
     }
 
-    while (idx_ < raw_.size()) {
-        if (peek() == TokenType::RightSquareBracket || peek() == TokenType::Comma) {
-            status_ = core::JsonError::EmptyValue;
-            return Parser::JsonValue::Null();
-        }
+    const size_t start_offset = res_.getArrayOffset();
 
+    while (true) {
         auto value = buildValue();
         if (has_error()) {
-            return Parser::JsonValue::Null();
+            return JsonValue::Null();
         }
 
-        res_.array(array_index).push_back(value);
+        res_.pushArrayElement(value);
 
-        if (idx_ >= raw_.size()) {
-            status_ = core::JsonError::InvalidValue;
-            return Parser::JsonValue::Null();
-        }
-
-        if (peek() == TokenType::Comma) {
-            advance();
-            if (idx_ < raw_.size() && peek() == TokenType::RightSquareBracket) {
+        if (raw_[idx_].type_ == TokenType::Comma) {
+            ++idx_;
+            if (raw_[idx_].type_ == TokenType::RightSquareBracket) {
                 status_ = core::JsonError::TrailingComma;
-                return Parser::JsonValue::Null();
+                return models::JsonValue::Null();
             }
             continue;
         }
 
-        if (peek() == TokenType::RightSquareBracket) {
-            advance();
-            return Parser::JsonValue::Array(array_index);
+        if (raw_[idx_].type_ == TokenType::RightSquareBracket) {
+            ++idx_;
+            return models::JsonValue::Array(res_.sealArray(start_offset));
         }
 
         status_ = core::JsonError::MissingComma;
-        return Parser::JsonValue::Null();
+        return models::JsonValue::Null();
     }
-
-    status_ = core::JsonError::InvalidValue;
-    return Parser::JsonValue::Null();
 }
 
 Parser::JsonValue Parser::buildObject() noexcept {
-    const auto object_index = res_.addObject();
-    advance();
+    idx_++;
 
     if (idx_ >= raw_.size()) {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
 
-    if (peek() == TokenType::RightCurlyBracket) {
-        advance();
-        return Parser::JsonValue::Object(object_index);
+    if (raw_[idx_].type_ == TokenType::RightCurlyBracket) {
+        idx_++;
+        return Parser::JsonValue::Object(res_.sealObject(res_.getObjectOffset()));
     }
 
-    while (idx_ < raw_.size()) {
-        if (peek() != TokenType::String) {
+    const size_t start_offset = res_.getObjectOffset();
+
+    while (true) {
+        if (raw_[idx_].type_ != TokenType::String) {
             status_ = core::JsonError::UnquotedKey;
-            return Parser::JsonValue::Null();
+            return JsonValue::Null();
         }
 
-        // Jalankan mesin unescape untuk Kunci (Key) Object
-        auto parsed_key = parseStringToken(raw_[idx_]);
-        if (has_error())
-            return Parser::JsonValue::Null();
+        // Terapkan Zero-copy fallback atau Unescaping untuk Key objek JSON
+        std::string_view key_val = raw_[idx_].value();
+		std::string key_buf;
+        if (raw_[idx_].has_escape_) {
+            key_buf = parseStringToken(raw_[idx_]);
+            if (has_error())
+                return JsonValue::Null();
+			key_val = key_buf;
+        }
 
-        const auto key_index = res_.addString(parsed_key);
-        advance();
+        const auto key_index = res_.commitString(key_val);
+        ++idx_;
 
-        if (idx_ >= raw_.size() || peek() != TokenType::Colon) {
+        if (raw_[idx_].type_ != TokenType::Colon) {
             status_ = core::JsonError::InvalidType;
-            return Parser::JsonValue::Null();
+            return JsonValue::Null();
         }
-        advance();
-
-        if (idx_ >= raw_.size()) {
-            status_ = core::JsonError::EmptyValue;
-            return Parser::JsonValue::Null();
-        }
-
-        if (peek() == TokenType::RightCurlyBracket || peek() == TokenType::Comma) {
-            status_ = core::JsonError::EmptyValue;
-            return Parser::JsonValue::Null();
-        }
+        ++idx_;
 
         auto value = buildValue();
         if (has_error()) {
-            return Parser::JsonValue::Null();
+            return JsonValue::Null();
         }
 
-        res_.object(object_index)
-            .push_back(Parser::JsonMember{.key_index_ = key_index, .value_ = value});
+        res_.pushObjectMember(JsonMember{.key_index_ = key_index, .value_ = value});
 
-        if (idx_ >= raw_.size()) {
-            status_ = core::JsonError::InvalidValue;
-            return Parser::JsonValue::Null();
-        }
-
-        if (peek() == TokenType::Comma) {
-            advance();
-            if (idx_ < raw_.size() && peek() == TokenType::RightCurlyBracket) {
+        if (raw_[idx_].type_ == TokenType::Comma) {
+            ++idx_;
+            if (raw_[idx_].type_ == TokenType::RightCurlyBracket) {
                 status_ = core::JsonError::TrailingComma;
-                return Parser::JsonValue::Null();
+                return JsonValue::Null();
             }
             continue;
         }
 
-        if (peek() == TokenType::RightCurlyBracket) {
-            advance();
-            return Parser::JsonValue::Object(object_index);
+        if (raw_[idx_].type_ == TokenType::RightCurlyBracket) {
+            ++idx_;
+            return JsonValue::Object(res_.sealObject(start_offset));
         }
 
         status_ = core::JsonError::MissingComma;
-        return Parser::JsonValue::Null();
+        return JsonValue::Null();
     }
-
-    status_ = core::JsonError::InvalidValue;
-    return Parser::JsonValue::Null();
 }
 
 Parser::JsonValue Parser::buildValue() noexcept {
@@ -366,7 +300,7 @@ Parser::JsonValue Parser::buildValue() noexcept {
         return Parser::JsonValue::Null();
     }
 
-    switch (peek()) {
+    switch (raw_[idx_].type_) {
         case TokenType::Null:
             return buildNull();
         case TokenType::Boolean:
