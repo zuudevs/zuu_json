@@ -143,7 +143,7 @@ void Tokenizer::readNumeric() noexcept {
     }
 
     if (!is_error()) {
-        res_.emplace_back(type, raw_.data() + start, idx_ - start);
+        res_.emplace_back(type, std::string_view(raw_.data() + start, idx_ - start));
     }
 }
 
@@ -154,7 +154,7 @@ void Tokenizer::readAlphabet() noexcept {
             const auto size = sizeof("null") - 1;
             if (rem >= size && raw_[idx_ + 1] == 'u' && raw_[idx_ + 2] == 'l' &&
                 raw_[idx_ + 3] == 'l') {
-                res_.emplace_back(TokenType::Null, raw_.data() + idx_, size);
+                res_.emplace_back(TokenType::Null, std::string_view(raw_.data() + idx_, size));
                 idx_ += size;
                 return;
             }
@@ -164,7 +164,7 @@ void Tokenizer::readAlphabet() noexcept {
             const auto size = sizeof("true") - 1;
             if (rem >= size && raw_[idx_ + 1] == 'r' && raw_[idx_ + 2] == 'u' &&
                 raw_[idx_ + 3] == 'e') {
-                res_.emplace_back(TokenType::Boolean, raw_.data() + idx_, size);
+                res_.emplace_back(TokenType::Boolean, std::string_view(raw_.data() + idx_, size));
                 idx_ += size;
                 return;
             }
@@ -174,7 +174,7 @@ void Tokenizer::readAlphabet() noexcept {
             const auto size = sizeof("false") - 1;
             if (rem >= size && raw_[idx_ + 1] == 'a' && raw_[idx_ + 2] == 'l' &&
                 raw_[idx_ + 3] == 's' && raw_[idx_ + 4] == 'e') {
-                res_.emplace_back(TokenType::Boolean, raw_.data() + idx_, size);
+                res_.emplace_back(TokenType::Boolean, std::string_view(raw_.data() + idx_, size));
                 idx_ += size;
                 return;
             }
@@ -185,6 +185,7 @@ void Tokenizer::readAlphabet() noexcept {
             return;
         }
     }
+    status_ = Error::InvalidValue;
 }
 
 void Tokenizer::tokenize() noexcept {

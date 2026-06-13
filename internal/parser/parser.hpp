@@ -45,7 +45,7 @@ class Parser {
     size_t idx_{};
     Error status_{core::JsonError::None};
 
-    [[nodiscard]] std::string parseStringToken(const Token& token) noexcept;
+    [[nodiscard]] std::string_view parseStringToken(const Token& token) noexcept;
 
     [[nodiscard]] JsonValue buildNull() noexcept;
     [[nodiscard]] JsonValue buildBoolean() noexcept;
