@@ -36,12 +36,6 @@ bool Tokenizer::is_error() const noexcept {
     return status_ != Error::None;
 }
 
-void Tokenizer::skip_whitespace() noexcept {
-    while (idx_ < raw_.size() && utils::is_whitespace(raw_[idx_])) {
-        idx_++;
-    }
-}
-
 void Tokenizer::readString() noexcept {
     idx_++;
     size_t start = idx_;
@@ -180,15 +174,17 @@ void Tokenizer::readAlphabet() noexcept {
 
 void Tokenizer::tokenize() noexcept {
     while (idx_ < raw_.size()) {
-        skip_whitespace();
-
-        if (idx_ >= raw_.size()) {
-            break;
-        }
-
         char c = raw_[idx_];
-
         switch (c) {
+			case '\t':
+			case '\n':
+			case '\v':
+			case '\f':
+			case '\r': 
+			case ' ': {
+				idx_++;
+				continue;
+			}
             case '{': {
                 res_.emplace_back(TokenType::LeftCurlyBracket);
 				hint_.object_count++;
