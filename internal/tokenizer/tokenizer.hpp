@@ -23,7 +23,8 @@ class Tokenizer {
     using Token = models::Token;
     using Error = core::JsonError;
     using Result = std::vector<Token>;
-    using Expected = std::expected<Result, Error>;
+	using Resource = std::pair<Result, models::Hint<Token>>;
+    using Expected = std::expected<Resource, Error>;
     using Raw = std::span<const char>;
 
     explicit Tokenizer(Raw json_content) noexcept;
@@ -33,8 +34,8 @@ class Tokenizer {
 
   private:
     Result res_;
-    Raw raw_;
-    size_t idx_{0};
+    const char* current_;
+    const char* end_;
     Error status_{Error::None};
 
     [[nodiscard]] bool is_error() const noexcept;

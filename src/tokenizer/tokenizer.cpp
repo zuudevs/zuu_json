@@ -12,10 +12,17 @@
 #include "constants/general.hpp"
 #include "utils/strings.hpp"
 
+namespace {
+
+thread_local static inline zuu::models::Hint<zuu::models::Token> g_hint{};
+
+} // namespace
+
 namespace zuu::tokenizer {
 
 Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
-    : raw_(json_content) {
+    : current_(json_content.data())
+	, end_(json_content.data() + json_content.size()) {
 
     res_.reserve(json_content.size() / 4);
     tokenize();
@@ -25,7 +32,7 @@ Tokenizer::Expected Tokenizer::result() && noexcept {
     if (is_error()) {
         return std::unexpected{status_};
     }
-    return std::move(res_);
+    return std::pair{std::move(res_), std::move(g_hint)};
 }
 
 Tokenizer::Expected Tokenizer::Tokenize(Raw json_content) noexcept {
@@ -37,129 +44,190 @@ bool Tokenizer::is_error() const noexcept {
 }
 
 void Tokenizer::readString() noexcept {
-    idx_++;
-    size_t start = idx_;
+    auto begin = ++current_;
 
-    while (idx_ < raw_.size()) {
-        if (raw_[idx_] == '\\') {
-            idx_++;
-            if (idx_ < raw_.size()) {
-                idx_++;
+	do {
+		if (*current_ == '\\') {
+            current_++;
+            if (current_ != end_) {
+                current_++;
             }
             continue;
         }
-        if (raw_[idx_] == '\"') {
+        if (*current_ == '\"') {
             break;
         }
-        idx_++;
-    }
+        current_++;
+	} while (current_ != end_);
 
-    if (idx_ >= raw_.size() || raw_[idx_] != '\"') {
+    if (current_ >= end_ || *current_ != '\"') {
         status_ = Error::InvalidValue;
         return;
     }
 
-    res_.emplace_back(Token::Type::String, raw_.data() + start, idx_ - start);
+    res_.emplace_back(
+		Token::Type::String, 
+		begin, 
+		current_ - begin
+	);
 
-    idx_++;
+    current_++;
 }
 
 void Tokenizer::readNumeric() noexcept {
-    size_t start = idx_;
+    auto begin = current_;
     auto type = Token::Type::Integer;
 
-    if (idx_ < raw_.size() && raw_[idx_] == '-') {
-        idx_++;
+    if (
+		current_ < end_ && 
+		*current_ == '-'
+	) {
+        current_++;
     }
 
-    if (idx_ < raw_.size() && raw_[idx_] == '0') {
-        idx_++;
-        if (idx_ < raw_.size() &&
-            (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
+    if (
+		current_ < end_ && 
+		*current_ == '0'
+	) {
+        current_++;
+        if (
+			current_ < end_ &&
+            (static_cast<unsigned char>(*current_ - '0') < constants::digit)
+		) {
             status_ = Error::LeadingZero;
             return;
         }
-    } else if (idx_ < raw_.size() &&
-               (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
-        while (idx_ < raw_.size() &&
-               (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
-            idx_++;
+    } else if (
+		current_ < end_ && 
+		(static_cast<unsigned char>(*current_ - '0') < constants::digit)
+	) {
+        while (
+			current_ < end_ && 
+			(static_cast<unsigned char>(*current_ - '0') < constants::digit)
+		) {
+            current_++;
         }
     } else {
         status_ = Error::InvalidValue;
         return;
     }
 
-    if (idx_ < raw_.size() && raw_[idx_] == '.') {
+    if (
+		current_ < end_ && 
+		*current_ == '.'
+	) {
         type = Token::Type::Double;
-        idx_++;
+        current_++;
 
-        if (idx_ >= raw_.size() ||
-            (static_cast<unsigned char>(raw_[idx_] - '0') >= constants::digit)) {
+        if (
+			current_ >= end_ || 
+			(static_cast<unsigned char>(*current_ - '0') >= constants::digit)
+		) {
             status_ = Error::InvalidValue;
             return;
         }
 
-        while (idx_ < raw_.size() &&
-               (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
-            idx_++;
+        while (
+			current_ < end_ && 
+			(static_cast<unsigned char>(*current_ - '0') < constants::digit)
+		) {
+            current_++;
         }
     }
 
-    if (idx_ < raw_.size() && (raw_[idx_] == 'e' || raw_[idx_] == 'E')) {
+    if (
+		current_ < end_ && 
+		(*current_ == 'e' || *current_ == 'E')
+	) {
         type = Token::Type::Double;
-        idx_++;
+        current_++;
 
-        if (idx_ < raw_.size() && (raw_[idx_] == '+' || raw_[idx_] == '-')) {
-            idx_++;
+        if (
+			current_ < end_ && 
+			(*current_ == '+' || *current_ == '-')
+		) {
+            current_++;
         }
 
-        if (idx_ >= raw_.size() ||
-            (static_cast<unsigned char>(raw_[idx_] - '0') >= constants::digit)) {
+        if (
+			current_ >= end_ ||
+            (static_cast<unsigned char>(*current_ - '0') >= constants::digit)
+		) {
             status_ = Error::InvalidValue;
             return;
         }
 
-        while (idx_ < raw_.size() &&
-               (static_cast<unsigned char>(raw_[idx_] - '0') < constants::digit)) {
-            idx_++;
+        while (
+			current_ < end_ && 
+			(static_cast<unsigned char>(*current_ - '0') < constants::digit)
+		) {
+            current_++;
         }
     }
 
     if (!is_error()) {
-        res_.emplace_back(type, raw_.data() + start, idx_ - start);
+        res_.emplace_back(
+			type, 
+			begin, 
+			current_ - begin
+		);
     }
 }
 
 void Tokenizer::readAlphabet() noexcept {
-    const auto rem = raw_.size() - idx_;
-    switch (raw_[idx_]) {
+    const auto rem = end_ - current_;
+    switch (*current_) {
         case 'n': {
             const auto size = sizeof("null") - 1;
-            if (rem >= size && raw_[idx_ + 1] == 'u' && raw_[idx_ + 2] == 'l' &&
-                raw_[idx_ + 3] == 'l') {
-                res_.emplace_back(Token::Type::Null, raw_.data() + idx_, size);
-                idx_ += size;
+            if (
+				rem >= size && 
+				*(current_ + 1) == 'u' && 
+				*(current_ + 2) == 'l' &&
+                *(current_ + 3) == 'l'
+			) {
+                res_.emplace_back(
+					Token::Type::Null, 
+					current_, 
+					size
+				);
+                current_ += size;
                 return;
             }
             break;
         }
         case 't': {
             const auto size = sizeof("true") - 1;
-            if (rem >= size && raw_[idx_ + 1] == 'r' && raw_[idx_ + 2] == 'u' &&
-                raw_[idx_ + 3] == 'e') {
-                res_.emplace_back(Token::Type::Boolean, raw_.data() + idx_, size);
-                idx_ += size;
+            if (
+				rem >= size && 
+				*(current_ + 1) == 'r' && 
+				*(current_ + 2) == 'u' &&
+                *(current_ + 3) == 'e'
+			) {
+                res_.emplace_back(
+					Token::Type::Boolean, 
+					current_, 
+					size
+				);
+                current_ += size;
                 return;
             }
             break;
         }
         case 'f': {
             const auto size = sizeof("false") - 1;
-            if (rem >= size && raw_[idx_ + 1] == 'a' && raw_[idx_ + 2] == 'l' &&
-                raw_[idx_ + 3] == 's' && raw_[idx_ + 4] == 'e') {
-                res_.emplace_back(Token::Type::Boolean, raw_.data() + idx_, size);
-                idx_ += size;
+            if (
+				rem >= size && 
+				*(current_ + 1) == 'a' && 
+				*(current_ + 2) == 'l' &&
+                *(current_ + 3) == 's' && 
+				*(current_ + 4) == 'e'
+			) {
+                res_.emplace_back(
+					Token::Type::Boolean, 
+					current_, 
+					size
+				);
+                current_ += size;
                 return;
             }
             break;
@@ -171,8 +239,8 @@ void Tokenizer::readAlphabet() noexcept {
 }
 
 void Tokenizer::tokenize() noexcept {
-    while (idx_ < raw_.size()) {
-		char c = raw_[idx_];
+    while (current_ < end_) {
+		char c = *current_;
         switch (c) {
 			case '\t':
 			case '\n':
@@ -180,43 +248,46 @@ void Tokenizer::tokenize() noexcept {
 			case '\f':
 			case '\r': 
 			case ' ': {
-				idx_++;
+				current_++;
 				continue;
 			}
             case '{': {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
-                idx_++;
+				g_hint.object_count_++;
+                current_++;
                 continue;
             }
             case '}': {
                 res_.emplace_back(Token::Type::RightCurlyBracket);
-                idx_++;
+                current_++;
                 continue;
             }
             case '[': {
                 res_.emplace_back(Token::Type::LeftSquareBracket);
-                idx_++;
+				g_hint.array_count_++;
+                current_++;
                 continue;
             }
             case ']': {
                 res_.emplace_back(Token::Type::RightSquareBracket);
-                idx_++;
+                current_++;
                 continue;
             }
             case ':': {
                 res_.emplace_back(Token::Type::Colon);
-                idx_++;
+                current_++;
                 continue;
             }
             case ',': {
                 res_.emplace_back(Token::Type::Comma);
-                idx_++;
+                current_++;
                 continue;
             }
             case '\"': {
                 readString();
                 if (is_error())
                     return;
+				g_hint.string_count_++;
                 continue;
             }
             case '\'': {

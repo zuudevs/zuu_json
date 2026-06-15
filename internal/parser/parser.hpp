@@ -22,6 +22,7 @@ namespace zuu::parser {
 class Parser {
   public:
     using Token = models::Token;
+	using Hint = models::Hint<Token>;
     using TokenType = Token::Type;
     using Error = core::JsonError;
     using Storage = models::Storage;
@@ -30,25 +31,18 @@ class Parser {
     using Raw = std::span<const Token>;
     using Expected = std::expected<Storage, Error>;
 
-    explicit Parser(Raw tokens) noexcept;
+    explicit Parser(Raw tokens, Hint hint) noexcept;
 
     [[nodiscard]] Expected result() && noexcept;
     [[nodiscard]] bool has_error() const noexcept;
 
-    [[nodiscard]] static Expected Parse(Raw tokens) noexcept;
+    [[nodiscard]] static Expected Parse(Raw tokens, Hint hint) noexcept;
 
   private:
-    Raw raw_;
     Storage res_;
-    size_t idx_{};
+	const Token* current_;
+	const Token* end_;
     Error status_{core::JsonError::None};
-
-    [[nodiscard]] size_t getStringCount() const noexcept;
-    [[nodiscard]] size_t getArrayCount() const noexcept;
-    [[nodiscard]] size_t getObjectCount() const noexcept;
-
-    [[nodiscard]] Token::Type peek() const noexcept;
-    void advance() noexcept;
 
     [[nodiscard]] std::string parseStringToken(const Token& token) noexcept;
 

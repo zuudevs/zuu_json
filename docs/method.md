@@ -8,3 +8,6 @@
 | M005 | SWAR (SIMD with a register) |
 | M006 | NaN Boxing |
 | M007 | Bump Allocator |
+|---|---|
+| M008 | Pointer Arithmetic + Lookup Table |
+| M009 | Pointer Arithmetic + Lexical Profiller & Deterministic pre-Allocation |

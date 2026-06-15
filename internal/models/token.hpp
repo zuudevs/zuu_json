@@ -10,24 +10,10 @@
 
 #pragma once
 
-namespace zuu {
+#include "hint.hpp"
+namespace zuu::models {
 
-namespace tokenizer {
-
-class Tokenizer;
-
-} // namespace tokenizer
-
-namespace parser {
-
-class Parser;
-
-} // namespace parser
-
-namespace models {
-
-class Token {
-  public:
+struct Token {
     enum class Type : unsigned char {
         LeftCurlyBracket,
         RightCurlyBracket,
@@ -44,20 +30,28 @@ class Token {
         Unknown,
     };
 
-    Token(Type type, const char* ptr = "", unsigned size = 0) noexcept
-        : ptr_(ptr)
+    Token(Type type, const char* begin = "", unsigned size = 0) noexcept
+        : begin_(begin)
         , size_(size)
         , type_(type) {}
 
-  private:
-    const char* ptr_;
+    const char* begin_;
     unsigned size_;
     Type type_;
-
-    friend class tokenizer::Tokenizer;
-    friend class parser::Parser;
 };
 
-} // namespace models
+template <>
+struct Hint<Token> {
+	size_t string_count_{};
+	size_t array_count_{};
+	size_t object_count_{};
 
-} // namespace zuu
+	constexpr Hint() noexcept = default;
+	constexpr Hint(const Hint&) noexcept = delete;
+	constexpr Hint(Hint&&) noexcept = default;
+	constexpr ~Hint() noexcept = default;
+	constexpr Hint& operator=(const Hint&) noexcept = delete;
+	constexpr Hint& operator=(Hint&&) noexcept = default;
+};
+
+} // namespace zuu::models

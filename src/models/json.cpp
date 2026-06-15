@@ -27,7 +27,7 @@ Json::Result<Json> Json::parse(std::string_view content) noexcept {
         return std::unexpected{tokens.error()};
     }
 
-    parser::Parser parser(tokens.value());
+    parser::Parser parser(tokens.value().first, std::move(tokens.value().second));
     auto parsed = std::move(parser).result();
     if (!parsed) {
         return std::unexpected{parsed.error()};
@@ -43,11 +43,11 @@ Value Json::root() const noexcept {
 Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
     const auto& root_val = storage_->root();
 
-    if (root_val.type_ != models::JsonValue::Type::Object) {
+    if (root_val.get_type() != models::JsonValue::Type::Object) {
         return std::unexpected{Error::IsNotObject};
     }
 
-    const auto& obj = storage_->object(root_val.data_.index);
+    const auto& obj = storage_->object(root_val.as_index());
     for (const auto& member : obj) {
         if (storage_->string(member.key_index_) == key) {
             return Value::fromInternal(storage_.get(), member.value_);
