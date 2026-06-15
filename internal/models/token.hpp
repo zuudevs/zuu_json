@@ -38,7 +38,7 @@ struct Token {
 		, has_escape_(has_escape) {}
 	
 	[[nodiscard]] inline constexpr std::string_view 
-	value() noexcept {
+	value() const noexcept {
 		return {begin_, size_};
 	}
 
@@ -53,6 +53,7 @@ struct Hint<Token> {
 	size_t string_count_{};
 	size_t array_count_{};
 	size_t object_count_{};
+	size_t comma_count_{};
 	size_t string_escape_bytes_{};
 
 	constexpr Hint() noexcept = default;

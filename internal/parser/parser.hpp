@@ -13,7 +13,7 @@
 #include "models/storage.hpp"
 #include "zuu_json/core/error.hpp"
 #include <expected>
-#include <span>
+#include <string>
 
 namespace zuu::parser {
 
@@ -42,7 +42,8 @@ class Parser {
 	const Token* end_;
     Error status_{core::JsonError::None};
 
-    [[nodiscard]] std::string parseStringToken(const Token& token) noexcept;
+	[[nodiscard]] uint32_t decodeUnicodeHex(const char* ptr) noexcept;
+    [[nodiscard]] std::string_view unescapeString(std::string_view src) noexcept;
 
     [[nodiscard]] JsonValue buildNull() noexcept;
     [[nodiscard]] JsonValue buildBoolean() noexcept;

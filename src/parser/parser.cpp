@@ -36,110 +36,118 @@ Parser::Expected Parser::Parse(Raw tokens, Hint hint) noexcept {
     return Parser(tokens, hint).result();
 }
 
-std::string Parser::parseStringToken(const Token& token) noexcept {
-    std::string result;
-    result.reserve(token.size_); // Optimasi memori
+uint32_t Parser::decodeUnicodeHex(const char* ptr) noexcept {
+    uint32_t value = 0;
+    for (int i = 0; i < 4; ++i) {
+        char c = ptr[i];
+        value <<= 4;
+        if (c >= '0' && c <= '9')
+            value |= (c - '0');
+        else if (c >= 'a' && c <= 'f')
+            value |= (c - 'a' + 10);
+        else if (c >= 'A' && c <= 'F')
+            value |= (c - 'A' + 10);
+        else {
+            status_ = core::JsonError::InvalidValue;
+            return 0;
+        }
+    }
+    return value;
+}
 
-    const char* ptr = token.begin_;
-    const size_t len = token.size_;
+std::string_view Parser::unescapeString(std::string_view src) noexcept {
+    // Alokasikan ruang buffer di dalam Memory Arena
+    char* dest = res_.allocateStringBuffer(src.size());
+    char* out = dest;
+    const char* ptr = src.data();
+    const char* end = ptr + src.size();
 
-    for (size_t i = 0; i < len; ++i) {
-        if (ptr[i] == '\\') {
-            if (i + 1 >= len) {
-                status_ = core::JsonError::UnescapedCharacter;
-                return "";
-            }
-            i++; // Lewati backslash
-
-            switch (ptr[i]) {
+    while (ptr < end) {
+        if (*ptr == '\\') {
+            ++ptr;
+            if (ptr >= end)
+                break;
+            switch (*ptr) {
                 case '"':
-                    result.push_back('"');
+                    *out++ = '"';
                     break;
                 case '\\':
-                    result.push_back('\\');
+                    *out++ = '\\';
                     break;
                 case '/':
-                    result.push_back('/');
+                    *out++ = '/';
                     break;
                 case 'b':
-                    result.push_back('\b');
+                    *out++ = '\b';
                     break;
                 case 'f':
-                    result.push_back('\f');
+                    *out++ = '\f';
                     break;
                 case 'n':
-                    result.push_back('\n');
+                    *out++ = '\n';
                     break;
                 case 'r':
-                    result.push_back('\r');
+                    *out++ = '\r';
                     break;
                 case 't':
-                    result.push_back('\t');
+                    *out++ = '\t';
                     break;
                 case 'u': {
-                    if (i + 4 >= len) {
-                        status_ = core::JsonError::InvalidUnicode;
-                        return "";
+                    if (ptr + 5 > end) {
+                        status_ = core::JsonError::InvalidValue;
+                        return {};
                     }
+                    uint32_t cp = decodeUnicodeHex(ptr + 1);
+                    ptr += 4;
 
-                    // Baca 4 digit hex (\uXXXX)
-                    uint32_t cp = 0;
-                    for (int j = 1; j <= 4; ++j) {
-                        int hex = utils::hex_to_int(ptr[i + j]);
-                        if (hex < 0) {
-                            status_ = core::JsonError::InvalidUnicode;
-                            return "";
-                        }
-                        cp = (cp << 4) | hex;
-                    }
-                    i += 4;
-
-                    // Validasi Surrogate Pair (Kombinasi 2 codepoint untuk karakter > 16-bit
-                    // seperti Emoji)
-                    if (cp >= 0xD800 && cp <= 0xDBFF) { // High Surrogate
-                        if (i + 6 >= len || ptr[i + 1] != '\\' || ptr[i + 2] != 'u') {
-                            status_ = core::JsonError::InvalidSurrogate;
-                            return "";
-                        }
-
-                        uint32_t cp2 = 0;
-                        for (int j = 3; j <= 6; ++j) {
-                            int hex = utils::hex_to_int(ptr[i + j]);
-                            if (hex < 0) {
-                                status_ = core::JsonError::InvalidSurrogate;
-                                return "";
+                    // Konversi UTF-16 Surrogate Pairs ke format UTF-8
+                    if (cp >= 0xD800 && cp <= 0xDBFF) {
+                        if (ptr + 6 <= end && ptr[1] == '\\' && ptr[2] == 'u') {
+                            uint32_t cp2 = decodeUnicodeHex(ptr + 3);
+                            if (cp2 >= 0xDC00 && cp2 <= 0xDFFF) {
+                                cp = 0x10000 + (((cp - 0xD800) << 10) | (cp2 - 0xDC00));
+                                ptr += 6;
+                            } else {
+                                status_ = core::JsonError::InvalidValue;
+                                return {};
                             }
-                            cp2 = (cp2 << 4) | hex;
+                        } else {
+                            status_ = core::JsonError::InvalidValue;
+                            return {};
                         }
-
-                        if (cp2 < 0xDC00 || cp2 > 0xDFFF) { // Low Surrogate
-                            status_ = core::JsonError::InvalidSurrogate;
-                            return "";
-                        }
-
-                        // Gabungkan menjadi codepoint aslinya
-                        cp = 0x10000 + (((cp - 0xD800) << 10) | (cp2 - 0xDC00));
-                        i += 6;
-                    } else if (cp >= 0xDC00 && cp <= 0xDFFF) {
-                        // Low Surrogate yg berdiri sendirian itu terlarang
-                        status_ = core::JsonError::InvalidSurrogate;
-                        return "";
                     }
 
-                    // Tulis Codepoint menjadi bytes UTF-8 ke dalam string
-                    utils::encode_utf8(cp, result);
+                    // Tulis hasil UTF-8 ke tujuan memory arena
+                    if (cp <= 0x7F) {
+                        *out++ = static_cast<char>(cp);
+                    } else if (cp <= 0x7FF) {
+                        *out++ = static_cast<char>(0xC0 | ((cp >> 6) & 0x1F));
+                        *out++ = static_cast<char>(0x80 | (cp & 0x3F));
+                    } else if (cp <= 0xFFFF) {
+                        *out++ = static_cast<char>(0xE0 | ((cp >> 12) & 0x0F));
+                        *out++ = static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+                        *out++ = static_cast<char>(0x80 | (cp & 0x3F));
+                    } else if (cp <= 0x10FFFF) {
+                        *out++ = static_cast<char>(0xF0 | ((cp >> 18) & 0x07));
+                        *out++ = static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
+                        *out++ = static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+                        *out++ = static_cast<char>(0x80 | (cp & 0x3F));
+                    } else {
+                        status_ = core::JsonError::InvalidValue;
+                        return {};
+                    }
                     break;
                 }
                 default:
-                    status_ = core::JsonError::UnescapedCharacter;
-                    return "";
+                    status_ = core::JsonError::InvalidValue;
+                    return {};
             }
         } else {
-            // Karakter ASCII normal atau UTF-8 mentah (passthrough)
-            result.push_back(ptr[i]);
+            *out++ = *ptr;
         }
+        ++ptr;
     }
-    return result;
+    return {dest, static_cast<size_t>(out - dest)};
 }
 
 Parser::JsonValue Parser::buildNull() noexcept {
@@ -192,167 +200,118 @@ Parser::JsonValue Parser::buildDouble() noexcept {
 }
 
 Parser::JsonValue Parser::buildString() noexcept {
-    // Jalankan mesin unescape untuk nilai String
-    auto parsed_str = parseStringToken(*current_);
-    if (has_error()) {
-        return Parser::JsonValue::Null();
-	}
-    const auto index = res_.addString(parsed_str);
-    current_++;
+    std::string_view val = current_->value();
+
+    // Lazy Evaluation: Decode hanya jika terbukti ada karakter escape
+    if (current_->has_escape_) {
+        val = unescapeString(val);
+        if (has_error()) {
+            return JsonValue::Null();
+        }
+    }
+
+    const auto index = res_.commitString(val);
+    ++current_;
     return Parser::JsonValue::String(index);
 }
 
 Parser::JsonValue Parser::buildArray() noexcept {
-    const auto array_index = res_.addArray();
-    current_++;
-
-    if (current_ >= end_) {
-        status_ = core::JsonError::InvalidValue;
-        return Parser::JsonValue::Null();
-    }
+    ++current_;
 
     if (current_->type_ == TokenType::RightSquareBracket) {
-        current_++;
-        return Parser::JsonValue::Array(array_index);
+        ++current_;
+        return JsonValue::Array(res_.sealArray(res_.getArrayOffset()));
     }
 
-    while (current_ < end_) {
-        if (
-			current_->type_ == TokenType::RightSquareBracket || 
-			current_->type_ == TokenType::Comma
-		) {
-            status_ = core::JsonError::EmptyValue;
-            return Parser::JsonValue::Null();
-        }
+    const size_t start_offset = res_.getArrayOffset();
 
+    while (true) {
         auto value = buildValue();
         if (has_error()) {
-            return Parser::JsonValue::Null();
+            return JsonValue::Null();
         }
 
-        res_.array(array_index).push_back(value);
-
-        if (current_ >= end_) {
-            status_ = core::JsonError::InvalidValue;
-            return Parser::JsonValue::Null();
-        }
+        res_.pushArrayElement(value);
 
         if (current_->type_ == TokenType::Comma) {
-            current_++;
-            if (
-				current_ < end_ && 
-				current_->type_ == TokenType::RightSquareBracket
-			) {
+            ++current_;
+            if (current_->type_ == TokenType::RightSquareBracket) {
                 status_ = core::JsonError::TrailingComma;
-                return Parser::JsonValue::Null();
+                return models::JsonValue::Null();
             }
             continue;
         }
 
         if (current_->type_ == TokenType::RightSquareBracket) {
-            current_++;
-            return Parser::JsonValue::Array(array_index);
+            ++current_;
+            return models::JsonValue::Array(res_.sealArray(start_offset));
         }
 
         status_ = core::JsonError::MissingComma;
-        return Parser::JsonValue::Null();
+        return models::JsonValue::Null();
     }
-
-    status_ = core::JsonError::InvalidValue;
-    return Parser::JsonValue::Null();
 }
 
 Parser::JsonValue Parser::buildObject() noexcept {
-    const auto object_index = res_.addObject();
-    current_++;
-
-    if (current_ >= end_) {
-        status_ = core::JsonError::InvalidValue;
-        return Parser::JsonValue::Null();
-    }
+    ++current_;
 
     if (current_->type_ == TokenType::RightCurlyBracket) {
-        current_++;
-        return Parser::JsonValue::Object(object_index);
+        ++current_;
+        return JsonValue::Object(res_.sealObject(res_.getObjectOffset()));
     }
 
-    while (current_ < end_) {
-        if (current_->type_ != TokenType::String) {
+    const size_t start_offset = res_.getObjectOffset();
+
+    while (true) {
+        if (current_->type_ != TokenType::String) [[unlikely]] {
             status_ = core::JsonError::UnquotedKey;
-            return Parser::JsonValue::Null();
+            return JsonValue::Null();
         }
 
-        // Jalankan mesin unescape untuk Kunci (Key) Object
-        auto parsed_key = parseStringToken(*current_);
-        if (has_error())
-            return Parser::JsonValue::Null();
+        // Terapkan Zero-copy fallback atau Unescaping untuk Key objek JSON
+        std::string_view key_val = current_->value();
+        if (current_->has_escape_) {
+            key_val = unescapeString(key_val);
+            if (has_error()) [[unlikely]]
+                return JsonValue::Null();
+        }
 
-        const auto key_index = res_.addString(parsed_key);
-        current_++;
+        const auto key_index = res_.commitString(key_val);
+        ++current_;
 
-        if (
-			current_ >= end_ || 
-			current_->type_ != TokenType::Colon
-		) {
+        if (current_->type_ != TokenType::Colon) [[unlikely]] {
             status_ = core::JsonError::InvalidType;
-            return Parser::JsonValue::Null();
+            return JsonValue::Null();
         }
-        current_++;
-
-        if (current_ >= end_) {
-            status_ = core::JsonError::EmptyValue;
-            return Parser::JsonValue::Null();
-        }
-
-        if (
-			current_->type_ == TokenType::RightCurlyBracket || 
-			current_->type_ == TokenType::Comma
-		) {
-            status_ = core::JsonError::EmptyValue;
-            return Parser::JsonValue::Null();
-        }
+        ++current_;
 
         auto value = buildValue();
-        if (has_error()) {
-            return Parser::JsonValue::Null();
+        if (has_error()) [[unlikely]] {
+            return JsonValue::Null();
         }
 
-        res_.object(object_index)
-            .push_back(Parser::JsonMember{.key_index_ = key_index, .value_ = value});
+        res_.pushObjectMember(JsonMember{.key_index_ = key_index, .value_ = value});
 
-        if (current_ >= end_) {
-            status_ = core::JsonError::InvalidValue;
-            return Parser::JsonValue::Null();
-        }
-
-        if (current_->type_ == TokenType::Comma) {
-            current_++;
-            if (current_ < end_ && current_->type_ == TokenType::RightCurlyBracket) {
+        if (current_->type_ == TokenType::Comma) [[likely]] {
+            ++current_;
+            if (current_->type_ == TokenType::RightCurlyBracket) [[unlikely]] {
                 status_ = core::JsonError::TrailingComma;
-                return Parser::JsonValue::Null();
+                return JsonValue::Null();
             }
             continue;
         }
 
-        if (current_->type_ == TokenType::RightCurlyBracket) {
-            current_++;
-            return Parser::JsonValue::Object(object_index);
+        if (current_->type_ == TokenType::RightCurlyBracket) [[likely]] {
+            ++current_;
+            return JsonValue::Object(res_.sealObject(start_offset));
         }
 
         status_ = core::JsonError::MissingComma;
-        return Parser::JsonValue::Null();
+        return JsonValue::Null();
     }
-
-    status_ = core::JsonError::InvalidValue;
-    return Parser::JsonValue::Null();
 }
 
 Parser::JsonValue Parser::buildValue() noexcept {
-    if (current_ >= end_) {
-        status_ = core::JsonError::EmptyValue;
-        return Parser::JsonValue::Null();
-    }
-
     switch (current_->type_) {
         case TokenType::Null:
             return buildNull();
@@ -381,10 +340,7 @@ Parser::JsonValue Parser::buildValue() noexcept {
 }
 
 void Parser::parse() noexcept {
-    if (
-		current_ == end_ || 
-		current_->type_ == TokenType::EndOfFile
-	) {
+    if (current_ == end_ || current_->type_ == TokenType::EndOfFile) {
         status_ = core::JsonError::EmptyValue;
         return;
     }
@@ -395,10 +351,7 @@ void Parser::parse() noexcept {
     }
 
     res_.setRoot(root);
-    if (
-		current_ == end_ || 
-		current_->type_ != TokenType::EndOfFile
-	) {
+    if (current_ == end_ || current_->type_ != TokenType::EndOfFile) {
         status_ = core::JsonError::InvalidValue;
     }
 }

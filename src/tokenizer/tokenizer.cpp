@@ -299,6 +299,7 @@ void Tokenizer::tokenize() noexcept {
             }
             case ',': {
                 res_.emplace_back(Token::Type::Comma);
+				hint_.comma_count_++;
                 current_++;
                 continue;
             }
