@@ -113,7 +113,7 @@ class Benchmark {
         const size_t nodes_count = tokens_result->first.size();
 
         for (auto _ : state) {
-            zuu::parser::Parser parser(tokens_result->first, std::move(tokens_result->second));
+            zuu::parser::Parser parser(tokens_result->first, tokens_result->second);
             auto parsed = std::move(parser).result();
 
             if (!parsed) {

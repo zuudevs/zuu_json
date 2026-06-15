@@ -1,10 +1,12 @@
 @echo off
 
-if not exist "..\samples" (
-    mkdir "..\samples"
+set "SCRIPT_DIR=%~dp0"
+
+if not exist "%SCRIPT_DIR%..\samples" (
+    mkdir "%SCRIPT_DIR%..\samples"
 )
 
-cd /d "..\samples"
+cd /d "%SCRIPT_DIR%..\samples"
 
 echo Get sample pack from repository...
 git clone https://github.com/zuudevs/zuu_json_sample.git

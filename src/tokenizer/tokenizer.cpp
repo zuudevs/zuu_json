@@ -12,12 +12,6 @@
 #include "constants/general.hpp"
 #include "utils/strings.hpp"
 
-namespace {
-
-thread_local static inline zuu::models::Hint<zuu::models::Token> g_hint{};
-
-} // namespace
-
 namespace zuu::tokenizer {
 
 Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
@@ -32,7 +26,7 @@ Tokenizer::Expected Tokenizer::result() && noexcept {
     if (is_error()) {
         return std::unexpected{status_};
     }
-    return std::pair{std::move(res_), std::move(g_hint)};
+    return std::pair{std::move(res_), hint_};
 }
 
 Tokenizer::Expected Tokenizer::Tokenize(Raw json_content) noexcept {
@@ -253,7 +247,7 @@ void Tokenizer::tokenize() noexcept {
 			}
             case '{': {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
-				g_hint.object_count_++;
+				hint_.object_count_++;
                 current_++;
                 continue;
             }
@@ -264,7 +258,7 @@ void Tokenizer::tokenize() noexcept {
             }
             case '[': {
                 res_.emplace_back(Token::Type::LeftSquareBracket);
-				g_hint.array_count_++;
+				hint_.array_count_++;
                 current_++;
                 continue;
             }
@@ -287,7 +281,7 @@ void Tokenizer::tokenize() noexcept {
                 readString();
                 if (is_error())
                     return;
-				g_hint.string_count_++;
+				hint_.string_count_++;
                 continue;
             }
             case '\'': {

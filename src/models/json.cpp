@@ -27,7 +27,7 @@ Json::Result<Json> Json::parse(std::string_view content) noexcept {
         return std::unexpected{tokens.error()};
     }
 
-    parser::Parser parser(tokens.value().first, std::move(tokens.value().second));
+    parser::Parser parser(tokens.value().first, tokens.value().second);
     auto parsed = std::move(parser).result();
     if (!parsed) {
         return std::unexpected{parsed.error()};

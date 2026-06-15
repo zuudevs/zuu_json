@@ -23,6 +23,7 @@ class Tokenizer {
     using Token = models::Token;
     using Error = core::JsonError;
     using Result = std::vector<Token>;
+	using Hint = models::Hint<Token>;
 	using Resource = std::pair<Result, models::Hint<Token>>;
     using Expected = std::expected<Resource, Error>;
     using Raw = std::span<const char>;
@@ -34,6 +35,7 @@ class Tokenizer {
 
   private:
     Result res_;
+	Hint hint_{};
     const char* current_;
     const char* end_;
     Error status_{Error::None};

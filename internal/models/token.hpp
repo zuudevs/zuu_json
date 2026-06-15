@@ -47,10 +47,10 @@ struct Hint<Token> {
 	size_t object_count_{};
 
 	constexpr Hint() noexcept = default;
-	constexpr Hint(const Hint&) noexcept = delete;
+	constexpr Hint(const Hint&) noexcept = default;
 	constexpr Hint(Hint&&) noexcept = default;
 	constexpr ~Hint() noexcept = default;
-	constexpr Hint& operator=(const Hint&) noexcept = delete;
+	constexpr Hint& operator=(const Hint&) noexcept = default;
 	constexpr Hint& operator=(Hint&&) noexcept = default;
 };
 

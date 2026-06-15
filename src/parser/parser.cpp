@@ -33,7 +33,7 @@ bool Parser::has_error() const noexcept {
 }
 
 Parser::Expected Parser::Parse(Raw tokens, Hint hint) noexcept {
-    return Parser(tokens, std::move(hint)).result();
+    return Parser(tokens, hint).result();
 }
 
 // =====================================================================
