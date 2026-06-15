@@ -28,7 +28,7 @@ Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
     : current_(json_content.data())
 	, end_(json_content.data() + json_content.size()) {
 
-    res_.reserve(json_content.size() / 4);
+    res_.reserve((json_content.size() >> 1) + 16);
     tokenize();
 }
 
@@ -67,7 +67,7 @@ void Tokenizer::readString() noexcept {
     // Slow-path skalar untuk resolusi akhir dan tracking escape character
     while (ptr < end) {
         char c = *ptr;
-        if (c == '"') {
+        if (c == '"') [[likely]] {
             res_.emplace_back(
                 Token::Type::String, 
 				std::string_view(begin, ptr - begin), 
@@ -82,7 +82,7 @@ void Tokenizer::readString() noexcept {
             current_ = ptr + 1;
             return;
         }
-        if (c == '\\') {
+        if (c == '\\') [[unlikely]] {
             has_escape = true;
             ptr += 2; // Lewati karakter escape
             if (ptr > end) {
@@ -191,8 +191,7 @@ void Tokenizer::readNumeric() noexcept {
     if (!is_error()) {
         res_.emplace_back(
 			type, 
-			begin, 
-			current_ - begin
+			std::string_view(begin, current_ - begin)
 		);
     }
 }
@@ -210,8 +209,7 @@ void Tokenizer::readAlphabet() noexcept {
 			) {
                 res_.emplace_back(
 					Token::Type::Null, 
-					current_, 
-					size
+					std::string_view(current_, size)
 				);
                 current_ += size;
                 return;
@@ -228,8 +226,7 @@ void Tokenizer::readAlphabet() noexcept {
 			) {
                 res_.emplace_back(
 					Token::Type::Boolean, 
-					current_, 
-					size
+					std::string_view(current_, size)
 				);
                 current_ += size;
                 return;
@@ -247,8 +244,7 @@ void Tokenizer::readAlphabet() noexcept {
 			) {
                 res_.emplace_back(
 					Token::Type::Boolean, 
-					current_, 
-					size
+					std::string_view(current_, size)
 				);
                 current_ += size;
                 return;
