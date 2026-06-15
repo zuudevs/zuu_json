@@ -11,6 +11,7 @@
 #pragma once
 
 #include "hint.hpp"
+#include <string_view>
 
 namespace zuu::models {
 
@@ -31,10 +32,15 @@ struct Token {
         Unknown,
     };
 
-    Token(Type type, const char* begin = "", unsigned size = 0) noexcept
-        : begin_(begin)
-        , size_(size)
+    Token(Type type, std::string_view value = "") noexcept
+        : begin_(value.data())
+        , size_(value.size())
         , type_(type) {}
+
+	[[nodiscard]] inline constexpr std::string_view
+	value() const noexcept {
+		return {begin_, size_};
+	}
 
     const char* begin_;
     unsigned size_;

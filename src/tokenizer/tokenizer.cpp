@@ -19,7 +19,7 @@ Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
     : current_(json_content.data())
 	, end_(json_content.data() + json_content.size()) {
 
-    res_.reserve(json_content.size() / 4);
+    res_.reserve((json_content.size() >> 1) + 16);
     tokenize();
 }
 
@@ -62,8 +62,7 @@ void Tokenizer::readString() noexcept {
 
     res_.emplace_back(
 		Token::Type::String, 
-		begin, 
-		current_ - begin
+		std::string_view(begin, current_ - begin)
 	);
 
     current_++;
@@ -163,8 +162,7 @@ void Tokenizer::readNumeric() noexcept {
     if (!is_error()) {
         res_.emplace_back(
 			type, 
-			begin, 
-			current_ - begin
+			std::string_view(begin, current_ - begin)
 		);
     }
 }
@@ -182,8 +180,7 @@ void Tokenizer::readAlphabet() noexcept {
 			) {
                 res_.emplace_back(
 					Token::Type::Null, 
-					current_, 
-					size
+					std::string_view(current_, size)
 				);
                 current_ += size;
                 return;
@@ -200,8 +197,7 @@ void Tokenizer::readAlphabet() noexcept {
 			) {
                 res_.emplace_back(
 					Token::Type::Boolean, 
-					current_, 
-					size
+					std::string_view(current_, size)
 				);
                 current_ += size;
                 return;
@@ -219,8 +215,7 @@ void Tokenizer::readAlphabet() noexcept {
 			) {
                 res_.emplace_back(
 					Token::Type::Boolean, 
-					current_, 
-					size
+					std::string_view(current_, size)
 				);
                 current_ += size;
                 return;
