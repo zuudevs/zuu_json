@@ -10,6 +10,7 @@
 
 #include "tokenizer/tokenizer.hpp"
 #include "constants/general.hpp"
+#include "constants/token_lut.hpp"
 #include "utils/strings.hpp"
 
 namespace zuu::tokenizer {
@@ -234,72 +235,69 @@ void Tokenizer::readAlphabet() noexcept {
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
-		char c = *current_;
-        switch (c) {
-			case '\t':
-			case '\n':
-			case '\v':
-			case '\f':
-			case '\r': 
-			case ' ': {
+        switch (constants::LUT_TOKEN[*current_]) {
+			case 0: {
 				current_++;
 				continue;
 			}
-            case '{': {
+            case 1: {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
 				hint_.object_count_++;
                 current_++;
                 continue;
             }
-            case '}': {
+            case 2: {
                 res_.emplace_back(Token::Type::RightCurlyBracket);
                 current_++;
                 continue;
             }
-            case '[': {
+            case 3: {
                 res_.emplace_back(Token::Type::LeftSquareBracket);
 				hint_.array_count_++;
                 current_++;
                 continue;
             }
-            case ']': {
+            case 4: {
                 res_.emplace_back(Token::Type::RightSquareBracket);
                 current_++;
                 continue;
             }
-            case ':': {
+            case 5: {
                 res_.emplace_back(Token::Type::Colon);
                 current_++;
                 continue;
             }
-            case ',': {
+            case 6: {
                 res_.emplace_back(Token::Type::Comma);
                 current_++;
                 continue;
             }
-            case '\"': {
+            case 7: {
                 readString();
                 if (is_error())
                     return;
 				hint_.string_count_++;
                 continue;
             }
-            case '\'': {
+			case 8: {
+				readNumeric();
+                if (is_error())
+                    return;
+                continue;
+			}
+			case 9: {
+				readAlphabet();
+                if (is_error())
+                    return;
+                continue;
+			}
+            case 10: {
                 status_ = Error::SingleQuotedString;
                 return;
             }
 			default: {
-				if (utils::is_numeric(c) || c == '-') {
-					readNumeric();
-				} else if (utils::is_alphabet(c)) {
-					readAlphabet();
-				} else {
-					status_ = Error::Unknown;
-					return;
-				}
-
-				if (is_error())
-					return;
+				status_ = Error::Unknown;
+				return;
 			}
         }
     }
