@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "models/token.hpp"
 #include "zuu_json/core/error.hpp"
+#include "models/token.hpp"
 #include <expected>
 #include <span>
 #include <vector>
@@ -29,9 +29,9 @@ class Tokenizer {
     using Raw = std::span<const char>;
 
     explicit Tokenizer(Raw json_content) noexcept;
-    [[nodiscard]] Expected result() && noexcept;
+    Expected result() && noexcept;
 
-    [[nodiscard]] static Expected Tokenize(Raw json_content) noexcept;
+    [[nodiscard]] static Expected Tokenize(Tokenizer::Raw json_content) noexcept;
 
   private:
     Result res_;

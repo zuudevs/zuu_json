@@ -11,6 +11,7 @@
 #pragma once
 
 #include "hint.hpp"
+
 namespace zuu::models {
 
 struct Token {
@@ -26,7 +27,7 @@ struct Token {
         Integer,
         Double,
         String,
-        EndOfFile,
+		EndOfFile,
         Unknown,
     };
 

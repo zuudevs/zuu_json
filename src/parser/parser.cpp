@@ -41,7 +41,7 @@ Parser::Expected Parser::Parse(Raw tokens, Hint hint) noexcept {
 // =====================================================================
 std::string Parser::parseStringToken(const Token& token) noexcept {
     std::string result;
-    result.reserve(token.size_); // Optimasi memori
+    result.reserve(token.size_);
 
     const char* ptr = token.begin_;
     const size_t len = token.size_;
@@ -52,7 +52,7 @@ std::string Parser::parseStringToken(const Token& token) noexcept {
                 status_ = core::JsonError::UnescapedCharacter;
                 return "";
             }
-            i++; // Lewati backslash
+            i++;
 
             switch (ptr[i]) {
                 case '"':
@@ -85,7 +85,6 @@ std::string Parser::parseStringToken(const Token& token) noexcept {
                         return "";
                     }
 
-                    // Baca 4 digit hex (\uXXXX)
                     uint32_t cp = 0;
                     for (int j = 1; j <= 4; ++j) {
                         int hex = utils::hex_to_int(ptr[i + j]);
@@ -97,8 +96,6 @@ std::string Parser::parseStringToken(const Token& token) noexcept {
                     }
                     i += 4;
 
-                    // Validasi Surrogate Pair (Kombinasi 2 codepoint untuk karakter > 16-bit
-                    // seperti Emoji)
                     if (cp >= 0xD800 && cp <= 0xDBFF) { // High Surrogate
                         if (i + 6 >= len || ptr[i + 1] != '\\' || ptr[i + 2] != 'u') {
                             status_ = core::JsonError::InvalidSurrogate;
@@ -138,7 +135,6 @@ std::string Parser::parseStringToken(const Token& token) noexcept {
                     return "";
             }
         } else {
-            // Karakter ASCII normal atau UTF-8 mentah (passthrough)
             result.push_back(ptr[i]);
         }
     }

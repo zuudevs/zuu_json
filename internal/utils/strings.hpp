@@ -22,15 +22,15 @@ namespace zuu::utils {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 [[nodiscard]] inline constexpr bool is_whitespace(char c) noexcept {
-    return c == '\t' || c == '\r' || c == '\n' || c == '\f' || c == ' ';
+    return c == '\t' || c == '\v' || c == '\r' || c == '\n' || c == '\f' || c == ' ';
 }
 [[nodiscard]] inline constexpr int hex_to_int(char c) noexcept {
     if (c >= '0' && c <= '9')
         return c - '0';
     if (c >= 'a' && c <= 'f')
-        return c - 'a' + 10;
+        return c - 'a' + constants::digit;
     if (c >= 'A' && c <= 'F')
-        return c - 'A' + 10;
+        return c - 'A' + constants::digit;
     return -1;
 }
 inline void encode_utf8(uint32_t cp, std::string& out) noexcept {
