@@ -1,0 +1,9 @@
+bin/
+build/
+assets/
+lib/
+result/
+graphify*/
+.claude/
+samples/
+CLAUDE.md
