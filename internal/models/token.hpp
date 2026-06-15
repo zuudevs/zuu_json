@@ -11,6 +11,7 @@
 #pragma once
 
 #include "hint.hpp"
+#include <string_view>
 namespace zuu::models {
 
 struct Token {
@@ -30,14 +31,21 @@ struct Token {
         Unknown,
     };
 
-    Token(Type type, const char* begin = "", unsigned size = 0) noexcept
-        : begin_(begin)
-        , size_(size)
-        , type_(type) {}
+    Token(Type type, std::string_view value = "", bool has_escape = false) noexcept
+        : begin_(value.data())
+        , size_(value.size())
+        , type_(type)
+		, has_escape_(has_escape) {}
+	
+	[[nodiscard]] inline constexpr std::string_view 
+	value() noexcept {
+		return {begin_, size_};
+	}
 
     const char* begin_;
     unsigned size_;
     Type type_;
+	bool has_escape_{false};
 };
 
 template <>
@@ -45,6 +53,7 @@ struct Hint<Token> {
 	size_t string_count_{};
 	size_t array_count_{};
 	size_t object_count_{};
+	size_t string_escape_bytes_{};
 
 	constexpr Hint() noexcept = default;
 	constexpr Hint(const Hint&) noexcept = default;

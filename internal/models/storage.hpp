@@ -11,6 +11,7 @@
 #pragma once
 
 #include "models/json_member.hpp"
+#include "models/token.hpp"
 #include <string>
 #include <string_view>
 #include <vector>
@@ -20,6 +21,8 @@ namespace zuu::models {
 class Storage {
   public:
     using Type = JsonValue::Type;
+	using Token = models::Token;
+	using Hint = models::Hint<Token>;
     using JsonArray = std::vector<JsonValue>;
     using JsonObject = std::vector<JsonMember>;
 
@@ -29,7 +32,7 @@ class Storage {
     Storage(const Storage&) noexcept = delete;
     Storage& operator=(const Storage&) noexcept = delete;
     ~Storage() noexcept = default;
-    Storage(size_t strings_cap, size_t arrays_cap, size_t objects_cap) noexcept;
+    Storage(Hint hints) noexcept;
 
     [[nodiscard]] bool hasRoot() const noexcept;
     void setRoot(JsonValue value) noexcept;

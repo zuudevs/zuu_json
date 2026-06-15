@@ -17,7 +17,7 @@ namespace zuu::parser {
 Parser::Parser(Raw tokens, Hint hint) noexcept
     : current_(tokens.data())
 	, end_(tokens.data() + tokens.size())
-	, res_(hint.string_count_, hint.array_count_, hint.object_count_) {
+	, res_(hint) {
     parse();
 }
 
@@ -36,9 +36,6 @@ Parser::Expected Parser::Parse(Raw tokens, Hint hint) noexcept {
     return Parser(tokens, hint).result();
 }
 
-// =====================================================================
-// MESIN DECODER UNICODE & ESCAPE CHARACTER
-// =====================================================================
 std::string Parser::parseStringToken(const Token& token) noexcept {
     std::string result;
     result.reserve(token.size_); // Optimasi memori
