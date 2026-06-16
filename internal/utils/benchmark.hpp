@@ -84,7 +84,7 @@ class Benchmark {
             }
             benchmark::DoNotOptimize(tokens);
         }
-        state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * bytes_processed);
+        state.SetBytesProcessed(static_cast<long long>(state.iterations()) * bytes_processed);
     }
 
     static void SmallTokenizer(benchmark::State& state);
@@ -153,7 +153,7 @@ class Benchmark {
             }
             benchmark::DoNotOptimize(json);
         }
-        state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * bytes_processed);
+        state.SetBytesProcessed(static_cast<long long>(state.iterations()) * bytes_processed);
     }
 
     static void SmallFullPipeline(benchmark::State& state);

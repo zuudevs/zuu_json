@@ -8,19 +8,19 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "tokenizer/tokenizer.hpp"
 #include "constants/general.hpp"
-#include "utils/strings.hpp"
+#include <cstring>
+#include "tokenizer/tokenizer.hpp"
 
 namespace zuu::tokenizer {
 
-[[nodiscard]] inline constexpr bool has_zero_byte(uint64_t v) noexcept {
+[[nodiscard]] inline constexpr bool has_zero_byte(unsigned long long v) noexcept {
     return (v - 0x0101010101010101ULL) & ~v & 0x8080808080808080ULL;
 }
 
-[[nodiscard]] inline constexpr bool has_quote_or_escape(uint64_t v) noexcept {
-    const uint64_t quote_mask = v ^ 0x2222222222222222ULL;
-    const uint64_t escape_mask = v ^ 0x5C5C5C5C5C5C5C5CULL;
+[[nodiscard]] inline constexpr bool has_quote_or_escape(unsigned long long v) noexcept {
+    const unsigned long long quote_mask = v ^ 0x2222222222222222ULL;
+    const unsigned long long escape_mask = v ^ 0x5C5C5C5C5C5C5C5CULL;
     return has_zero_byte(quote_mask) | has_zero_byte(escape_mask);
 }
 
@@ -55,7 +55,7 @@ void Tokenizer::readString() noexcept {
 
     // Fast-path SWAR: Pindai 8 bytes sekaligus
     while (ptr + 8 <= end) {
-        uint64_t block{};
+        unsigned long long block{};
         std::memcpy(&block, ptr, 8);
 
         if (has_quote_or_escape(block)) {
