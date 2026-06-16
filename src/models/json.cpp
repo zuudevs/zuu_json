@@ -13,8 +13,10 @@
 #include "tokenizer/tokenizer.hpp"
 #include <algorithm>
 
-
 namespace zuu::models {
+
+Json::Json(Json&&) noexcept = default;
+Json& Json::operator=(Json&&) noexcept = default;
 
 Json::~Json() noexcept = default;
 
@@ -52,10 +54,14 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
     const auto obj = storage_->object(root_val.as_index());
 
     // Binary Search: O(log N) Lookup
-    auto it = std::lower_bound(
-        obj.begin(), obj.end(), key, [this](const JsonMember& member, std::string_view k) {
-            return storage_->string(member.key_index_) < k;
-        });
+    auto it = std::ranges::lower_bound(
+        obj, 
+		key, 
+		{}, 
+		[this](const JsonMember& member) {
+            return storage_->string(member.key_index_);
+        }
+	);
 
     if (it != obj.end() && storage_->string(it->key_index_) == key) {
         return Value::fromInternal(storage_.get(), it->value_);

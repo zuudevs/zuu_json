@@ -1,0 +1,32 @@
+# Set default behavior, secara otomatis menormalkan line endings (LF)
+* text=auto
+
+# --- C++ Source Code ---
+# Pastikan source code selalu menggunakan LF (Linux/Mac style)
+*.cpp text eol=lf
+*.hpp text eol=lf
+*.h   text eol=lf
+*.c   text eol=lf
+
+# --- Developer Scripts ---
+# PowerShell dan Shell scripts pakai LF biar aman pas di-run di CI/CD
+*.ps1 text eol=lf
+*.sh  text eol=lf
+*.py  text eol=lf
+# Batch file Windows harus pakai CRLF
+*.bat text eol=crlf
+
+# --- Data, Docs, & Configuration ---
+*.json text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf
+.clang-format text eol=lf
+.clang-tidy   text eol=lf
+.gitignore    text eol=lf
+CMakeLists.txt text eol=lf
+
+# --- GitHub Linguist ---
+# Sembunyikan kode pihak ketiga dan sample JSON agar tidak merusak
+# kalkulasi persentase bahasa C++ di repositori GitHub kamu.
+third_party/** linguist-vendored
+samples/** linguist-vendored

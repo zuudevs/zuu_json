@@ -11,7 +11,6 @@
 #include "models/storage.hpp"
 #include <algorithm>
 
-
 namespace zuu::models {
 
 Storage::Storage(models::Hint<Token> hint) noexcept {

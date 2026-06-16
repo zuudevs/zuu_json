@@ -9,8 +9,6 @@
  */
 
 #include "utils/benchmark.hpp"
-#include <print>
-
 
 using namespace zuu::utils;
 

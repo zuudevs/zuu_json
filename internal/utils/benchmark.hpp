@@ -23,7 +23,6 @@
 #include <string>
 #include <system_error>
 
-
 namespace zuu::utils {
 
 [[nodiscard]] inline std::string getSamplePath(const std::string& filename) {

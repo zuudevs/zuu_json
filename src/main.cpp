@@ -11,7 +11,6 @@
 #include "zuu_json/json.hpp"
 #include <print>
 
-
 int main() {
     constexpr std::string_view json_input = R"({
         "name"    : "zuu",
