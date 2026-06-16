@@ -1,6 +1,6 @@
-<div style="text-align:center;">
-	<h1>zuu_json</h1>
-	<p>A high-performance, header-friendly C++23 JSON library focused on predictable latency and zero-allocation hot paths.</p>
+<div>
+	<h1 align="center">zuu_json</h1>
+	<p align="center">A high-performance, header-friendly C++23 JSON library focused on predictable latency and zero-allocation hot paths.</p>
 </div>
 
 ---
