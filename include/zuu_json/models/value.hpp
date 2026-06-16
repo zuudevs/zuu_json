@@ -38,8 +38,6 @@ class Value {
     template <typename T>
     using Result = std::expected<T, core::JsonError>;
     using Type = models::JsonValue::Type;
-    using Storage = Storage;
-    using JsonValue = JsonValue;
 
     // ── Inspeksi Tipe ──
     [[nodiscard]] Type type() const noexcept;

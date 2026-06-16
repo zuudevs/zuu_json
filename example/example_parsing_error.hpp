@@ -10,7 +10,7 @@
 
 #include "zuu_json/json.hpp"
 #include "zuu_json/utils/error_translator.hpp"
-#include <print>
+#include <iostream>
 
 int main() {
     // Sengaja membuat JSON yang salah (kurang kutip pada key)
@@ -24,8 +24,8 @@ int main() {
     if (!result) {
         // TranslateError akan mengubah kode error (enum) menjadi teks yang bisa dibaca
         auto pesan_error = zuu::utils::TranslateError(result.error());
-        std::println("Ops! Parsing gagal.");
-        std::println("Alasan: {}", pesan_error);
+        std::cout << "Ops! Parsing gagal.\n";
+        std::cout << "Alasan: " << pesan_error;
         // Output yang diharapkan: "Unquoted key"
     }
 }

@@ -9,7 +9,7 @@
  */
 
 #include "zuu_json/json.hpp"
-#include <print>
+#include <iostream>
 
 int main() {
     std::string_view json_input = R"({
@@ -31,10 +31,10 @@ int main() {
     std::string_view merk_gpu = root["komputer"]["gpu"]["merk"].get_string("Unknown GPU");
     long long vram = root["komputer"]["gpu"]["vram"].get_integer(0);
 
-    std::println("GPU: {} ({} GB VRAM)", merk_gpu, vram);
+	std::cout << "GPU: " << merk_gpu << '(' << vram << ") GB VRAM\n";
 
     // Cek apakah key tertentu ada
     if (root["komputer"].contains("ram")) {
-        std::println("Info RAM tersedia: {} GB", root["komputer"]["ram"].get_integer());
+		std::cout << "Info RAM tersedia: " << root["komputer"]["ram"].get_integer() << " GB\n";
     }
 }

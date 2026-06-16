@@ -9,7 +9,7 @@
  */
 
 #include "zuu_json/json.hpp"
-#include <print>
+#include <iostream>
 
 int main() {
     std::string_view json_input = R"({
@@ -21,7 +21,7 @@ int main() {
     // 1. Parsing string JSON
     auto doc = zuu::Json::parse(json_input);
     if (!doc) {
-        std::println("Gagal parsing JSON!");
+        std::cerr << "Gagal parsing JSON!\n";
         return 1;
     }
 
@@ -29,10 +29,10 @@ int main() {
     auto root = doc->root();
 
     // 3. Mengambil data dengan Fluent API (Aman)
-    std::println("Nama   : {}", root["nama"].get_string("Tidak diketahui"));
-    std::println("Umur   : {}", root["umur"].get_integer(0));
-    std::println("Pelajar: {}", root["is_student"].get_bool(false));
+    std::cout << "Nama   : " << root["nama"].get_string("Tidak diketahui") << '\n';
+    std::cout << "Umur   : " << root["umur"].get_integer(0) << '\n';
+    std::cout << "Pelajar: " << root["is_student"].get_bool(false) << '\n';
 
     // Jika key tidak ada, nilai default akan dikembalikan
-    std::println("Hobi   : {}", root["hobi"].get_string("Belum ada hobi"));
+    std::cout << "Hobi   : " << root["hobi"].get_string("Belum ada hobi") << '\n';
 }

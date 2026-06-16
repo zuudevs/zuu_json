@@ -10,7 +10,7 @@
 
 #include "zuu_json/json.hpp"
 #include "zuu_json/utils/error_translator.hpp"
-#include <print>
+#include <iostream>
 
 int main() {
     std::string_view json_input = R"({ "skor": 95 })";
@@ -21,15 +21,15 @@ int main() {
     auto skor_result = root["skor"].as_integer();
 
     if (skor_result.has_value()) {
-        std::println("Skor berhasil diambil: {}", skor_result.value());
+        std::cout << "Skor berhasil diambil: " << skor_result.value() << '\n';
     } else {
         auto err_msg = zuu::utils::TranslateError(skor_result.error());
-        std::println("Gagal ambil skor: {}", err_msg);
+        std::cerr << "Gagal ambil skor: " << err_msg << '\n';
     }
 
     // Mari kita coba ambil "skor" sebagai String (Pasti error karena tipenya Integer)
     auto salah_tipe = root["skor"].as_string();
     if (!salah_tipe) {
-        std::println("Error tipe data: {}", zuu::utils::TranslateError(salah_tipe.error()));
+        std::cerr << "Error tipe data: " << zuu::utils::TranslateError(salah_tipe.error()) << '\n';
     }
 }
