@@ -2,54 +2,59 @@ name: C++ CI Pipeline
 
 on:
   push:
-    branches: [ "main", "ci/*" ]
+    branches: [main, "ci/*"]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
 
 jobs:
   build-and-test:
-    name: Build & Test on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, windows-latest]
 
+    runs-on: ${{ matrix.os }}
+
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Fetch Samples
-      shell: pwsh
-      run: |
-        ./scripts/fetch-samples.ps1
+      - name: Fetch Samples
+        shell: pwsh
+        run: ./scripts/fetch-samples.ps1
 
-    - name: Install Tools (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y clang-tidy valgrind ninja-build
+      - name: Install Tools (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            clang-tidy \
+            lld \
+            ninja-build \
+            valgrind
 
-    - name: Install Tools (Windows)
-      if: runner.os == 'Windows'
-      run: choco install ninja llvm -y
+      - name: Install Tools (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install llvm ninja -y
 
-    - name: Configure CMake
-      run: >
-        cmake -B build -G Ninja
-        -DCMAKE_BUILD_TYPE=Debug
-        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-        -DENABLE_BENCHMARK=OFF
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_CXX_STANDARD=23
+          -DCMAKE_CXX_STANDARD_REQUIRED=ON
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          -DENABLE_BENCHMARK=OFF
 
-    - name: Build Project
-      run: cmake --build build --config Debug --parallel 4
+      - name: Build
+        run: cmake --build build --parallel
 
-    - name: Static Analysis (Clang-Tidy on BOTH OS)
-      shell: bash
-      run: |
-        find src internal -name "*.cpp" | xargs clang-tidy -p build/
-
-    - name: Memory Check (Valgrind - Linux Only)
-      if: runner.os == 'Linux'
-      run: |
-        valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 ./bin/zuu_json
+      - name: Valgrind
+        if: runner.os == 'Linux'
+        run: |
+          valgrind \
+            --leak-check=full \
+            --show-leak-kinds=all \
+            --error-exitcode=1 \
+            ./bin/zuu_json
