@@ -177,9 +177,10 @@ class Benchmark {
             return;
         }
         auto& doc = json_opt.value(); 
+		auto root = doc.root();
 
         for (auto _ : state) {
-            auto value = doc.root()[1000]; 
+            auto value = root[1000]; 
             benchmark::DoNotOptimize(value);
         }
         
@@ -199,10 +200,11 @@ class Benchmark {
             return;
         }
         auto& doc = json_opt.value();
+		auto root = doc.root();
 
         for (auto _ : state) {
-            auto value1 = doc["events"];
-            auto value2 = doc["performances"];
+            auto value1 = root["events"];
+            auto value2 = root["performances"];
             
             benchmark::DoNotOptimize(value1);
             benchmark::DoNotOptimize(value2);
@@ -223,12 +225,10 @@ class Benchmark {
             return;
         }
         auto& doc = json_opt.value();
+		auto root = doc.root();
 
         for (auto _ : state) {
-            auto val = doc["statuses"].value()
-                          [0].value()
-                          ["user"].value()
-                          ["screen_name"].value();
+            auto val = root["statuses"][0]["user"]["screen_name"].as_string();
             benchmark::DoNotOptimize(val);
         }
         

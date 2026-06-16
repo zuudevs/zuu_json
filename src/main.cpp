@@ -2,14 +2,14 @@
  * @file main.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 0.1.0
- * @date 2026-06-05
+ * @version 0.2.0
+ * @date 2026-06-16
  *
  * @copyright Copyright (c) 2026
  */
 
-#include "zuu_json/json.hpp"
 #include <print>
+#include "zuu_json/json.hpp"
 
 int main() {
     constexpr std::string_view json_input = R"({
@@ -28,57 +28,35 @@ int main() {
         return 1;
     }
 
-    const auto& json = *result;
+    const auto& doc = *result;
+    const auto root = doc.root();
 
-    if (auto v = json["name"]) {
-        if (auto s = v->as_string()) {
-            std::println("name    : {}", *s);
-        }
+    std::println("--- FLUENT API SHOWCASE ---");
+
+    // Mengambil nilai primitif langsung dengan get_XXX()
+    std::println("name    : {}", root["name"].get_string("unknown"));
+    std::println("active  : {}", root["active"].get_bool());
+    std::println("age     : {}", root["age"].get_integer());
+    std::println("pi      : {}", root["pi"].get_double());
+    
+    // Optional Chaining: langsung akses nested object tanpa if-checker bertumpuk
+    std::println("pos.x   : {}", root["position"]["x"].get_double());
+    std::println("pos.y   : {}", root["position"]["y"].get_double());
+
+    // Mengecek Null
+    if (root["data"].is_null()) {
+        std::println("data    : is explicitly null");
     }
 
-    if (auto v = json["active"]) {
-        if (auto b = v->as_bool()) {
-            std::println("active  : {}", *b);
-        }
-    }
+    // Penanganan key yang tidak ada secara aman (tidak akan crash/throw exception)
+    std::println("missing : {}", root["invalid_key"]["deep_key"].get_string("default_string"));
 
-    if (auto v = json["age"]) {
-        if (auto i = v->as_integer()) {
-            std::println("age     : {}", *i);
-        }
+    // Iterasi Array (menggunakan size() secara aman)
+    auto colors = root["colors"];
+    std::println("colors  : {} item(s)", colors.size());
+    for (size_t i = 0; i < colors.size(); ++i) {
+        std::println("  [{}]   : {}", i, colors[i].get_string());
     }
-
-    if (auto v = json["pi"]) {
-        if (auto d = v->as_double()) {
-            std::println("pi      : {}", static_cast<double>(*d));
-        }
-    }
-
-    if (auto v = json["data"]; v && v->is_null()) {
-        std::println("data    : null");
-    }
-
-    if (auto pos = json["position"]) {
-        if (auto x = (*pos)["x"]) {
-            if (auto d = x->as_double()) {
-                std::println("pos.x   : {}", static_cast<double>(*d));
-            }
-        }
-        if (auto y = (*pos)["y"]) {
-            if (auto d = y->as_double()) {
-                std::println("pos.y   : {}", static_cast<double>(*d));
-            }
-        }
-    }
-
-    if (auto colors = json["colors"]) {
-        std::println("colors  : {} item(s)", colors->size());
-        for (size_t i = 0; i < colors->size(); ++i) {
-            if (auto c = (*colors)[i]) {
-                if (auto s = c->as_string()) {
-                    std::println("  [{}]   : {}", i, *s);
-                }
-            }
-        }
-    }
+    
+    return 0;
 }
