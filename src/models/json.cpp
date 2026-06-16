@@ -8,9 +8,10 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "zuu_json/models/json.hpp"
+#include <algorithm>
 #include "parser/parser.hpp"
 #include "tokenizer/tokenizer.hpp"
+#include "zuu_json/models/json.hpp"
 
 namespace zuu::models {
 
@@ -43,15 +44,20 @@ Value Json::root() const noexcept {
 Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
     const auto& root_val = storage_->root();
 
-    if (root_val.get_type() != models::JsonValue::Type::Object) {
+    if (root_val.get_type() != JsonValue::Type::Object) {
         return std::unexpected{Error::IsNotObject};
     }
 
-    const auto& obj = storage_->object(root_val.as_index());
-    for (const auto& member : obj) {
-        if (storage_->string(member.key_index_) == key) {
-            return Value::fromInternal(storage_.get(), member.value_);
-        }
+    const auto obj = storage_->object(root_val.as_index());
+    
+    // Binary Search: O(log N) Lookup
+    auto it = std::lower_bound(obj.begin(), obj.end(), key,
+        [this](const JsonMember& member, std::string_view k) {
+            return storage_->string(member.key_index_) < k;
+        });
+
+    if (it != obj.end() && storage_->string(it->key_index_) == key) {
+        return Value::fromInternal(storage_.get(), it->value_);
     }
 
     return std::unexpected{Error::InvalidValue};

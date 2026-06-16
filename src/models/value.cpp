@@ -8,8 +8,8 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "zuu_json/models/value.hpp"
 #include "models/storage.hpp"
+#include "zuu_json/models/value.hpp"
 
 namespace zuu::models {
 
@@ -101,25 +101,35 @@ Value::Result<Value> Value::operator[](std::string_view key) const noexcept {
     if (value_.get_type() != Type::Object) {
         return std::unexpected{core::JsonError::IsNotObject};
     }
-    const auto& obj = storage_->object(value_.as_index());
-    for (const auto& member : obj) {
-        if (storage_->string(member.key_index_) == key) {
-            return fromInternal(storage_, member.value_);
-        }
+    
+    const auto obj = storage_->object(value_.as_index());
+    
+    // Binary Search: O(log N) Lookup
+    auto it = std::lower_bound(obj.begin(), obj.end(), key,
+        [this](const JsonMember& member, std::string_view k) {
+            return storage_->string(member.key_index_) < k;
+        });
+
+    if (it != obj.end() && storage_->string(it->key_index_) == key) {
+        return fromInternal(storage_, it->value_);
     }
+
     return std::unexpected{core::JsonError::InvalidValue};
 }
 
 bool Value::contains(std::string_view key) const noexcept {
     if (value_.get_type() != Type::Object)
         return false;
-    const auto& obj = storage_->object(value_.as_index());
-    for (const auto& member : obj) {
-        if (storage_->string(member.key_index_) == key) {
-            return true;
-        }
-    }
-    return false;
+        
+    const auto obj = storage_->object(value_.as_index());
+    
+    // Binary Search: O(log N) Lookup
+    auto it = std::lower_bound(obj.begin(), obj.end(), key,
+        [this](const JsonMember& member, std::string_view k) {
+            return storage_->string(member.key_index_) < k;
+        });
+
+    return (it != obj.end() && storage_->string(it->key_index_) == key);
 }
 
 } // namespace zuu::models

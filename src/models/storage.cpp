@@ -8,6 +8,7 @@
  * @copyright Copyright (c) 2026
  */
 
+#include <algorithm>
 #include "models/storage.hpp"
 
 namespace zuu::models {
@@ -110,6 +111,15 @@ void Storage::pushObjectMember(const JsonMember& member) noexcept {
 
 size_t Storage::sealObject(size_t start_offset) noexcept {
     const auto size = static_cast<uint32_t>(object_elements_size_ - start_offset);
+	if (size > 1) {
+        std::sort(
+			object_elements_ + start_offset, 
+			object_elements_ + object_elements_size_, 
+			[this](const JsonMember& a, const JsonMember& b) {
+				return strings_[a.key_index_] < strings_[b.key_index_];
+			}
+		);
+    }
     objects_[objects_size_] = {static_cast<uint32_t>(start_offset), size};
     return objects_size_++;
 }
