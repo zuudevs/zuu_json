@@ -57,14 +57,9 @@ std::expected<Value, core::JsonError> Json::operator[](std::string_view key) con
     const auto obj = storage_->object(root_val.as_index());
 
     // Binary Search: O(log N) Lookup
-    auto it = std::ranges::lower_bound(
-        obj, 
-		key, 
-		{}, 
-		[this](const JsonMember& member) {
-            return storage_->string(member.key_index_);
-        }
-	);
+    auto it = std::ranges::lower_bound(obj, key, {}, [this](const JsonMember& member) {
+        return storage_->string(member.key_index_);
+    });
 
     if (it != obj.end() && storage_->string(it->key_index_) == key) {
         return Value::fromInternal(storage_.get(), it->value_);

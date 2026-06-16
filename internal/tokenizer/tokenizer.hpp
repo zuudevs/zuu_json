@@ -20,26 +20,22 @@ namespace zuu::tokenizer {
 
 class Tokenizer {
   public:
-    using Token = models::Token;
-    using Lookup = models::Lookup<Token>;
-    using Error = core::JsonError;
-    using Result = std::vector<Token>;
-    using Hint = models::Hint<Token>;
-    using Resource = std::pair<Result, models::Hint<Token>>;
-    using Expected = std::expected<Resource, Error>;
-    using Raw = std::span<const char>;
+    explicit Tokenizer(std::span<const char> json_content) noexcept;
+    [[nodiscard]] std::expected<std::pair<std::vector<models::Token>, models::Hint<models::Token>>,
+                                core::JsonError>
+    result() && noexcept;
 
-    explicit Tokenizer(Raw json_content) noexcept;
-    [[nodiscard]] Expected result() && noexcept;
-
-    [[nodiscard]] static Expected Tokenize(Raw json_content) noexcept;
+    [[nodiscard]] static std::expected<
+        std::pair<std::vector<models::Token>, models::Hint<models::Token>>,
+        core::JsonError>
+    Tokenize(std::span<const char> json_content) noexcept;
 
   private:
-    Result res_;
-    Hint hint_{};
+    std::vector<models::Token> res_;
+    models::Hint<models::Token> hint_{};
     const char* current_;
     const char* end_;
-    Error status_{Error::None};
+    core::JsonError status_{core::JsonError::None};
 
     [[nodiscard]] bool is_error() const noexcept;
     void readString() noexcept;

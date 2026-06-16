@@ -10,10 +10,10 @@
 
 #pragma once
 
-#include <expected>
-#include <memory>
 #include "zuu_json/core/error.hpp"
 #include "zuu_json/models/value.hpp"
+#include <expected>
+#include <memory>
 
 namespace zuu::models {
 
@@ -38,13 +38,15 @@ class Json {
     ~Json() noexcept;
 
     Json(const Json&) = delete;
-	Json& operator=(const Json&) = delete;
+    Json& operator=(const Json&) = delete;
 
-    [[nodiscard]] static std::expected<Json, core::JsonError> parse(std::string_view content) noexcept;
+    [[nodiscard]] static std::expected<Json, core::JsonError>
+    parse(std::string_view content) noexcept;
 
     [[nodiscard]] Value root() const noexcept;
 
-    [[nodiscard]] std::expected<Value, core::JsonError> operator[](std::string_view key) const noexcept;
+    [[nodiscard]] std::expected<Value, core::JsonError>
+    operator[](std::string_view key) const noexcept;
 
   private:
     explicit Json(std::unique_ptr<Storage> storage) noexcept;

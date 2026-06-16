@@ -9,7 +9,10 @@
  */
 
 #include "models/storage.hpp"
+#include "models/json_member.hpp"
+#include "models/json_value.hpp"
 #include <algorithm>
+#include <span>
 
 namespace zuu::models {
 
@@ -120,12 +123,12 @@ unsigned long long Storage::sealObject(unsigned long long start_offset) noexcept
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-Storage::JsonArray Storage::array(unsigned long long index) const noexcept {
+std::span<const JsonValue> Storage::array(unsigned long long index) const noexcept {
     const auto& [offset, size] = arrays_[index];
     return {array_elements_ + offset, size};
 }
 
-Storage::JsonObject Storage::object(unsigned long long index) const noexcept {
+std::span<const JsonMember> Storage::object(unsigned long long index) const noexcept {
     const auto& [offset, size] = objects_[index];
     return {object_elements_ + offset, size};
 }

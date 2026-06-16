@@ -9,8 +9,11 @@
  */
 
 #include "zuu_json/models/value.hpp"
+#include "models/json_value.hpp"
 #include "models/storage.hpp"
+#include "zuu_json/core/error.hpp"
 #include <algorithm>
+#include <expected>
 
 namespace zuu::models {
 
@@ -26,56 +29,56 @@ Value Value::createNull(const Storage* storage) noexcept {
     return Value(storage, JsonValue::Null());
 }
 
-Value::Type Value::type() const noexcept {
+models::JsonValue::Type Value::type() const noexcept {
     return value_.get_type();
 }
 bool Value::is_null() const noexcept {
-    return value_.get_type() == Type::Null;
+    return value_.get_type() == models::JsonValue::Type::Null;
 }
 bool Value::is_bool() const noexcept {
-    return value_.get_type() == Type::Boolean;
+    return value_.get_type() == models::JsonValue::Type::Boolean;
 }
 bool Value::is_integer() const noexcept {
-    return value_.get_type() == Type::Integer;
+    return value_.get_type() == models::JsonValue::Type::Integer;
 }
 bool Value::is_double() const noexcept {
-    return value_.get_type() == Type::Double;
+    return value_.get_type() == models::JsonValue::Type::Double;
 }
 bool Value::is_string() const noexcept {
-    return value_.get_type() == Type::String;
+    return value_.get_type() == models::JsonValue::Type::String;
 }
 bool Value::is_array() const noexcept {
-    return value_.get_type() == Type::Array;
+    return value_.get_type() == models::JsonValue::Type::Array;
 }
 bool Value::is_object() const noexcept {
-    return value_.get_type() == Type::Object;
+    return value_.get_type() == models::JsonValue::Type::Object;
 }
 
 // ── Strict Extraction ──
 
-Value::Result<bool> Value::as_bool() const noexcept {
-    if (value_.get_type() != Type::Boolean)
+std::expected<bool, core::JsonError> Value::as_bool() const noexcept {
+    if (value_.get_type() != models::JsonValue::Type::Boolean)
         return std::unexpected{core::JsonError::InvalidType};
     return value_.as_bool();
 }
 
-Value::Result<long long> Value::as_integer() const noexcept {
-    if (value_.get_type() != Type::Integer)
+std::expected<long long, core::JsonError> Value::as_integer() const noexcept {
+    if (value_.get_type() != models::JsonValue::Type::Integer)
         return std::unexpected{core::JsonError::InvalidType};
     return value_.as_integer();
 }
 
-Value::Result<long double> Value::as_double() const noexcept {
+std::expected<long double, core::JsonError> Value::as_double() const noexcept {
     // Toleransi: Integer dapat dibaca sebagai double secara strict
-    if (value_.get_type() == Type::Integer)
+    if (value_.get_type() == models::JsonValue::Type::Integer)
         return static_cast<long double>(value_.as_integer());
-    if (value_.get_type() != Type::Double)
+    if (value_.get_type() != models::JsonValue::Type::Double)
         return std::unexpected{core::JsonError::InvalidType};
     return value_.as_double();
 }
 
-Value::Result<std::string_view> Value::as_string() const noexcept {
-    if (value_.get_type() != Type::String)
+std::expected<std::string_view, core::JsonError> Value::as_string() const noexcept {
+    if (value_.get_type() != models::JsonValue::Type::String)
         return std::unexpected{core::JsonError::InvalidType};
     return storage_->string(value_.as_index());
 }
@@ -83,27 +86,27 @@ Value::Result<std::string_view> Value::as_string() const noexcept {
 // ── Fluent / Default Extraction ──
 
 bool Value::get_bool(bool default_val) const noexcept {
-    if (value_.get_type() != Type::Boolean)
+    if (value_.get_type() != models::JsonValue::Type::Boolean)
         return default_val;
     return value_.as_bool();
 }
 
 long long Value::get_integer(long long default_val) const noexcept {
-    if (value_.get_type() != Type::Integer)
+    if (value_.get_type() != models::JsonValue::Type::Integer)
         return default_val;
     return value_.as_integer();
 }
 
 double Value::get_double(double default_val) const noexcept {
-    if (value_.get_type() == Type::Integer)
+    if (value_.get_type() == models::JsonValue::Type::Integer)
         return static_cast<double>(value_.as_integer());
-    if (value_.get_type() != Type::Double)
+    if (value_.get_type() != models::JsonValue::Type::Double)
         return default_val;
     return static_cast<double>(value_.as_double());
 }
 
 std::string_view Value::get_string(std::string_view default_val) const noexcept {
-    if (value_.get_type() != Type::String)
+    if (value_.get_type() != models::JsonValue::Type::String)
         return default_val;
     return storage_->string(value_.as_index());
 }
@@ -111,15 +114,15 @@ std::string_view Value::get_string(std::string_view default_val) const noexcept 
 // ── Container & Traversal ──
 
 unsigned long long Value::size() const noexcept {
-    if (value_.get_type() == Type::Array)
+    if (value_.get_type() == models::JsonValue::Type::Array)
         return storage_->array(value_.as_index()).size();
-    if (value_.get_type() == Type::Object)
+    if (value_.get_type() == models::JsonValue::Type::Object)
         return storage_->object(value_.as_index()).size();
     return 0;
 }
 
 bool Value::contains(std::string_view key) const noexcept {
-    if (value_.get_type() != Type::Object)
+    if (value_.get_type() != models::JsonValue::Type::Object)
         return false;
 
     const auto obj = storage_->object(value_.as_index());
@@ -131,8 +134,8 @@ bool Value::contains(std::string_view key) const noexcept {
 }
 
 // Strict at()
-Value::Result<Value> Value::at(unsigned long long index) const noexcept {
-    if (value_.get_type() != Type::Array) {
+std::expected<Value, core::JsonError> Value::at(unsigned long long index) const noexcept {
+    if (value_.get_type() != models::JsonValue::Type::Array) {
         return std::unexpected{core::JsonError::IsNotArray};
     }
     const auto arr = storage_->array(value_.as_index());
@@ -142,8 +145,8 @@ Value::Result<Value> Value::at(unsigned long long index) const noexcept {
     return fromInternal(storage_, arr[index]);
 }
 
-Value::Result<Value> Value::at(std::string_view key) const noexcept {
-    if (value_.get_type() != Type::Object) {
+std::expected<Value, core::JsonError> Value::at(std::string_view key) const noexcept {
+    if (value_.get_type() != models::JsonValue::Type::Object) {
         return std::unexpected{core::JsonError::IsNotObject};
     }
 

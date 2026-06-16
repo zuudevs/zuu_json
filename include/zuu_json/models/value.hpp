@@ -35,14 +35,8 @@ class Json;
  */
 class Value {
   public:
-    template <typename T>
-    using Result = std::expected<T, core::JsonError>;
-    using Type = models::JsonValue::Type;
-    using Storage = Storage;
-    using JsonValue = JsonValue;
-
     // ── Inspeksi Tipe ──
-    [[nodiscard]] Type type() const noexcept;
+    [[nodiscard]] models::JsonValue::Type type() const noexcept;
     [[nodiscard]] bool is_null() const noexcept;
     [[nodiscard]] bool is_bool() const noexcept;
     [[nodiscard]] bool is_integer() const noexcept;
@@ -52,10 +46,10 @@ class Value {
     [[nodiscard]] bool is_object() const noexcept;
 
     // ── Strict Extraction (mengembalikan Error jika gagal) ──
-    [[nodiscard]] Result<bool> as_bool() const noexcept;
-    [[nodiscard]] Result<long long> as_integer() const noexcept;
-    [[nodiscard]] Result<long double> as_double() const noexcept;
-    [[nodiscard]] Result<std::string_view> as_string() const noexcept;
+    [[nodiscard]] std::expected<bool, core::JsonError> as_bool() const noexcept;
+    [[nodiscard]] std::expected<long long, core::JsonError> as_integer() const noexcept;
+    [[nodiscard]] std::expected<long double, core::JsonError> as_double() const noexcept;
+    [[nodiscard]] std::expected<std::string_view, core::JsonError> as_string() const noexcept;
 
     // ── Fluent Extraction (mengembalikan nilai default jika gagal) ──
     [[nodiscard]] bool get_bool(bool default_val = false) const noexcept;
@@ -68,8 +62,8 @@ class Value {
     [[nodiscard]] bool contains(std::string_view key) const noexcept;
 
     // Strict traversal
-    [[nodiscard]] Result<Value> at(unsigned long long index) const noexcept;
-    [[nodiscard]] Result<Value> at(std::string_view key) const noexcept;
+    [[nodiscard]] std::expected<Value, core::JsonError> at(unsigned long long index) const noexcept;
+    [[nodiscard]] std::expected<Value, core::JsonError> at(std::string_view key) const noexcept;
 
     // Fluent traversal (Optional Chaining - mengembalikan Value Null jika tidak ditemukan)
     [[nodiscard]] Value operator[](unsigned long long index) const noexcept;

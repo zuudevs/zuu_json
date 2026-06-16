@@ -11,6 +11,7 @@
 #pragma once
 
 #include "models/json_member.hpp"
+#include "models/json_value.hpp"
 #include "models/token.hpp"
 #include <memory>
 #include <span>
@@ -20,10 +21,6 @@ namespace zuu::models {
 
 class Storage {
   public:
-    using Type = JsonValue::Type;
-    using JsonArray = std::span<const JsonValue>;
-    using JsonObject = std::span<const JsonMember>;
-
     Storage() noexcept = default;
     Storage(const Storage&) = delete;
     Storage(Storage&&) noexcept = default;
@@ -51,8 +48,8 @@ class Storage {
     void pushObjectMember(const JsonMember& member) noexcept;
     [[nodiscard]] unsigned long long sealObject(unsigned long long start_offset) noexcept;
 
-    [[nodiscard]] JsonArray array(unsigned long long index) const noexcept;
-    [[nodiscard]] JsonObject object(unsigned long long index) const noexcept;
+    [[nodiscard]] std::span<const JsonValue> array(unsigned long long index) const noexcept;
+    [[nodiscard]] std::span<const JsonMember> object(unsigned long long index) const noexcept;
     [[nodiscard]] std::string_view string(unsigned long long index) const noexcept;
 
   private:

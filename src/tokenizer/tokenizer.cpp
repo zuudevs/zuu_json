@@ -8,9 +8,15 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "constants/general.hpp"
-#include <cstring>
 #include "tokenizer/tokenizer.hpp"
+#include "constants/general.hpp"
+#include "models/hint.hpp"
+#include "models/token.hpp"
+#include "zuu_json/core/error.hpp"
+#include <cstring>
+#include <expected>
+#include <utility>
+#include <vector>
 
 namespace zuu::tokenizer {
 
@@ -32,19 +38,21 @@ Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
     tokenize();
 }
 
-Tokenizer::Expected Tokenizer::result() && noexcept {
+std::expected<std::pair<std::vector<models::Token>, models::Hint<models::Token>>, core::JsonError>
+Tokenizer::result() && noexcept {
     if (is_error()) {
         return std::unexpected{status_};
     }
     return std::pair{std::move(res_), hint_};
 }
 
-Tokenizer::Expected Tokenizer::Tokenize(Raw json_content) noexcept {
+std::expected<std::pair<std::vector<models::Token>, models::Hint<models::Token>>, core::JsonError>
+Tokenizer::Tokenize(std::span<const char> json_content) noexcept {
     return Tokenizer(json_content).result();
 }
 
 bool Tokenizer::is_error() const noexcept {
-    return status_ != Error::None;
+    return status_ != core::JsonError::None;
 }
 
 void Tokenizer::readString() noexcept {
@@ -69,7 +77,7 @@ void Tokenizer::readString() noexcept {
         char c = *ptr;
         if (c == '"') {
             res_.emplace_back(
-                Token::Type::String, std::string_view(begin, ptr - begin), has_escape);
+                models::Token::Type::String, std::string_view(begin, ptr - begin), has_escape);
 
             // Catat kebutuhan buffer jika string memiliki escape
             if (has_escape) {
@@ -96,7 +104,7 @@ void Tokenizer::readString() noexcept {
 
 void Tokenizer::readNumeric() noexcept {
     auto begin = current_;
-    auto type = Token::Type::Integer;
+    auto type = models::Token::Type::Integer;
 
     if (current_ < end_ && *current_ == '-') {
         current_++;
@@ -105,7 +113,7 @@ void Tokenizer::readNumeric() noexcept {
     if (current_ < end_ && *current_ == '0') {
         current_++;
         if (current_ < end_ && (static_cast<unsigned char>(*current_ - '0') < constants::digit)) {
-            status_ = Error::LeadingZero;
+            status_ = core::JsonError::LeadingZero;
             return;
         }
     } else if (current_ < end_ &&
@@ -115,16 +123,16 @@ void Tokenizer::readNumeric() noexcept {
             current_++;
         }
     } else {
-        status_ = Error::InvalidValue;
+        status_ = core::JsonError::InvalidValue;
         return;
     }
 
     if (current_ < end_ && *current_ == '.') {
-        type = Token::Type::Double;
+        type = models::Token::Type::Double;
         current_++;
 
         if (current_ >= end_ || (static_cast<unsigned char>(*current_ - '0') >= constants::digit)) {
-            status_ = Error::InvalidValue;
+            status_ = core::JsonError::InvalidValue;
             return;
         }
 
@@ -135,7 +143,7 @@ void Tokenizer::readNumeric() noexcept {
     }
 
     if (current_ < end_ && (*current_ == 'e' || *current_ == 'E')) {
-        type = Token::Type::Double;
+        type = models::Token::Type::Double;
         current_++;
 
         if (current_ < end_ && (*current_ == '+' || *current_ == '-')) {
@@ -143,7 +151,7 @@ void Tokenizer::readNumeric() noexcept {
         }
 
         if (current_ >= end_ || (static_cast<unsigned char>(*current_ - '0') >= constants::digit)) {
-            status_ = Error::InvalidValue;
+            status_ = core::JsonError::InvalidValue;
             return;
         }
 
@@ -165,7 +173,7 @@ void Tokenizer::readAlphabet() noexcept {
             const auto size = sizeof("null") - 1;
             if (rem >= size && *(current_ + 1) == 'u' && *(current_ + 2) == 'l' &&
                 *(current_ + 3) == 'l') {
-                res_.emplace_back(Token::Type::Null, std::string_view(current_, size));
+                res_.emplace_back(models::Token::Type::Null, std::string_view(current_, size));
                 current_ += size;
                 return;
             }
@@ -175,7 +183,7 @@ void Tokenizer::readAlphabet() noexcept {
             const auto size = sizeof("true") - 1;
             if (rem >= size && *(current_ + 1) == 'r' && *(current_ + 2) == 'u' &&
                 *(current_ + 3) == 'e') {
-                res_.emplace_back(Token::Type::Boolean, std::string_view(current_, size));
+                res_.emplace_back(models::Token::Type::Boolean, std::string_view(current_, size));
                 current_ += size;
                 return;
             }
@@ -185,89 +193,89 @@ void Tokenizer::readAlphabet() noexcept {
             const auto size = sizeof("false") - 1;
             if (rem >= size && *(current_ + 1) == 'a' && *(current_ + 2) == 'l' &&
                 *(current_ + 3) == 's' && *(current_ + 4) == 'e') {
-                res_.emplace_back(Token::Type::Boolean, std::string_view(current_, size));
+                res_.emplace_back(models::Token::Type::Boolean, std::string_view(current_, size));
                 current_ += size;
                 return;
             }
             break;
         }
         default: {
-            status_ = Error::InvalidValue;
+            status_ = core::JsonError::InvalidValue;
         }
     }
 }
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
-        auto actionType = Lookup{}[*current_];
+        auto actionType = models::Lookup<models::Token>{}[*current_];
         switch (actionType) {
-            case Lookup::Type::WhiteSpace: {
+            case models::Lookup<models::Token>::Type::WhiteSpace: {
                 current_++;
                 continue;
             }
-            case Lookup::Type::LeftCurlyBracket: {
-                res_.emplace_back(Token::Type::LeftCurlyBracket);
+            case models::Lookup<models::Token>::Type::LeftCurlyBracket: {
+                res_.emplace_back(models::Token::Type::LeftCurlyBracket);
                 hint_.object_count_++;
                 current_++;
                 continue;
             }
-            case Lookup::Type::RightCurlyBracket: {
-                res_.emplace_back(Token::Type::RightCurlyBracket);
+            case models::Lookup<models::Token>::Type::RightCurlyBracket: {
+                res_.emplace_back(models::Token::Type::RightCurlyBracket);
                 current_++;
                 continue;
             }
-            case Lookup::Type::LeftSquareBracket: {
-                res_.emplace_back(Token::Type::LeftSquareBracket);
+            case models::Lookup<models::Token>::Type::LeftSquareBracket: {
+                res_.emplace_back(models::Token::Type::LeftSquareBracket);
                 hint_.array_count_++;
                 current_++;
                 continue;
             }
-            case Lookup::Type::RightSquareBracket: {
-                res_.emplace_back(Token::Type::RightSquareBracket);
+            case models::Lookup<models::Token>::Type::RightSquareBracket: {
+                res_.emplace_back(models::Token::Type::RightSquareBracket);
                 current_++;
                 continue;
             }
-            case Lookup::Type::Colon: {
-                res_.emplace_back(Token::Type::Colon);
+            case models::Lookup<models::Token>::Type::Colon: {
+                res_.emplace_back(models::Token::Type::Colon);
                 current_++;
                 continue;
             }
-            case Lookup::Type::Comma: {
-                res_.emplace_back(Token::Type::Comma);
+            case models::Lookup<models::Token>::Type::Comma: {
+                res_.emplace_back(models::Token::Type::Comma);
                 hint_.comma_count_++;
                 current_++;
                 continue;
             }
-            case Lookup::Type::DoubleQuote: {
+            case models::Lookup<models::Token>::Type::DoubleQuote: {
                 readString();
                 if (is_error())
                     return;
                 hint_.string_count_++;
                 continue;
             }
-            case Lookup::Type::Numeric: {
+            case models::Lookup<models::Token>::Type::Numeric: {
                 readNumeric();
                 if (is_error())
                     return;
                 continue;
             }
-            case Lookup::Type::Alphabet: {
+            case models::Lookup<models::Token>::Type::Alphabet: {
                 readAlphabet();
                 if (is_error())
                     return;
                 continue;
             }
-            case Lookup::Type::SigleQuote: {
-                status_ = Error::SingleQuotedString;
+            case models::Lookup<models::Token>::Type::SigleQuote: {
+                status_ = core::JsonError::SingleQuotedString;
                 return;
             }
             default: {
-                status_ = Error::Unknown;
+                status_ = core::JsonError::Unknown;
                 return;
             }
         }
     }
-    res_.emplace_back(Token::Type::EndOfFile);
+    res_.emplace_back(models::Token::Type::EndOfFile);
 }
 
 } // namespace zuu::tokenizer
