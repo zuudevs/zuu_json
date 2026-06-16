@@ -2,14 +2,15 @@
  * @file benchmark.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief High-Precision Benchmarks JSON Parser
- * @version 0.1.0
+ * @version 1.0.0
  * @date 2026-06-11
  *
  * @copyright Copyright (c) 2026
  */
 
-#include <print>
 #include "utils/benchmark.hpp"
+#include <print>
+
 
 using namespace zuu::utils;
 

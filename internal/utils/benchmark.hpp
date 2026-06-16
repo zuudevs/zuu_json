@@ -2,7 +2,7 @@
  * @file benchmark.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 0.1.0
+ * @version 1.0.0
  * @date 2026-06-11
  *
  * @copyright Copyright (c) 2026
@@ -10,23 +10,23 @@
 
 #pragma once
 
+#include "parser/parser.hpp"
+#include "tokenizer/tokenizer.hpp"
+#include "zuu_json/json.hpp"
+#include "zuu_json/utils/error_translator.hpp"
 #include <benchmark/benchmark.h>
 #include <expected>
 #include <filesystem>
 #include <format>
 #include <fstream>
-#include "parser/parser.hpp"
-#include "tokenizer/tokenizer.hpp"
 #include <span>
 #include <string>
 #include <system_error>
-#include "zuu_json/json.hpp"
-#include "zuu_json/utils/error_translator.hpp"
+
 
 namespace zuu::utils {
 
-[[nodiscard]] inline std::string 
-getSamplePath(const std::string& filename) {
+[[nodiscard]] inline std::string getSamplePath(const std::string& filename) {
     std::filesystem::path current_file_path = __FILE__;
     std::filesystem::path project_root = current_file_path.parent_path().parent_path();
     return (project_root / "samples" / filename).string();
@@ -117,7 +117,8 @@ class Benchmark {
             auto parsed = std::move(parser).result();
 
             if (!parsed) {
-                state.SkipWithError(std::format("Parser failed!, Error code: {}", utils::TranslateError(parsed.error())));
+                state.SkipWithError(std::format("Parser failed!, Error code: {}",
+                                                utils::TranslateError(parsed.error())));
                 break;
             }
             benchmark::DoNotOptimize(parsed);
@@ -147,7 +148,8 @@ class Benchmark {
         for (auto _ : state) {
             auto json = zuu::Json::parse(std::string_view(raw.data(), raw.size()));
             if (!json) {
-                state.SkipWithError(std::format("Full Pipeline failed!, Error code: {}", utils::TranslateError(json.error())));
+                state.SkipWithError(std::format("Full Pipeline failed!, Error code: {}",
+                                                utils::TranslateError(json.error())));
                 break;
             }
             benchmark::DoNotOptimize(json);
@@ -176,16 +178,16 @@ class Benchmark {
             state.SkipWithError("Parsing huge gagal saat setup!");
             return;
         }
-        auto& doc = json_opt.value(); 
-		auto root = doc.root();
+        auto& doc = json_opt.value();
+        auto root = doc.root();
 
         for (auto _ : state) {
-            auto value = root[1000]; 
+            auto value = root[1000];
             benchmark::DoNotOptimize(value);
         }
-        
-        state.counters["Lookups/s"] = benchmark::Counter(
-            static_cast<double>(state.iterations()), benchmark::Counter::kIsRate);
+
+        state.counters["Lookups/s"] = benchmark::Counter(static_cast<double>(state.iterations()),
+                                                         benchmark::Counter::kIsRate);
     }
 
     static void DomTraversalObject(benchmark::State& state) {
@@ -200,17 +202,18 @@ class Benchmark {
             return;
         }
         auto& doc = json_opt.value();
-		auto root = doc.root();
+        auto root = doc.root();
 
         for (auto _ : state) {
             auto value1 = root["events"];
             auto value2 = root["performances"];
-            
+
             benchmark::DoNotOptimize(value1);
             benchmark::DoNotOptimize(value2);
         }
 
-        state.counters["Lookups/s"] = benchmark::Counter(static_cast<double>(state.iterations()) * 2, benchmark::Counter::kIsRate);
+        state.counters["Lookups/s"] = benchmark::Counter(
+            static_cast<double>(state.iterations()) * 2, benchmark::Counter::kIsRate);
     }
 
     static void DomTraversalDeep(benchmark::State& state) {
@@ -225,13 +228,13 @@ class Benchmark {
             return;
         }
         auto& doc = json_opt.value();
-		auto root = doc.root();
+        auto root = doc.root();
 
         for (auto _ : state) {
             auto val = root["statuses"][0]["user"]["screen_name"].as_string();
             benchmark::DoNotOptimize(val);
         }
-        
+
         state.counters["Lookups/s"] = benchmark::Counter(
             static_cast<double>(state.iterations()) * 4, benchmark::Counter::kIsRate);
     }
@@ -250,7 +253,7 @@ class Benchmark {
 
     static inline std::string getSamplePath(std::string_view filename) {
         std::filesystem::path cwd = std::filesystem::current_path();
-        
+
         for (int i = 0; i < 4; ++i) {
             std::filesystem::path target = cwd / "samples" / filename;
             if (std::filesystem::exists(target)) {
@@ -258,7 +261,7 @@ class Benchmark {
             }
             cwd = cwd.parent_path();
         }
-        
+
         return "";
     }
 

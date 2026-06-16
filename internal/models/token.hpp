@@ -2,7 +2,7 @@
  * @file token.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 0.1.0
+ * @version 1.0.0
  * @date 2026-06-06
  *
  * @copyright Copyright (c) 2026
@@ -37,38 +37,37 @@ struct Token {
         : begin_(value.data())
         , size_(value.size())
         , type_(type)
-		, has_escape_(has_escape) {}
-	
-	[[nodiscard]] inline constexpr std::string_view 
-	value() const noexcept {
-		return {begin_, size_};
-	}
+        , has_escape_(has_escape) {}
+
+    [[nodiscard]] inline constexpr std::string_view value() const noexcept {
+        return {begin_, size_};
+    }
 
     const char* begin_;
     uint32_t size_;
     Type type_;
-	bool has_escape_{false};
+    bool has_escape_{false};
 };
 
 template <>
 struct Hint<Token> {
-	size_t string_count_{};
-	size_t array_count_{};
-	size_t object_count_{};
-	size_t comma_count_{};
-	size_t string_escape_bytes_{};
+    size_t string_count_{};
+    size_t array_count_{};
+    size_t object_count_{};
+    size_t comma_count_{};
+    size_t string_escape_bytes_{};
 
-	constexpr Hint() noexcept = default;
-	constexpr Hint(const Hint&) noexcept = default;
-	constexpr Hint(Hint&&) noexcept = default;
-	constexpr ~Hint() noexcept = default;
-	constexpr Hint& operator=(const Hint&) noexcept = default;
-	constexpr Hint& operator=(Hint&&) noexcept = default;
+    constexpr Hint() noexcept = default;
+    constexpr Hint(const Hint&) noexcept = default;
+    constexpr Hint(Hint&&) noexcept = default;
+    constexpr ~Hint() noexcept = default;
+    constexpr Hint& operator=(const Hint&) noexcept = default;
+    constexpr Hint& operator=(Hint&&) noexcept = default;
 };
 
 template <>
 struct Lookup<models::Token> {
-	// clang-format off
+    // clang-format off
 	/**
 	* @brief lookup table token action
 	*
@@ -105,27 +104,26 @@ struct Lookup<models::Token> {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
 	};
 
-	// clang-format on
+    // clang-format on
 
-	enum class Type : uint8_t {
-		WhiteSpace,
-		LeftCurlyBracket,
-		RightCurlyBracket,
-		LeftSquareBracket,
-		RightSquareBracket,
-		Colon,
-		Comma,
-		DoubleQuote,
-		Numeric,
-		Alphabet,
-		SigleQuote,
-		Error
-	};
+    enum class Type : uint8_t {
+        WhiteSpace,
+        LeftCurlyBracket,
+        RightCurlyBracket,
+        LeftSquareBracket,
+        RightSquareBracket,
+        Colon,
+        Comma,
+        DoubleQuote,
+        Numeric,
+        Alphabet,
+        SigleQuote,
+        Error
+    };
 
-	[[nodiscard]] static inline constexpr Type 
-	operator[](uint8_t idx) noexcept {
-		return static_cast<Type>(value[idx]);
-	}
+    [[nodiscard]] static inline constexpr Type operator[](uint8_t idx) noexcept {
+        return static_cast<Type>(value[idx]);
+    }
 };
 
 } // namespace zuu::models

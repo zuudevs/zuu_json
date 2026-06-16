@@ -2,7 +2,7 @@
  * @file parser.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 0.1.0
+ * @version 1.0.0
  * @date 2026-06-10
  *
  * @copyright Copyright (c) 2026
@@ -16,8 +16,8 @@ namespace zuu::parser {
 
 Parser::Parser(Raw tokens, Hint hint) noexcept
     : current_(tokens.data())
-	, end_(tokens.data() + tokens.size())
-	, res_(hint) {
+    , end_(tokens.data() + tokens.size())
+    , res_(hint) {
     parse();
 }
 
@@ -163,16 +163,9 @@ Parser::JsonValue Parser::buildBoolean() noexcept {
 
 Parser::JsonValue Parser::buildInteger() noexcept {
     long long value{};
-    auto [ptr, ec] = std::from_chars(
-		current_->begin_, 
-		current_->begin_ + current_->size_, 
-		value
-	);
+    auto [ptr, ec] = std::from_chars(current_->begin_, current_->begin_ + current_->size_, value);
 
-    if (
-		ec != std::errc{} || 
-		ptr != current_->begin_ + current_->size_
-	) {
+    if (ec != std::errc{} || ptr != current_->begin_ + current_->size_) {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }
@@ -182,16 +175,9 @@ Parser::JsonValue Parser::buildInteger() noexcept {
 
 Parser::JsonValue Parser::buildDouble() noexcept {
     long double value{};
-    auto [ptr, ec] = std::from_chars(
-		current_->begin_, 
-		current_->begin_ + current_->size_, 
-		value
-	);
+    auto [ptr, ec] = std::from_chars(current_->begin_, current_->begin_ + current_->size_, value);
 
-    if (
-		ec != std::errc{} || 
-		ptr != current_->begin_ + current_->size_
-	) {
+    if (ec != std::errc{} || ptr != current_->begin_ + current_->size_) {
         status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
     }

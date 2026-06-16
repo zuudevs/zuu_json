@@ -2,16 +2,17 @@
  * @file json.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 0.1.0
+ * @version 1.0.0
  * @date 2026-06-06
  *
  * @copyright Copyright (c) 2026
  */
 
-#include <algorithm>
+#include "zuu_json/models/json.hpp"
 #include "parser/parser.hpp"
 #include "tokenizer/tokenizer.hpp"
-#include "zuu_json/models/json.hpp"
+#include <algorithm>
+
 
 namespace zuu::models {
 
@@ -49,10 +50,10 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
     }
 
     const auto obj = storage_->object(root_val.as_index());
-    
+
     // Binary Search: O(log N) Lookup
-    auto it = std::lower_bound(obj.begin(), obj.end(), key,
-        [this](const JsonMember& member, std::string_view k) {
+    auto it = std::lower_bound(
+        obj.begin(), obj.end(), key, [this](const JsonMember& member, std::string_view k) {
             return storage_->string(member.key_index_) < k;
         });
 

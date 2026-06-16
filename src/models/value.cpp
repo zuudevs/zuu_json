@@ -2,15 +2,15 @@
  * @file value.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 0.2.0
+ * @version 1.0.0
  * @date 2026-06-16
  *
  * @copyright Copyright (c) 2026
  */
 
-#include <algorithm> 
-#include "models/storage.hpp"
 #include "zuu_json/models/value.hpp"
+#include "models/storage.hpp"
+#include <algorithm>
 
 namespace zuu::models {
 
@@ -26,14 +26,30 @@ Value Value::createNull(const Storage* storage) noexcept {
     return Value(storage, JsonValue::Null());
 }
 
-Value::Type Value::type() const noexcept { return value_.get_type(); }
-bool Value::is_null() const noexcept { return value_.get_type() == Type::Null; }
-bool Value::is_bool() const noexcept { return value_.get_type() == Type::Boolean; }
-bool Value::is_integer() const noexcept { return value_.get_type() == Type::Integer; }
-bool Value::is_double() const noexcept { return value_.get_type() == Type::Double; }
-bool Value::is_string() const noexcept { return value_.get_type() == Type::String; }
-bool Value::is_array() const noexcept { return value_.get_type() == Type::Array; }
-bool Value::is_object() const noexcept { return value_.get_type() == Type::Object; }
+Value::Type Value::type() const noexcept {
+    return value_.get_type();
+}
+bool Value::is_null() const noexcept {
+    return value_.get_type() == Type::Null;
+}
+bool Value::is_bool() const noexcept {
+    return value_.get_type() == Type::Boolean;
+}
+bool Value::is_integer() const noexcept {
+    return value_.get_type() == Type::Integer;
+}
+bool Value::is_double() const noexcept {
+    return value_.get_type() == Type::Double;
+}
+bool Value::is_string() const noexcept {
+    return value_.get_type() == Type::String;
+}
+bool Value::is_array() const noexcept {
+    return value_.get_type() == Type::Array;
+}
+bool Value::is_object() const noexcept {
+    return value_.get_type() == Type::Object;
+}
 
 // ── Strict Extraction ──
 
@@ -67,23 +83,28 @@ Value::Result<std::string_view> Value::as_string() const noexcept {
 // ── Fluent / Default Extraction ──
 
 bool Value::get_bool(bool default_val) const noexcept {
-    if (value_.get_type() != Type::Boolean) return default_val;
+    if (value_.get_type() != Type::Boolean)
+        return default_val;
     return value_.as_bool();
 }
 
 long long Value::get_integer(long long default_val) const noexcept {
-    if (value_.get_type() != Type::Integer) return default_val;
+    if (value_.get_type() != Type::Integer)
+        return default_val;
     return value_.as_integer();
 }
 
 double Value::get_double(double default_val) const noexcept {
-    if (value_.get_type() == Type::Integer) return static_cast<double>(value_.as_integer());
-    if (value_.get_type() != Type::Double) return default_val;
+    if (value_.get_type() == Type::Integer)
+        return static_cast<double>(value_.as_integer());
+    if (value_.get_type() != Type::Double)
+        return default_val;
     return static_cast<double>(value_.as_double());
 }
 
 std::string_view Value::get_string(std::string_view default_val) const noexcept {
-    if (value_.get_type() != Type::String) return default_val;
+    if (value_.get_type() != Type::String)
+        return default_val;
     return storage_->string(value_.as_index());
 }
 
@@ -100,10 +121,10 @@ size_t Value::size() const noexcept {
 bool Value::contains(std::string_view key) const noexcept {
     if (value_.get_type() != Type::Object)
         return false;
-        
+
     const auto obj = storage_->object(value_.as_index());
-    auto it = std::lower_bound(obj.begin(), obj.end(), key,
-        [this](const JsonMember& member, std::string_view k) {
+    auto it = std::lower_bound(
+        obj.begin(), obj.end(), key, [this](const JsonMember& member, std::string_view k) {
             return storage_->string(member.key_index_) < k;
         });
 
@@ -126,10 +147,10 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
     if (value_.get_type() != Type::Object) {
         return std::unexpected{core::JsonError::IsNotObject};
     }
-    
+
     const auto obj = storage_->object(value_.as_index());
-    auto it = std::lower_bound(obj.begin(), obj.end(), key,
-        [this](const JsonMember& member, std::string_view k) {
+    auto it = std::lower_bound(
+        obj.begin(), obj.end(), key, [this](const JsonMember& member, std::string_view k) {
             return storage_->string(member.key_index_) < k;
         });
 
@@ -143,13 +164,15 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
 // Fluent operator[] (Optional Chaining safe)
 Value Value::operator[](size_t index) const noexcept {
     auto res = at(index);
-    if (res) return res.value();
+    if (res)
+        return res.value();
     return createNull(storage_);
 }
 
 Value Value::operator[](std::string_view key) const noexcept {
     auto res = at(key);
-    if (res) return res.value();
+    if (res)
+        return res.value();
     return createNull(storage_);
 }
 

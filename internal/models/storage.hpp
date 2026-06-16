@@ -2,7 +2,7 @@
  * @file storage.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 0.1.0
+ * @version 1.0.0
  * @date 2026-06-06
  *
  * @copyright Copyright (c) 2026

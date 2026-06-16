@@ -2,7 +2,7 @@
  * @file parser.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 0.1.0
+ * @version 1.0.0
  * @date 2026-06-10
  *
  * @copyright Copyright (c) 2026
@@ -20,7 +20,7 @@ namespace zuu::parser {
 class Parser {
   public:
     using Token = models::Token;
-	using Hint = models::Hint<Token>;
+    using Hint = models::Hint<Token>;
     using TokenType = Token::Type;
     using Error = core::JsonError;
     using Storage = models::Storage;
@@ -38,11 +38,11 @@ class Parser {
 
   private:
     Storage res_;
-	const Token* current_;
-	const Token* end_;
+    const Token* current_;
+    const Token* end_;
     Error status_{core::JsonError::None};
 
-	[[nodiscard]] uint32_t decodeUnicodeHex(const char* ptr) noexcept;
+    [[nodiscard]] uint32_t decodeUnicodeHex(const char* ptr) noexcept;
     [[nodiscard]] std::string_view unescapeString(std::string_view src) noexcept;
 
     [[nodiscard]] JsonValue buildNull() noexcept;

@@ -2,14 +2,15 @@
  * @file main.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 0.2.0
+ * @version 1.0.0
  * @date 2026-06-16
  *
  * @copyright Copyright (c) 2026
  */
 
-#include <print>
 #include "zuu_json/json.hpp"
+#include <print>
+
 
 int main() {
     constexpr std::string_view json_input = R"({
@@ -38,7 +39,7 @@ int main() {
     std::println("active  : {}", root["active"].get_bool());
     std::println("age     : {}", root["age"].get_integer());
     std::println("pi      : {}", root["pi"].get_double());
-    
+
     // Optional Chaining: langsung akses nested object tanpa if-checker bertumpuk
     std::println("pos.x   : {}", root["position"]["x"].get_double());
     std::println("pos.y   : {}", root["position"]["y"].get_double());
@@ -57,6 +58,6 @@ int main() {
     for (size_t i = 0; i < colors.size(); ++i) {
         std::println("  [{}]   : {}", i, colors[i].get_string());
     }
-    
+
     return 0;
 }
