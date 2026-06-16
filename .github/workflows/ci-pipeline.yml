@@ -22,7 +22,7 @@ jobs:
     - name: Fetch Samples
       shell: pwsh
       run: |
-        ./scripts/fetch_samples.ps1
+        ./scripts/fetch-samples.ps1
 
     - name: Install Tools (Linux)
       if: runner.os == 'Linux'
