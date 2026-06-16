@@ -21,6 +21,7 @@ namespace zuu::tokenizer {
 class Tokenizer {
   public:
     using Token = models::Token;
+	using Lookup = models::Lookup<Token>;
     using Error = core::JsonError;
     using Result = std::vector<Token>;
 	using Hint = models::Hint<Token>;

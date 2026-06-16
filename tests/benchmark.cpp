@@ -10,6 +10,7 @@
 
 #include <print>
 #include "utils/benchmark.hpp"
+
 using namespace zuu::utils;
 
 // ── BENCHMARK 1: Tokenizer murni ──
@@ -75,8 +76,7 @@ void Benchmark::SmallFullPipeline(benchmark::State& state) {
     Benchmark::FullPipeline(state, std::span<const char>(Benchmark::small));
 }
 void Benchmark::MediumFullPipeline(benchmark::State& state) {
-    Benchmark::FullPipeline(state,
-                                        std::span<const char>(Benchmark::medium));
+    Benchmark::FullPipeline(state, std::span<const char>(Benchmark::medium));
 }
 void Benchmark::BigFullPipeline(benchmark::State& state) {
     Benchmark::FullPipeline(state, std::span<const char>(Benchmark::big));
@@ -85,23 +85,19 @@ void Benchmark::HugeFullPipeline(benchmark::State& state) {
     Benchmark::FullPipeline(state, std::span<const char>(Benchmark::huge));
 }
 void Benchmark::NumericFullPipeline(benchmark::State& state) {
-    Benchmark::FullPipeline(state,
-                                        std::span<const char>(Benchmark::numeric));
+    Benchmark::FullPipeline(state, std::span<const char>(Benchmark::numeric));
 }
 void Benchmark::StringFullPipeline(benchmark::State& state) {
-    Benchmark::FullPipeline(state,
-                                        std::span<const char>(Benchmark::string));
+    Benchmark::FullPipeline(state, std::span<const char>(Benchmark::string));
 }
 void Benchmark::ArrayFullPipeline(benchmark::State& state) {
     Benchmark::FullPipeline(state, std::span<const char>(Benchmark::array));
 }
 void Benchmark::ObjectFullPipeline(benchmark::State& state) {
-    Benchmark::FullPipeline(state,
-                                        std::span<const char>(Benchmark::object));
+    Benchmark::FullPipeline(state, std::span<const char>(Benchmark::object));
 }
 void Benchmark::LiteralFullPipeline(benchmark::State& state) {
-    Benchmark::FullPipeline(state,
-                                        std::span<const char>(Benchmark::literal));
+    Benchmark::FullPipeline(state, std::span<const char>(Benchmark::literal));
 }
 
 // Registrasi Benchmark
@@ -145,7 +141,5 @@ int main(int argc, char** argv) {
     benchmark::Initialize(&argc, argv);
     benchmark::RunSpecifiedBenchmarks();
     benchmark::Shutdown();
-	std::println("Pre-allocate Space of Tokenizer    : {}", Benchmark::tokenizer_current_space);
-	std::println("Actual Space Required of Tokenizer : {}", Benchmark::tokenizer_required_space);
     return 0;
 }

@@ -34,9 +34,6 @@ getSamplePath(const std::string& filename) {
 
 class Benchmark {
   public:
-  	static inline uint64_t tokenizer_current_space{0};
-	static inline uint64_t tokenizer_required_space{0};
-	
     static void Initialize() {
         if (was_init) {
             return;
@@ -108,8 +105,6 @@ class Benchmark {
         }
 
         auto tokens_result = zuu::tokenizer::Tokenizer::Tokenize(raw);
-		tokenizer_current_space = (raw.size() >> 1) + 16;
-		tokenizer_required_space = tokens_result->first.size();
 
         if (!tokens_result) {
             state.SkipWithError("Tokenizer failed during setup!");

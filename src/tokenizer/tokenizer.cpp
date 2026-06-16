@@ -67,7 +67,7 @@ void Tokenizer::readString() noexcept {
     // Slow-path skalar untuk resolusi akhir dan tracking escape character
     while (ptr < end) {
         char c = *ptr;
-        if (c == '"') [[likely]] {
+        if (c == '"') {
             res_.emplace_back(
                 Token::Type::String, 
 				std::string_view(begin, ptr - begin), 
@@ -82,7 +82,7 @@ void Tokenizer::readString() noexcept {
             current_ = ptr + 1;
             return;
         }
-        if (c == '\\') [[unlikely]] {
+        if (c == '\\') {
             has_escape = true;
             ptr += 2; // Lewati karakter escape
             if (ptr > end) {
@@ -259,73 +259,71 @@ void Tokenizer::readAlphabet() noexcept {
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
-		char c = *current_;
-        switch (c) {
-			case '\t':
-			case '\n':
-			case '\v':
-			case '\f':
-			case '\r': 
-			case ' ': {
+		auto actionType = Lookup{}[*current_];
+        switch (actionType) {
+			case Lookup::Type::WhiteSpace: {
 				current_++;
 				continue;
 			}
-            case '{': {
+            case Lookup::Type::LeftCurlyBracket: {
                 res_.emplace_back(Token::Type::LeftCurlyBracket);
 				hint_.object_count_++;
                 current_++;
                 continue;
             }
-            case '}': {
+            case Lookup::Type::RightCurlyBracket: {
                 res_.emplace_back(Token::Type::RightCurlyBracket);
                 current_++;
                 continue;
             }
-            case '[': {
+            case Lookup::Type::LeftSquareBracket: {
                 res_.emplace_back(Token::Type::LeftSquareBracket);
 				hint_.array_count_++;
                 current_++;
                 continue;
             }
-            case ']': {
+            case Lookup::Type::RightSquareBracket: {
                 res_.emplace_back(Token::Type::RightSquareBracket);
                 current_++;
                 continue;
             }
-            case ':': {
+            case Lookup::Type::Colon: {
                 res_.emplace_back(Token::Type::Colon);
                 current_++;
                 continue;
             }
-            case ',': {
+            case Lookup::Type::Comma: {
                 res_.emplace_back(Token::Type::Comma);
 				hint_.comma_count_++;
                 current_++;
                 continue;
             }
-            case '\"': {
+            case Lookup::Type::DoubleQuote: {
                 readString();
                 if (is_error())
                     return;
 				hint_.string_count_++;
                 continue;
             }
-            case '\'': {
+            case Lookup::Type::Numeric: {
+                readNumeric();
+                if (is_error())
+                    return;
+                continue;
+            }
+            case Lookup::Type::Alphabet: {
+                readAlphabet();
+                if (is_error())
+                    return;
+                continue;
+            }
+            case Lookup::Type::SigleQuote: {
                 status_ = Error::SingleQuotedString;
                 return;
             }
 			default: {
-				if (utils::is_numeric(c) || c == '-') {
-					readNumeric();
-				} else if (utils::is_alphabet(c)) {
-					readAlphabet();
-				} else {
-					status_ = Error::Unknown;
-					return;
-				}
-
-				if (is_error())
-					return;
+				status_ = Error::Unknown;
+				return;
 			}
         }
     }
