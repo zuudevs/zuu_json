@@ -6,13 +6,13 @@ This document covers the **public** API of `zuu_json`. Anything under `internal/
 
 The public surface is concentrated in two headers, both reachable from the umbrella `zuu_json/json.hpp`:
 
-| Header | Provides |
-| --- | --- |
-| `zuu_json/json.hpp` | `zuu::Json`, `zuu::Value` aliases |
-| `zuu_json/models/json.hpp` | `zuu::models::Json` |
-| `zuu_json/models/value.hpp` | `zuu::models::Value` |
-| `zuu_json/core/error.hpp` | `zuu::core::JsonError` |
-| `zuu_json/utils/error_translator.hpp` | `zuu::utils::TranslateError` |
+| Header                                | Provides                          |
+| ------------------------------------- | --------------------------------- |
+| `zuu_json/json.hpp`                   | `zuu::Json`, `zuu::Value` aliases |
+| `zuu_json/models/json.hpp`            | `zuu::models::Json`               |
+| `zuu_json/models/value.hpp`           | `zuu::models::Value`              |
+| `zuu_json/core/error.hpp`             | `zuu::core::JsonError`            |
+| `zuu_json/utils/error_translator.hpp` | `zuu::utils::TranslateError`      |
 
 The default include is `#include "zuu_json/json.hpp"`.
 
@@ -35,28 +35,28 @@ zuu::utils             // free-function helpers
 
 `zuu::core::JsonError` is a strongly-typed enum that every fallible operation returns through `std::expected`.
 
-| Member | When it is produced |
-| --- | --- |
-| `None` | Successful outcome. |
-| `TrailingComma` | A `,` appears where a value is expected. |
-| `SingleQuotedString` | A `'` was used to delimit a string. |
-| `UnquotedKey` | An object key is missing `"` quotes. |
-| `MissingComma` | Two values are adjacent without a separator. |
-| `UnescapedCharacter` | An invalid escape sequence appears in a string. |
-| `InvalidValue` | A literal could not be matched; **also** returned for a missing object key. |
-| `CommentNotAllowed` | `//` or `/* */` appears in strict mode. |
-| `InvalidBooleanLiteral` | Token is not exactly `true` or `false`. |
-| `InvalidNullLiteral` | Token is not exactly `null`. |
-| `EmptyValue` | A position where a value is required is empty. |
-| `LeadingZero` | A numeric literal starts with a `0` other than `0` itself. |
-| `InvalidType` | A typed access (`as_*`) was called on the wrong type. |
-| `IsNotArray` | An array operation was applied to a non-array. |
-| `IsNotObject` | An object operation was applied to a non-object. |
-| `RootNotArrayType` | Array root was expected. |
-| `RootNotObjectType` | Object root was expected. |
-| `InvalidUnicode` | A `\uXXXX` sequence is not a valid code point. |
-| `InvalidSurrogate` | A surrogate pair is malformed. |
-| `Unknown` | Catch-all for unrecoverable states. |
+| Member                  | When it is produced                                                         |
+| ----------------------- | --------------------------------------------------------------------------- |
+| `None`                  | Successful outcome.                                                         |
+| `TrailingComma`         | A `,` appears where a value is expected.                                    |
+| `SingleQuotedString`    | A `'` was used to delimit a string.                                         |
+| `UnquotedKey`           | An object key is missing `"` quotes.                                        |
+| `MissingComma`          | Two values are adjacent without a separator.                                |
+| `UnescapedCharacter`    | An invalid escape sequence appears in a string.                             |
+| `InvalidValue`          | A literal could not be matched; **also** returned for a missing object key. |
+| `CommentNotAllowed`     | `//` or `/* */` appears in strict mode.                                     |
+| `InvalidBooleanLiteral` | Token is not exactly `true` or `false`.                                     |
+| `InvalidNullLiteral`    | Token is not exactly `null`.                                                |
+| `EmptyValue`            | A position where a value is required is empty.                              |
+| `LeadingZero`           | A numeric literal starts with a `0` other than `0` itself.                  |
+| `InvalidType`           | A typed access (`as_*`) was called on the wrong type.                       |
+| `IsNotArray`            | An array operation was applied to a non-array.                              |
+| `IsNotObject`           | An object operation was applied to a non-object.                            |
+| `RootNotArrayType`      | Array root was expected.                                                    |
+| `RootNotObjectType`     | Object root was expected.                                                   |
+| `InvalidUnicode`        | A `\uXXXX` sequence is not a valid code point.                              |
+| `InvalidSurrogate`      | A surrogate pair is malformed.                                              |
+| `Unknown`               | Catch-all for unrecoverable states.                                         |
 
 `zuu::utils::TranslateError(JsonError)` returns a human-readable `const char*` for the enum.
 
@@ -72,12 +72,12 @@ A fully-parsed JSON document. Move-only and non-copyable. The `Json` object owns
 [[nodiscard]] static Result<Json> Json::parse(std::string_view content) noexcept;
 ```
 
-| Parameter | Description |
-| --- | --- |
+| Parameter | Description                                                                                            |
+| --------- | ------------------------------------------------------------------------------------------------------ |
 | `content` | The full JSON text to parse. The view is not retained; the parser copies what it needs into the arena. |
 
-| Return | Description |
-| --- | --- |
+| Return         | Description                                                 |
+| -------------- | ----------------------------------------------------------- |
 | `Result<Json>` | `Json` on success; `std::unexpected{JsonError}` on failure. |
 
 ### Lifetime
@@ -111,15 +111,15 @@ A read-only view of a single JSON value. Holds a pointer to the owning `Storage`
 
 ### Type predicates
 
-| Method | Returns `true` when… |
-| --- | --- |
-| `is_null()` | Type is `Null`. |
-| `is_bool()` | Type is `Boolean`. |
-| `is_integer()` | Type is `Integer`. |
-| `is_double()` | Type is `Double` (the bit pattern of a normal double is preserved in the storage word). |
-| `is_string()` | Type is `String`. |
-| `is_array()` | Type is `Array`. |
-| `is_object()` | Type is `Object`. |
+| Method         | Returns `true` when…                                                                    |
+| -------------- | --------------------------------------------------------------------------------------- |
+| `is_null()`    | Type is `Null`.                                                                         |
+| `is_bool()`    | Type is `Boolean`.                                                                      |
+| `is_integer()` | Type is `Integer`.                                                                      |
+| `is_double()`  | Type is `Double` (the bit pattern of a normal double is preserved in the storage word). |
+| `is_string()`  | Type is `String`.                                                                       |
+| `is_array()`   | Type is `Array`.                                                                        |
+| `is_object()`  | Type is `Object`.                                                                       |
 
 ```cpp
 [[nodiscard]] Type type() const noexcept;
@@ -165,7 +165,7 @@ std::println("{}", doc["missing"].get_string("fallback"));
 ### Container inspection
 
 ```cpp
-[[nodiscard]] size_t size() const noexcept;
+[[nodiscard]] unsigned long long size() const noexcept;
 ```
 
 Returns the number of elements (for arrays) or members (for objects). Returns `0` for all other types.
@@ -179,17 +179,17 @@ Returns `true` if the value is an object that contains `key`. Implemented with O
 ### Strict traversal
 
 ```cpp
-[[nodiscard]] Result<Value> at(size_t index) const noexcept;
+[[nodiscard]] Result<Value> at(unsigned long long index) const noexcept;
 [[nodiscard]] Result<Value> at(std::string_view key) const noexcept;
 ```
 
-- `at(size_t)` — bounds-checked array access. Returns `InvalidValue` on out-of-range.
+- `at(unsigned long long)` — bounds-checked array access. Returns `InvalidValue` on out-of-range.
 - `at(string_view)` — object lookup. Returns `IsNotObject` or `InvalidValue` as appropriate.
 
 ### Fluent traversal (optional chaining)
 
 ```cpp
-[[nodiscard]] Value operator[](size_t index) const noexcept;
+[[nodiscard]] Value operator[](unsigned long long index) const noexcept;
 [[nodiscard]] Value operator[](std::string_view key) const noexcept;
 ```
 
@@ -244,7 +244,7 @@ int main() {
 
     // Iteration via size()
     auto tags = root["tags"];
-    for (size_t i = 0; i < tags.size(); ++i) {
+    for (unsigned long long i = 0; i < tags.size(); ++i) {
         std::println("tag[{}] = {}", i, tags[i].get_string());
     }
 

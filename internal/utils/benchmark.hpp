@@ -69,7 +69,7 @@ class Benchmark {
     }
 
     static void Tokenizer(benchmark::State& state, std::span<const char> raw) {
-        const size_t bytes_processed = raw.size();
+        const unsigned long long bytes_processed = raw.size();
 
         if (raw.empty()) {
             state.SkipWithError("File JSON kosong atau path salah! (Tokenizer)");
@@ -109,7 +109,7 @@ class Benchmark {
             state.SkipWithError("Tokenizer failed during setup!");
             return;
         }
-        const size_t nodes_count = tokens_result->first.size();
+        const unsigned long long nodes_count = tokens_result->first.size();
 
         for (auto _ : state) {
             zuu::parser::Parser parser(tokens_result->first, tokens_result->second);
@@ -142,7 +142,7 @@ class Benchmark {
             return;
         }
 
-        const size_t bytes_processed = raw.size();
+        const unsigned long long bytes_processed = raw.size();
 
         for (auto _ : state) {
             auto json = zuu::Json::parse(std::string_view(raw.data(), raw.size()));
@@ -277,7 +277,7 @@ class Benchmark {
             return std::unexpected{std::errc::io_error};
         }
 
-        std::string result(static_cast<std::size_t>(size), '\0');
+        std::string result(static_cast<unsigned long long>(size), '\0');
         file.seekg(0, std::ios::beg);
 
         file.read(result.data(), static_cast<std::streamsize>(result.size()));
@@ -285,7 +285,7 @@ class Benchmark {
             return std::unexpected{std::errc::io_error};
         }
 
-        result.resize(static_cast<std::size_t>(file.gcount()));
+        result.resize(static_cast<unsigned long long>(file.gcount()));
         return result;
     }
 };

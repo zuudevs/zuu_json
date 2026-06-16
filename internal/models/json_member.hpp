@@ -15,7 +15,7 @@
 namespace zuu::models {
 
 struct JsonMember {
-    size_t key_index_{};
+    unsigned long long key_index_{};
     JsonValue value_{};
 };
 

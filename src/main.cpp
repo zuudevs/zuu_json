@@ -54,7 +54,7 @@ int main() {
     // Iterasi Array (menggunakan size() secara aman)
     auto colors = root["colors"];
     std::println("colors  : {} item(s)", colors.size());
-    for (size_t i = 0; i < colors.size(); ++i) {
+    for (unsigned long long i = 0; i < colors.size(); ++i) {
         std::println("  [{}]   : {}", i, colors[i].get_string());
     }
 

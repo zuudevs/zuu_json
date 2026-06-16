@@ -10,8 +10,9 @@
 
 #pragma once
 
-#include "zuu_json/models/value.hpp"
+#include <expected>
 #include <memory>
+#include "zuu_json/models/value.hpp"
 
 namespace zuu::models {
 

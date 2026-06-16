@@ -17,7 +17,7 @@
 namespace zuu::models {
 
 struct Token {
-    enum class Type : uint8_t {
+    enum class Type : unsigned char {
         LeftCurlyBracket,
         RightCurlyBracket,
         LeftSquareBracket,
@@ -44,18 +44,18 @@ struct Token {
     }
 
     const char* begin_;
-    uint32_t size_;
+    unsigned size_;
     Type type_;
     bool has_escape_{false};
 };
 
 template <>
 struct Hint<Token> {
-    size_t string_count_{};
-    size_t array_count_{};
-    size_t object_count_{};
-    size_t comma_count_{};
-    size_t string_escape_bytes_{};
+    unsigned long long string_count_{};
+    unsigned long long array_count_{};
+    unsigned long long object_count_{};
+    unsigned long long comma_count_{};
+    unsigned long long string_escape_bytes_{};
 
     constexpr Hint() noexcept = default;
     constexpr Hint(const Hint&) noexcept = default;
@@ -106,7 +106,7 @@ struct Lookup<models::Token> {
 
     // clang-format on
 
-    enum class Type : uint8_t {
+    enum class Type : unsigned char {
         WhiteSpace,
         LeftCurlyBracket,
         RightCurlyBracket,
@@ -121,7 +121,7 @@ struct Lookup<models::Token> {
         Error
     };
 
-    [[nodiscard]] static inline constexpr Type operator[](uint8_t idx) noexcept {
+    [[nodiscard]] static inline constexpr Type operator[](unsigned char idx) noexcept {
         return static_cast<Type>(value[idx]);
     }
 };

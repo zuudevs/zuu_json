@@ -110,7 +110,7 @@ std::string_view Value::get_string(std::string_view default_val) const noexcept 
 
 // ── Container & Traversal ──
 
-size_t Value::size() const noexcept {
+unsigned long long Value::size() const noexcept {
     if (value_.get_type() == Type::Array)
         return storage_->array(value_.as_index()).size();
     if (value_.get_type() == Type::Object)
@@ -123,20 +123,15 @@ bool Value::contains(std::string_view key) const noexcept {
         return false;
 
     const auto obj = storage_->object(value_.as_index());
-    auto it = std::ranges::lower_bound(
-        obj, 
-		key, 
-		{}, 
-		[this](const JsonMember& member) {
-            return storage_->string(member.key_index_);
-        }
-	);
+    auto it = std::ranges::lower_bound(obj, key, {}, [this](const JsonMember& member) {
+        return storage_->string(member.key_index_);
+    });
 
     return (it != obj.end() && storage_->string(it->key_index_) == key);
 }
 
 // Strict at()
-Value::Result<Value> Value::at(size_t index) const noexcept {
+Value::Result<Value> Value::at(unsigned long long index) const noexcept {
     if (value_.get_type() != Type::Array) {
         return std::unexpected{core::JsonError::IsNotArray};
     }
@@ -153,14 +148,9 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
     }
 
     const auto obj = storage_->object(value_.as_index());
-    auto it = std::ranges::lower_bound(
-        obj, 
-		key, 
-		{}, 
-		[this](const JsonMember& member) {
-            return storage_->string(member.key_index_);
-        }
-	);
+    auto it = std::ranges::lower_bound(obj, key, {}, [this](const JsonMember& member) {
+        return storage_->string(member.key_index_);
+    });
 
     if (it != obj.end() && storage_->string(it->key_index_) == key) {
         return fromInternal(storage_, it->value_);
@@ -170,7 +160,7 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
 }
 
 // Fluent operator[] (Optional Chaining safe)
-Value Value::operator[](size_t index) const noexcept {
+Value Value::operator[](unsigned long long index) const noexcept {
     auto res = at(index);
     if (res)
         return res.value();

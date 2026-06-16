@@ -64,15 +64,15 @@ class Value {
     [[nodiscard]] std::string_view get_string(std::string_view default_val = "") const noexcept;
 
     // ── Container & Chaining ──
-    [[nodiscard]] size_t size() const noexcept;
+    [[nodiscard]] unsigned long long size() const noexcept;
     [[nodiscard]] bool contains(std::string_view key) const noexcept;
 
     // Strict traversal
-    [[nodiscard]] Result<Value> at(size_t index) const noexcept;
+    [[nodiscard]] Result<Value> at(unsigned long long index) const noexcept;
     [[nodiscard]] Result<Value> at(std::string_view key) const noexcept;
 
     // Fluent traversal (Optional Chaining - mengembalikan Value Null jika tidak ditemukan)
-    [[nodiscard]] Value operator[](size_t index) const noexcept;
+    [[nodiscard]] Value operator[](unsigned long long index) const noexcept;
     [[nodiscard]] Value operator[](std::string_view key) const noexcept;
 
   private:

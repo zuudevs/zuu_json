@@ -9,7 +9,6 @@
  */
 
 #include "parser/parser.hpp"
-#include "utils/strings.hpp"
 #include <charconv>
 
 namespace zuu::parser {
@@ -36,8 +35,8 @@ Parser::Expected Parser::Parse(Raw tokens, Hint hint) noexcept {
     return Parser(tokens, hint).result();
 }
 
-uint32_t Parser::decodeUnicodeHex(const char* ptr) noexcept {
-    uint32_t value = 0;
+unsigned Parser::decodeUnicodeHex(const char* ptr) noexcept {
+    unsigned value = 0;
     for (int i = 0; i < 4; ++i) {
         char c = ptr[i];
         value <<= 4;
@@ -97,13 +96,13 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
                         status_ = core::JsonError::InvalidValue;
                         return {};
                     }
-                    uint32_t cp = decodeUnicodeHex(ptr + 1);
+                    unsigned cp = decodeUnicodeHex(ptr + 1);
                     ptr += 4;
 
                     // Konversi UTF-16 Surrogate Pairs ke format UTF-8
                     if (cp >= 0xD800 && cp <= 0xDBFF) {
                         if (ptr + 6 <= end && ptr[1] == '\\' && ptr[2] == 'u') {
-                            uint32_t cp2 = decodeUnicodeHex(ptr + 3);
+                            unsigned cp2 = decodeUnicodeHex(ptr + 3);
                             if (cp2 >= 0xDC00 && cp2 <= 0xDFFF) {
                                 cp = 0x10000 + (((cp - 0xD800) << 10) | (cp2 - 0xDC00));
                                 ptr += 6;
@@ -147,7 +146,7 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
         }
         ++ptr;
     }
-    return {dest, static_cast<size_t>(out - dest)};
+    return {dest, static_cast<unsigned long long>(out - dest)};
 }
 
 Parser::JsonValue Parser::buildNull() noexcept {
@@ -209,7 +208,7 @@ Parser::JsonValue Parser::buildArray() noexcept {
         return JsonValue::Array(res_.sealArray(res_.getArrayOffset()));
     }
 
-    const size_t start_offset = res_.getArrayOffset();
+    const unsigned long long start_offset = res_.getArrayOffset();
 
     while (true) {
         auto value = buildValue();
@@ -246,7 +245,7 @@ Parser::JsonValue Parser::buildObject() noexcept {
         return JsonValue::Object(res_.sealObject(res_.getObjectOffset()));
     }
 
-    const size_t start_offset = res_.getObjectOffset();
+    const unsigned long long start_offset = res_.getObjectOffset();
 
     while (true) {
         if (current_->type_ != TokenType::String) [[unlikely]] {

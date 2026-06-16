@@ -27,7 +27,7 @@ int main() {
         std::println("zuu punya {} bahasa pemrograman favorit:", bahasa.size());
 
         // Iterasi array secara aman
-        for (size_t i = 0; i < bahasa.size(); ++i) {
+        for (unsigned long long i = 0; i < bahasa.size(); ++i) {
             std::println("{}. {}", i + 1, bahasa[i].get_string());
         }
     }

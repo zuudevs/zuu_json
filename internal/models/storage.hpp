@@ -37,45 +37,45 @@ class Storage {
     void setRoot(JsonValue value) noexcept;
     [[nodiscard]] const JsonValue& root() const noexcept;
 
-    [[nodiscard]] size_t commitString(std::string_view value) noexcept;
+    [[nodiscard]] unsigned long long commitString(std::string_view value) noexcept;
 
     // Fast-path untuk unescaping
-    [[nodiscard]] char* allocateStringBuffer(size_t length) noexcept;
+    [[nodiscard]] char* allocateStringBuffer(unsigned long long length) noexcept;
 
     // Fast-path untuk Parser (Bump Allocation)
-    [[nodiscard]] size_t getArrayOffset() const noexcept;
+    [[nodiscard]] unsigned long long getArrayOffset() const noexcept;
     void pushArrayElement(const JsonValue& val) noexcept;
-    [[nodiscard]] size_t sealArray(size_t start_offset) noexcept;
+    [[nodiscard]] unsigned long long sealArray(unsigned long long start_offset) noexcept;
 
-    [[nodiscard]] size_t getObjectOffset() const noexcept;
+    [[nodiscard]] unsigned long long getObjectOffset() const noexcept;
     void pushObjectMember(const JsonMember& member) noexcept;
-    [[nodiscard]] size_t sealObject(size_t start_offset) noexcept;
+    [[nodiscard]] unsigned long long sealObject(unsigned long long start_offset) noexcept;
 
-    [[nodiscard]] JsonArray array(size_t index) const noexcept;
-    [[nodiscard]] JsonObject object(size_t index) const noexcept;
-    [[nodiscard]] std::string_view string(size_t index) const noexcept;
+    [[nodiscard]] JsonArray array(unsigned long long index) const noexcept;
+    [[nodiscard]] JsonObject object(unsigned long long index) const noexcept;
+    [[nodiscard]] std::string_view string(unsigned long long index) const noexcept;
 
   private:
     std::unique_ptr<std::byte[]> arena_;
 
     std::string_view* strings_{nullptr};
-    uint32_t strings_size_{0};
+    unsigned strings_size_{0};
 
     JsonValue* array_elements_{nullptr};
-    uint32_t array_elements_size_{0};
+    unsigned array_elements_size_{0};
 
-    std::pair<uint32_t, uint32_t>* arrays_{nullptr};
-    uint32_t arrays_size_{0};
+    std::pair<unsigned, unsigned>* arrays_{nullptr};
+    unsigned arrays_size_{0};
 
     JsonMember* object_elements_{nullptr};
-    uint32_t object_elements_size_{0};
+    unsigned object_elements_size_{0};
 
-    std::pair<uint32_t, uint32_t>* objects_{nullptr};
-    uint32_t objects_size_{0};
+    std::pair<unsigned, unsigned>* objects_{nullptr};
+    unsigned objects_size_{0};
 
     // Buffer mentah untuk teks string yang membutuhkan Unescaping
     char* string_buffer_{nullptr};
-    uint32_t string_buffer_size_{0};
+    unsigned string_buffer_size_{0};
 
     JsonValue root_{};
     bool root_set_{false};

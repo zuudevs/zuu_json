@@ -65,7 +65,7 @@ int main() {
     std::println("age   : {}", root["age"].get_integer());
     std::println("pos.x : {}", root["position"]["x"].get_double());
 
-    for (size_t i = 0; i < root["colors"].size(); ++i) {
+    for (unsigned long long i = 0; i < root["colors"].size(); ++i) {
         std::println("color[{}]: {}", i, root["colors"][i].get_string());
     }
 }
@@ -75,17 +75,17 @@ A larger runnable demo is in [`src/main.cpp`](src/main.cpp).
 
 ## Documentation
 
-| Document | Purpose |
-| --- | --- |
-| [docs/QUICKSTART.md](docs/QUICKSTART.md) | Get up and running in minutes |
-| [docs/API.md](docs/API.md) | Full public API reference |
+| Document                                     | Purpose                                     |
+| -------------------------------------------- | ------------------------------------------- |
+| [docs/QUICKSTART.md](docs/QUICKSTART.md)     | Get up and running in minutes               |
+| [docs/API.md](docs/API.md)                   | Full public API reference                   |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, data flow, module boundaries |
-| [docs/CHANGELOG.md](docs/CHANGELOG.md) | Release history (Keep a Changelog) |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Planned milestones and direction |
-| [BUILD.md](BUILD.md) | Environment setup and build instructions |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution workflow and standards |
-| [SECURITY.md](SECURITY.md) | Vulnerability disclosure |
-| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md)       | Release history (Keep a Changelog)          |
+| [docs/ROADMAP.md](docs/ROADMAP.md)           | Planned milestones and direction            |
+| [BUILD.md](BUILD.md)                         | Environment setup and build instructions    |
+| [CONTRIBUTING.md](CONTRIBUTING.md)           | Contribution workflow and standards         |
+| [SECURITY.md](SECURITY.md)                   | Vulnerability disclosure                    |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)     | Community standards                         |
 
 ## Build at a glance
 
