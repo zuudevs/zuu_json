@@ -37,6 +37,30 @@
 },
 {
   "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o CMakeFiles\\example_array.dir\\example\\example_array.cpp.obj -c D:\\Project\\zuu_json\\example\\example_array.cpp",
+  "file": "D:/Project/zuu_json/example/example_array.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/example_array.dir/example/example_array.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o CMakeFiles\\example_basic.dir\\example\\example_basic.cpp.obj -c D:\\Project\\zuu_json\\example\\example_basic.cpp",
+  "file": "D:/Project/zuu_json/example/example_basic.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/example_basic.dir/example/example_basic.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o CMakeFiles\\example_nested_object.dir\\example\\example_nested_object.cpp.obj -c D:\\Project\\zuu_json\\example\\example_nested_object.cpp",
+  "file": "D:/Project/zuu_json/example/example_nested_object.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/example_nested_object.dir/example/example_nested_object.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o CMakeFiles\\example_strict.dir\\example\\example_strict.cpp.obj -c D:\\Project\\zuu_json\\example\\example_strict.cpp",
+  "file": "D:/Project/zuu_json/example/example_strict.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/example_strict.dir/example/example_strict.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
   "command": "D:\\program\\LLVM\\bin\\clang++.exe -DBENCHMARK_STATIC_DEFINE -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -ID:/Project/zuu_json/build/_deps/benchmark-src/include -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -o CMakeFiles\\zuu_json_benchmark.dir\\tests\\benchmark.cpp.obj -c D:\\Project\\zuu_json\\tests\\benchmark.cpp",
   "file": "D:/Project/zuu_json/tests/benchmark.cpp",
   "output": "D:/Project/zuu_json/build/CMakeFiles/zuu_json_benchmark.dir/tests/benchmark.cpp.obj"

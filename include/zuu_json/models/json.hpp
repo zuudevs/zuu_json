@@ -35,12 +35,12 @@ class Json {
     template <typename T>
     using Result = std::expected<T, Error>;
 
-    Json(Json&&) noexcept = default;
-    Json& operator=(Json&&) noexcept = default;
+    Json(Json&&) noexcept;
+    Json& operator=(Json&&) noexcept;
     ~Json() noexcept;
 
     Json(const Json&) = delete;
-    Json& operator=(const Json&) = delete;
+	Json& operator=(const Json&) = delete;
 
     [[nodiscard]] static Result<Json> parse(std::string_view content) noexcept;
 

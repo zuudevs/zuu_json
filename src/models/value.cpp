@@ -123,10 +123,14 @@ bool Value::contains(std::string_view key) const noexcept {
         return false;
 
     const auto obj = storage_->object(value_.as_index());
-    auto it = std::lower_bound(
-        obj.begin(), obj.end(), key, [this](const JsonMember& member, std::string_view k) {
-            return storage_->string(member.key_index_) < k;
-        });
+    auto it = std::ranges::lower_bound(
+        obj, 
+		key, 
+		{}, 
+		[this](const JsonMember& member) {
+            return storage_->string(member.key_index_);
+        }
+	);
 
     return (it != obj.end() && storage_->string(it->key_index_) == key);
 }
@@ -149,10 +153,14 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
     }
 
     const auto obj = storage_->object(value_.as_index());
-    auto it = std::lower_bound(
-        obj.begin(), obj.end(), key, [this](const JsonMember& member, std::string_view k) {
-            return storage_->string(member.key_index_) < k;
-        });
+    auto it = std::ranges::lower_bound(
+        obj, 
+		key, 
+		{}, 
+		[this](const JsonMember& member) {
+            return storage_->string(member.key_index_);
+        }
+	);
 
     if (it != obj.end() && storage_->string(it->key_index_) == key) {
         return fromInternal(storage_, it->value_);

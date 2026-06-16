@@ -102,6 +102,36 @@ target_link_libraries(
     PRIVATE
         ${LIBRARY_OUTPUT_NAME}
 )
+# ============================================================
+# example program set
+# ============================================================
+
+file(GLOB EXAMPLE_SOURCES CONFIGURE_DEPENDS
+	${CMAKE_SOURCE_DIR}/example/*.cpp
+)
+
+foreach(SOURCE ${EXAMPLE_SOURCES})
+	get_filename_component(
+		TARGET_NAME 
+		${SOURCE} 
+		NAME_WE
+	)
+
+	add_executable(${TARGET_NAME}
+		${SOURCE}
+	)
+
+	target_include_directories(${TARGET_NAME}
+		PRIVATE
+			${CMAKE_SOURCE_DIR}/include
+			${CMAKE_SOURCE_DIR}/internal
+	)
+
+	target_link_libraries(${TARGET_NAME}
+		PRIVATE
+			${LIBRARY_OUTPUT_NAME}
+	)
+endforeach()
 
 # ============================================================
 # benchmark program set
