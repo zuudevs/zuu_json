@@ -165,20 +165,38 @@ endif()
 # clang-tidy tool
 # ============================================================
 
-find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+option(ENABLE_CLANG_TIDY "Enable clang-tidy checking" OFF)
 
-if(CLANG_TIDY_EXE)
-    set_target_properties(
-        ${LIBRARY_OUTPUT_NAME}
-        PROPERTIES
-        CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-p=${CMAKE_BINARY_DIR}"
-    )
+if(ENABLE_CLANG_TIDY)
+	find_program(CLANG_TIDY_EXE NAMES clang-tidy)
 
-    set_target_properties(
-        ${PROJECT_NAME}
-        PROPERTIES
-        CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-p=${CMAKE_BINARY_DIR}"
-    )
+	if(CLANG_TIDY_EXE)
+		set_target_properties(
+			${LIBRARY_OUTPUT_NAME}
+			PROPERTIES
+			CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-p=${CMAKE_BINARY_DIR}"
+		)
+
+		set_target_properties(
+			${PROJECT_NAME}
+			PROPERTIES
+			CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-p=${CMAKE_BINARY_DIR}"
+		)
+
+		if(DEFINED ALL_SOURCE_FILES)
+            add_custom_target(
+                tidy
+                COMMAND ${CLANG_TIDY_EXE} -p=${CMAKE_BINARY_DIR} --fix ${ALL_SOURCE_FILES}
+                COMMENT "Fixing source files with clang-tidy"
+            )
+
+            add_custom_target(
+                tidy-check
+                COMMAND ${CLANG_TIDY_EXE} -p=${CMAKE_BINARY_DIR} --warnings-as-errors=* ${ALL_SOURCE_FILES}
+                COMMENT "Checking source files with clang-tidy"
+            )
+        endif()
+	endif()
 endif()
 
 # ============================================================
