@@ -16,6 +16,7 @@
 #include <format>
 #include <fstream>
 #include "parser/parser.hpp"
+// #include <print>
 #include "tokenizer/tokenizer.hpp"
 #include <span>
 #include <string>
@@ -83,7 +84,10 @@ class Benchmark {
         for (auto _ : state) {
             auto tokens = zuu::tokenizer::Tokenizer::Tokenize(raw);
             if (!tokens) {
-                state.SkipWithError("Tokenizer failed!");
+                state.SkipWithError(std::format(
+					"Tokenizer failed!, Error: {}",
+					utils::TranslateError(tokens.error())
+				));
                 break;
             }
             benchmark::DoNotOptimize(tokens);
@@ -108,27 +112,38 @@ class Benchmark {
         }
 
         auto tokens_result = zuu::tokenizer::Tokenizer::Tokenize(raw);
-		tokenizer_current_space = (raw.size() >> 1) + 16;
-		tokenizer_required_space = tokens_result->first.size();
 
         if (!tokens_result) {
-            state.SkipWithError("Tokenizer failed during setup!");
+            state.SkipWithError(std::format(
+				"Tokenizer failed during setup!, Error: {}", 
+				utils::TranslateError(tokens_result.error())
+			));
             return;
         }
         const size_t nodes_count = tokens_result->first.size();
 
         for (auto _ : state) {
-            zuu::parser::Parser parser(tokens_result->first, tokens_result->second);
+            zuu::parser::Parser parser(
+				tokens_result->first, 
+				tokens_result->second
+			);
             auto parsed = std::move(parser).result();
 
             if (!parsed) {
-                state.SkipWithError(std::format("Parser failed!, Error code: {}", utils::TranslateError(parsed.error())));
+                state.SkipWithError(std::format(
+					"Parser failed!, Error: {}", 
+					utils::TranslateError(parsed.error())
+				));
                 break;
             }
             benchmark::DoNotOptimize(parsed);
         }
         state.counters["Tokens/s"] = benchmark::Counter(
-            static_cast<double>(nodes_count), benchmark::Counter::kIsIterationInvariantRate);
+            static_cast<double>(nodes_count), 
+			benchmark::Counter::kIsIterationInvariantRate
+		);
+		// std::println("Pre-allocate Space of Tokenizer    : {}", (raw.size() >> 1) + 16);
+		// std::println("Actual Space Required of Tokenizer : {}", tokens_result->first.size());
     }
 
     static void SmallParser(benchmark::State& state);
@@ -150,9 +165,15 @@ class Benchmark {
         const size_t bytes_processed = raw.size();
 
         for (auto _ : state) {
-            auto json = zuu::Json::parse(std::string_view(raw.data(), raw.size()));
+            auto json = zuu::Json::parse(std::string_view(
+				raw.data(), 
+				raw.size()
+			));
             if (!json) {
-                state.SkipWithError(std::format("Full Pipeline failed!, Error code: {}", utils::TranslateError(json.error())));
+                state.SkipWithError(std::format(
+					"Full Pipeline failed!, Error: {}", 
+					utils::TranslateError(json.error())
+				));
                 break;
             }
             benchmark::DoNotOptimize(json);
@@ -213,7 +234,10 @@ class Benchmark {
             benchmark::DoNotOptimize(value2);
         }
 
-        state.counters["Lookups/s"] = benchmark::Counter(static_cast<double>(state.iterations()) * 2, benchmark::Counter::kIsRate);
+        state.counters["Lookups/s"] = benchmark::Counter(
+			static_cast<double>(state.iterations()) * 2, 
+			benchmark::Counter::kIsRate
+		);
     }
 
     static void DomTraversalDeep(benchmark::State& state) {
@@ -238,7 +262,9 @@ class Benchmark {
         }
         
         state.counters["Lookups/s"] = benchmark::Counter(
-            static_cast<double>(state.iterations()) * 4, benchmark::Counter::kIsRate);
+            static_cast<double>(state.iterations()) * 4, 
+			benchmark::Counter::kIsRate
+		);
     }
 
   private:
@@ -269,7 +295,10 @@ class Benchmark {
 
     [[nodiscard]] static std::expected<std::string, std::errc>
     loadFile(std::string_view filepath) noexcept {
-        std::ifstream file(std::string(filepath), std::ios::in | std::ios::binary);
+        std::ifstream file(
+			std::string(filepath), 
+			std::ios::in | std::ios::binary
+		);
         if (!file.is_open()) {
             return std::unexpected{std::errc::no_such_file_or_directory};
         }

@@ -8,7 +8,6 @@
  * @copyright Copyright (c) 2026
  */
 
-#include <print>
 #include "utils/benchmark.hpp"
 using namespace zuu::utils;
 
@@ -145,7 +144,5 @@ int main(int argc, char** argv) {
     benchmark::Initialize(&argc, argv);
     benchmark::RunSpecifiedBenchmarks();
     benchmark::Shutdown();
-	std::println("Pre-allocate Space of Tokenizer    : {}", Benchmark::tokenizer_current_space);
-	std::println("Actual Space Required of Tokenizer : {}", Benchmark::tokenizer_required_space);
     return 0;
 }
