@@ -11,7 +11,10 @@
 #include "zuu_json/models/json.hpp"
 #include "parser/parser.hpp"
 #include "tokenizer/tokenizer.hpp"
+#include "zuu_json/core/error.hpp"
+#include "zuu_json/models/value.hpp"
 #include <algorithm>
+#include <expected>
 
 namespace zuu::models {
 
@@ -23,7 +26,7 @@ Json::~Json() noexcept = default;
 Json::Json(std::unique_ptr<Storage> storage) noexcept
     : storage_(std::move(storage)) {}
 
-Json::Result<Json> Json::parse(std::string_view content) noexcept {
+std::expected<Json, core::JsonError> Json::parse(std::string_view content) noexcept {
     const auto raw = std::span<const char>(content.data(), content.size());
 
     auto tokens = tokenizer::Tokenizer::Tokenize(raw);
@@ -44,11 +47,11 @@ Value Json::root() const noexcept {
     return Value::fromInternal(storage_.get(), storage_->root());
 }
 
-Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
+std::expected<Value, core::JsonError> Json::operator[](std::string_view key) const noexcept {
     const auto& root_val = storage_->root();
 
     if (root_val.get_type() != JsonValue::Type::Object) {
-        return std::unexpected{Error::IsNotObject};
+        return std::unexpected{core::JsonError::IsNotObject};
     }
 
     const auto obj = storage_->object(root_val.as_index());
@@ -67,7 +70,7 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
         return Value::fromInternal(storage_.get(), it->value_);
     }
 
-    return std::unexpected{Error::InvalidValue};
+    return std::unexpected{core::JsonError::InvalidValue};
 }
 
 } // namespace zuu::models

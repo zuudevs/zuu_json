@@ -12,6 +12,7 @@
 
 #include <expected>
 #include <memory>
+#include "zuu_json/core/error.hpp"
 #include "zuu_json/models/value.hpp"
 
 namespace zuu::models {
@@ -32,10 +33,6 @@ class Storage;
  */
 class Json {
   public:
-    using Error = core::JsonError;
-    template <typename T>
-    using Result = std::expected<T, Error>;
-
     Json(Json&&) noexcept;
     Json& operator=(Json&&) noexcept;
     ~Json() noexcept;
@@ -43,11 +40,11 @@ class Json {
     Json(const Json&) = delete;
 	Json& operator=(const Json&) = delete;
 
-    [[nodiscard]] static Result<Json> parse(std::string_view content) noexcept;
+    [[nodiscard]] static std::expected<Json, core::JsonError> parse(std::string_view content) noexcept;
 
     [[nodiscard]] Value root() const noexcept;
 
-    [[nodiscard]] Result<Value> operator[](std::string_view key) const noexcept;
+    [[nodiscard]] std::expected<Value, core::JsonError> operator[](std::string_view key) const noexcept;
 
   private:
     explicit Json(std::unique_ptr<Storage> storage) noexcept;
