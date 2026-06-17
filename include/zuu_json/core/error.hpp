@@ -35,4 +35,11 @@ enum class JsonError : unsigned char {
     Unknown
 };
 
+enum class ParseError : unsigned char {
+	None,
+	InvalidFormat,
+	OutOfBound,
+	Unknown,
+};
+
 } // namespace zuu::core

@@ -1,5 +1,5 @@
 /**
- * @file lookup.hpp
+ * @file lookup_trait.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
  * @version 1.0.0
@@ -10,11 +10,11 @@
 
 #pragma once
 
-namespace zuu::models {
+namespace zuu::traits {
 
 template <typename>
-struct Lookup {
-    static_assert(sizeof(Lookup) == 0, "invalid lookup");
+struct LookupTrait {
+    static_assert(sizeof(LookupTrait) == 0, "invalid size lookup trait");
 };
 
-} // namespace zuu::models
+} // namespace zuu::traits

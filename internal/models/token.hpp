@@ -10,11 +10,13 @@
 
 #pragma once
 
-#include "models/hint.hpp"
-#include "models/lookup.hpp"
+#include "traits/lookup_trait.hpp"
+#include "traits/hint_trait.hpp"
 #include <string_view>
 
-namespace zuu::models {
+namespace zuu {
+
+namespace models {
 
 struct Token {
     enum class Type : unsigned char {
@@ -49,24 +51,28 @@ struct Token {
     bool has_escape_{false};
 };
 
+} // namespace models
+
+namespace traits {
+
 template <>
-struct Hint<Token> {
+struct HintTrait<models::Token> {
     unsigned long long string_count_{};
     unsigned long long array_count_{};
     unsigned long long object_count_{};
     unsigned long long comma_count_{};
     unsigned long long string_escape_bytes_{};
 
-    constexpr Hint() noexcept = default;
-    constexpr Hint(const Hint&) noexcept = default;
-    constexpr Hint(Hint&&) noexcept = default;
-    constexpr ~Hint() noexcept = default;
-    constexpr Hint& operator=(const Hint&) noexcept = default;
-    constexpr Hint& operator=(Hint&&) noexcept = default;
+    constexpr HintTrait() noexcept = default;
+    constexpr HintTrait(const HintTrait&) noexcept = default;
+    constexpr HintTrait(HintTrait&&) noexcept = default;
+    constexpr ~HintTrait() noexcept = default;
+    constexpr HintTrait& operator=(const HintTrait&) noexcept = default;
+    constexpr HintTrait& operator=(HintTrait&&) noexcept = default;
 };
 
 template <>
-struct Lookup<models::Token> {
+struct LookupTrait<models::Token> {
     // clang-format off
 	/**
 	* @brief lookup table token action
@@ -126,4 +132,6 @@ struct Lookup<models::Token> {
     }
 };
 
-} // namespace zuu::models
+} // namespace traits
+
+} // namespace zuu
