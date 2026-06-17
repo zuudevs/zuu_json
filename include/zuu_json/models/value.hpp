@@ -1,6 +1,6 @@
 /**
  * @file value.hpp
- * @author zuu::modelsdevs (zuu::modelsdevs@gmail.com)
+ * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
  * @version 1.0.0
  * @date 2026-06-05
