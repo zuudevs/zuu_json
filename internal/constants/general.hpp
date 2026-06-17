@@ -13,5 +13,6 @@
 namespace zuu::constants {
 
 constexpr unsigned char digit = 10;
+constexpr unsigned char byte = 8;
 
 } // namespace zuu::constants

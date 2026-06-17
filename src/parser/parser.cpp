@@ -44,9 +44,9 @@ unsigned Parser::decodeUnicodeHex(const char* ptr) noexcept {
         if (c >= '0' && c <= '9')
             value |= (c - '0');
         else if (c >= 'a' && c <= 'f')
-            value |= (c - 'a' + 10);
+            value |= (c - 'a' + constants::digit);
         else if (c >= 'A' && c <= 'F')
-            value |= (c - 'A' + 10);
+            value |= (c - 'A' + constants::digit);
         else {
             status_ = core::JsonError::InvalidValue;
             return 0;

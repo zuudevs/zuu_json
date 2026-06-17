@@ -12,7 +12,7 @@
 #include <cstring>
 #include "tokenizer/tokenizer.hpp"
 
-namespace zuu::tokenizer {
+namespace {
 
 [[nodiscard]] inline constexpr bool has_zero_byte(unsigned long long v) noexcept {
     return (v - 0x0101010101010101ULL) & ~v & 0x8080808080808080ULL;
@@ -23,6 +23,10 @@ namespace zuu::tokenizer {
     const unsigned long long escape_mask = v ^ 0x5C5C5C5C5C5C5C5CULL;
     return has_zero_byte(quote_mask) | has_zero_byte(escape_mask);
 }
+
+} // namespace
+
+namespace zuu::tokenizer {
 
 Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
     : current_(json_content.data())
