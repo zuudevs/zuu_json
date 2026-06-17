@@ -21,11 +21,11 @@ namespace zuu::tokenizer {
 class Tokenizer {
   public:
     using Token = models::Token;
-    using Lookup = models::Lookup<Token>;
+    using Lookup = traits::LookupTrait<Token>;
     using Error = core::JsonError;
     using Result = std::vector<Token>;
-    using Hint = models::Hint<Token>;
-    using Resource = std::pair<Result, models::Hint<Token>>;
+    using Hint = traits::HintTrait<Token>;
+    using Resource = std::pair<Result, Hint>;
     using Expected = std::expected<Resource, Error>;
     using Raw = std::span<const char>;
 

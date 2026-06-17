@@ -13,7 +13,7 @@
 
 namespace zuu::models {
 
-Storage::Storage(models::Hint<Token> hint) noexcept {
+Storage::Storage(Hint hint) noexcept {
     const unsigned long long max_strings = hint.string_count_;
     const unsigned long long max_arrays = hint.array_count_;
     const unsigned long long max_objects = hint.object_count_;

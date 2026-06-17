@@ -1,5 +1,5 @@
 /**
- * @file hint.hpp
+ * @file hint_trait.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
  * @version 1.0.0
@@ -10,9 +10,11 @@
 
 #pragma once
 
-namespace zuu::models {
+namespace zuu::traits {
 
 template <typename>
-struct Hint;
+struct HintTrait {
+	static_assert(sizeof(HintTrait) == 0, "invalid size hint trait");
+};
 
-} // namespace zuu::models
+} // namespace zuu::traits

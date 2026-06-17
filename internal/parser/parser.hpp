@@ -19,7 +19,7 @@ namespace zuu::parser {
 class Parser {
   public:
     using Token = models::Token;
-    using Hint = models::Hint<Token>;
+    using Hint = traits::HintTrait<Token>;
     using TokenType = Token::Type;
     using Error = core::JsonError;
     using Storage = models::Storage;

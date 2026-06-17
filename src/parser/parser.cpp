@@ -9,6 +9,7 @@
  */
 
 #include "parser/parser.hpp"
+#include "utils/parse_double.hpp"
 #include <charconv>
 
 namespace zuu::parser {
@@ -173,15 +174,19 @@ Parser::JsonValue Parser::buildInteger() noexcept {
 }
 
 Parser::JsonValue Parser::buildDouble() noexcept {
-    long double value{};
-    auto [ptr, ec] = std::from_chars(current_->begin_, current_->begin_ + current_->size_, value);
-
-    if (ec != std::errc{} || ptr != current_->begin_ + current_->size_) {
-        status_ = core::JsonError::InvalidValue;
+    if(
+		auto res = utils::parse<double>(
+			current_->begin_, 
+			current_->begin_ + current_->size_
+		);
+		res
+	) {
+		current_++;
+    	return Parser::JsonValue::Double(*res);
+	} else {
+		status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
-    }
-    current_++;
-    return Parser::JsonValue::Double(value);
+	}
 }
 
 Parser::JsonValue Parser::buildString() noexcept {

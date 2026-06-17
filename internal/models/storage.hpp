@@ -21,6 +21,7 @@ namespace zuu::models {
 class Storage {
   public:
     using Type = JsonValue::Type;
+	using Hint = traits::HintTrait<Token>;
     using JsonArray = std::span<const JsonValue>;
     using JsonObject = std::span<const JsonMember>;
 
@@ -31,7 +32,7 @@ class Storage {
     Storage& operator=(Storage&&) noexcept = default;
     ~Storage() noexcept = default;
 
-    Storage(models::Hint<Token> hint) noexcept;
+    Storage(Hint hint) noexcept;
 
     [[nodiscard]] bool hasRoot() const noexcept;
     void setRoot(JsonValue value) noexcept;
