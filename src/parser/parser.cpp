@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2026
  */
 
-#include <charconv>
+#include <cstring>
 #include "parser/parser.hpp"
 #include "utils/parser.hpp"
 

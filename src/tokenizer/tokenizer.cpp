@@ -27,7 +27,7 @@ namespace {
 
 // --- COMPILE-TIME SWAR CONSTANTS ---
 // Struktur 4 byte persis untuk memanipulasi std::bit_cast
-struct Bytes4 { char c[4]; };
+struct Bytes4 { char c[4]{}; };
 
 // consteval: Memaksa fungsi ini dieksekusi SAAT KOMPILASI, 0% beban saat runtime!
 [[nodiscard]] consteval unsigned make_word(const char* str) noexcept {
@@ -190,7 +190,7 @@ void Tokenizer::readAlphabet() noexcept {
     
     // Tarik 4 byte sekaligus dan bandingkan 32-bit angkanya!
     if (rem >= 4) [[likely]] {
-        unsigned val;
+        unsigned val{};
         std::memcpy(&val, current_, 4); // Di-optimasi compiler jadi 1x MOV
 
         switch (val) {
