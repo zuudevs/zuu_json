@@ -19,5 +19,6 @@ constexpr unsigned char hex_alpha_max_val = 15;
 constexpr unsigned char hex_alpha_min_val = 10;
 constexpr unsigned char hex_digit_max_val = 9;
 constexpr unsigned char hex_digit_min_val = 0;
+constexpr unsigned char cache_line_size = 64;
 
 } // namespace zuu::constants
