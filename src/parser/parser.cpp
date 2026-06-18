@@ -14,12 +14,14 @@
 
 namespace {
 
-[[nodiscard]] inline constexpr bool has_zero_byte(unsigned long long v) noexcept {
+[[nodiscard]] inline constexpr unsigned long long 
+find_zero_byte_mask(unsigned long long v) noexcept {
 	return (v - 0x0101010101010101ULL) & ~v & 0x8080808080808080ULL;
 }
 
-[[nodiscard]] inline constexpr bool has_escape_char(unsigned long long v) noexcept {
-	return has_zero_byte(v ^ 0x5C5C5C5C5C5C5C5CULL);
+[[nodiscard]] inline constexpr unsigned long long 
+get_escape_mask(unsigned long long v) noexcept {
+	return find_zero_byte_mask(v ^ 0x5C5C5C5C5C5C5C5CULL);
 }
 
 } // namespace
@@ -70,68 +72,65 @@ unsigned Parser::decodeUnicodeHex(const char* ptr) noexcept {
 }
 
 std::string_view Parser::unescapeString(std::string_view src) noexcept {
-    // Alokasikan ruang buffer di dalam Memory Arena
     char* dest = res_.allocateStringBuffer(src.size());
     char* out = dest;
     const char* ptr = src.data();
     const char* end = ptr + src.size();
 
     while (ptr < end) {
-        while (ptr + constants::byte <= end) {
-            unsigned long long block{};
-            std::memcpy(
-				&block, 
-				ptr, 
-				constants::byte
-			);
+        
+        // --- PRECISION SWAR ACCELERATION ZONE ---
+        if constexpr (std::endian::native == std::endian::little) {
+            while (ptr + constants::byte <= end) {
+                unsigned long long block{};
+                std::memcpy(&block, ptr, 8);
 
-            if (has_escape_char(block)) {
-                break;
+                unsigned long long match_mask = get_escape_mask(block);
+
+                if (match_mask != 0) {
+                    // Radar menemukan karakter '\'! Hitung di byte ke berapa posisinya.
+                    unsigned int byte_idx = std::countr_zero(match_mask) >> 3;
+                    
+                    // Salin karakter aman tepat SEBELUM '\', lalu hentikan SWAR.
+                    std::memcpy(out, ptr, byte_idx);
+                    out += byte_idx;
+                    ptr += byte_idx;
+                    break; 
+                }
+
+                // Copy instan 8 byte jika aman semua
+                std::memcpy(out, ptr, constants::byte);
+                out += constants::byte;
+                ptr += constants::byte;
             }
-
-            std::memcpy(
-				out, 
-				ptr, 
-				constants::byte
-			);
-
-            out += constants::byte;
-            ptr += constants::byte;
+        } else {
+            // Fallback klasik untuk arsitektur Big Endian
+            while (ptr + constants::byte <= end) {
+                unsigned long long block{};
+                std::memcpy(&block, ptr, constants::byte);
+                if (get_escape_mask(block) != 0) break;
+                std::memcpy(out, ptr, constants::byte);
+                out += constants::byte;
+                ptr += constants::byte;
+            }
         }
 
-        if (ptr >= end) {
-			break;
-		}
+        if (ptr >= end) break; 
 
+        // --- SLOW PATH (Hanya menangani escape sequence-nya saja) ---
         if (*ptr == '\\') {
             ++ptr;
             if (ptr >= end)
                 break;
             switch (*ptr) {
-                case '"':
-                    *out++ = '"';
-                    break;
-                case '\\':
-                    *out++ = '\\';
-                    break;
-                case '/':
-                    *out++ = '/';
-                    break;
-                case 'b':
-                    *out++ = '\b';
-                    break;
-                case 'f':
-                    *out++ = '\f';
-                    break;
-                case 'n':
-                    *out++ = '\n';
-                    break;
-                case 'r':
-                    *out++ = '\r';
-                    break;
-                case 't':
-                    *out++ = '\t';
-                    break;
+                case '"':  *out++ = '"';  break;
+                case '\\': *out++ = '\\'; break;
+                case '/':  *out++ = '/';  break;
+                case 'b':  *out++ = '\b'; break;
+                case 'f':  *out++ = '\f'; break;
+                case 'n':  *out++ = '\n'; break;
+                case 'r':  *out++ = '\r'; break;
+                case 't':  *out++ = '\t'; break;
                 case 'u': {
                     if (ptr + 5 > end) {
                         status_ = core::JsonError::InvalidValue;
@@ -140,12 +139,11 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
                     unsigned cp = decodeUnicodeHex(ptr + 1);
                     ptr += 4;
 
-                    // Konversi UTF-16 Surrogate Pairs ke format UTF-8
                     if (cp >= 0xD800 && cp <= 0xDBFF) {
                         if (ptr + 6 <= end && ptr[1] == '\\' && ptr[2] == 'u') {
                             unsigned cp2 = decodeUnicodeHex(ptr + 3);
                             if (cp2 >= 0xDC00 && cp2 <= 0xDFFF) {
-                                cp = 0x10000 + (((cp - 0xD800) << 10) | (cp2 - 0xDC00));
+                                cp = 0x10000 + (((cp - 0xD800) << constants::hex_alpha_min_val) | (cp2 - 0xDC00));
                                 ptr += 6;
                             } else {
                                 status_ = core::JsonError::InvalidValue;
@@ -157,7 +155,6 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
                         }
                     }
 
-                    // Tulis hasil UTF-8 ke tujuan memory arena
                     if (cp <= 0x7F) {
                         *out++ = static_cast<char>(cp);
                     } else if (cp <= 0x7FF) {
@@ -187,7 +184,7 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
         }
         ++ptr;
     }
-    return {dest, static_cast<unsigned long long>(out - dest)};
+    return {dest, static_cast<std::size_t>(out - dest)};
 }
 
 Parser::JsonValue Parser::buildNull() noexcept {
