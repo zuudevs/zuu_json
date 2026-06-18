@@ -15,14 +15,15 @@
 
 namespace {
 
-[[nodiscard]] inline constexpr bool has_zero_byte(unsigned long long v) noexcept {
-    return (v - 0x0101010101010101ULL) & ~v & 0x8080808080808080ULL;
+[[nodiscard]] inline constexpr unsigned long long find_zero_byte_mask(unsigned long long v) noexcept {
+	return (v - 0x0101010101010101ULL) & ~v & 0x8080808080808080ULL;
 }
 
-[[nodiscard]] inline constexpr bool has_quote_or_escape(unsigned long long v) noexcept {
-    const unsigned long long quote_mask = v ^ 0x2222222222222222ULL;
-    const unsigned long long escape_mask = v ^ 0x5C5C5C5C5C5C5C5CULL;
-    return has_zero_byte(quote_mask) | has_zero_byte(escape_mask);
+// Mengembalikan MASK (bukan bool) untuk mencari tahu posisi pastinya
+[[nodiscard]] inline constexpr unsigned long long get_quote_or_escape_mask(unsigned long long v) noexcept {
+	const unsigned long long quote_mask = v ^ 0x2222222222222222ULL;
+	const unsigned long long escape_mask = v ^ 0x5C5C5C5C5C5C5C5CULL;
+	return find_zero_byte_mask(quote_mask) | find_zero_byte_mask(escape_mask);
 }
 
 // --- COMPILE-TIME SWAR CONSTANTS ---
@@ -74,31 +75,45 @@ void Tokenizer::readString() noexcept {
     bool has_escape = false;
 
     // Fast-path SWAR: Pindai 8 bytes sekaligus
-    while (ptr + constants::byte <= end) {
-        unsigned long long block{};
-        std::memcpy(
-			&block, 
-			ptr, 
-			constants::byte
-		);
+    // Trik countr_zero untuk indeks byte ini hanya valid di arsitektur Little-Endian (Mayoritas CPU modern)
+    if constexpr (std::endian::native == std::endian::little) {
+        while (ptr + 8 <= end) {
+            unsigned long long block{};
+            std::memcpy(&block, ptr, 8);
 
-        if (has_quote_or_escape(block)) {
-            break; // Jika ada '"' atau '\', keluar dan evaluasi secara presisi di slow-path
+            unsigned long long match_mask = get_quote_or_escape_mask(block);
+
+            if (match_mask != 0) {
+                unsigned int byte_idx = std::countr_zero(match_mask) >> 3;
+
+                if (ptr[byte_idx] == '"') {
+                    res_.emplace_back(
+                        Token::Type::String, std::string_view(begin, (ptr + byte_idx) - begin), has_escape);
+
+                    if (has_escape) {
+                        hint_.string_escape_bytes_ += ((ptr + byte_idx) - begin);
+                    }
+
+                    current_ = ptr + byte_idx + 1;
+                    return;
+                } else {
+                    // Ini adalah karakter escape '\'. 
+                    // Kita majukan pointer persis ke posisi '\', lalu biarkan slow-path yang menangani.
+                    ptr += byte_idx;
+                    break;
+                }
+            }
+            ptr += 8;
         }
-        ptr += constants::byte;
     }
 
-    // Slow-path skalar untuk resolusi akhir dan tracking escape character
+    // Slow-path skalar (Akan menangani sisa string atau string yang memuat escape char)
     while (ptr < end) {
         char c = *ptr;
         if (c == '"') {
             res_.emplace_back(
-                Token::Type::String, 
-				std::string_view(begin, ptr - begin), 
-				has_escape
-			);
+                Token::Type::String, std::string_view(begin, ptr - begin), has_escape);
 
-            // Catat kebutuhan buffer jika string memiliki escape
             if (has_escape) {
                 hint_.string_escape_bytes_ += (ptr - begin);
             }
@@ -108,7 +123,7 @@ void Tokenizer::readString() noexcept {
         }
         if (c == '\\') {
             has_escape = true;
-            ptr += 2; // Lewati karakter escape
+            ptr += 2; // Lewati karakter escape dan karakter di sebelahnya
             if (ptr > end) {
                 status_ = core::JsonError::InvalidValue;
                 return;
@@ -224,7 +239,9 @@ void Tokenizer::tokenize() noexcept {
         auto actionType = Lookup{}[*current_];
         switch (actionType) {
             case Lookup::Type::WhiteSpace: {
-                current_++;
+				do {
+					++current_;
+				} while (current_ < end_ && Lookup{}[*current_] == Lookup::Type::WhiteSpace);
                 continue;
             }
             case Lookup::Type::LeftCurlyBracket: {
