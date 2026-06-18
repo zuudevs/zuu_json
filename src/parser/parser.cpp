@@ -8,9 +8,21 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "parser/parser.hpp"
-#include "utils/parse_double.hpp"
 #include <charconv>
+#include "parser/parser.hpp"
+#include "utils/parser.hpp"
+
+namespace {
+
+[[nodiscard]] inline constexpr bool has_zero_byte(unsigned long long v) noexcept {
+	return (v - 0x0101010101010101ULL) & ~v & 0x8080808080808080ULL;
+}
+
+[[nodiscard]] inline constexpr bool has_escape_char(unsigned long long v) noexcept {
+	return has_zero_byte(v ^ 0x5C5C5C5C5C5C5C5CULL);
+}
+
+} // namespace
 
 namespace zuu::parser {
 
@@ -37,20 +49,22 @@ Parser::Expected Parser::Parse(Raw tokens, Hint hint) noexcept {
 }
 
 unsigned Parser::decodeUnicodeHex(const char* ptr) noexcept {
-    unsigned value = 0;
+    unsigned value{};
     for (int i = 0; i < 4; ++i) {
-        char c = ptr[i];
-        value <<= 4;
-        if (c >= '0' && c <= '9')
-            value |= (c - '0');
-        else if (c >= 'a' && c <= 'f')
-            value |= (c - 'a' + constants::digit);
-        else if (c >= 'A' && c <= 'F')
-            value |= (c - 'A' + constants::digit);
-        else {
+        auto c = static_cast<unsigned char>(ptr[i]);
+        
+        if (!(
+			(c >= '0' && c <= '9') || 
+			(c >= 'a' && c <= 'f') || 
+			(c >= 'A' && c <= 'F')
+		)) {
             status_ = core::JsonError::InvalidValue;
             return 0;
         }
+
+        unsigned hex_val = (c & constants::hex_alpha_max_val) + 
+		(c >= 'A' ? constants::hex_digit_max_val : 0);
+        value = (value << 4) | (hex_val & constants::hex_alpha_max_val);
     }
     return value;
 }
@@ -63,6 +77,32 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
     const char* end = ptr + src.size();
 
     while (ptr < end) {
+        while (ptr + constants::byte <= end) {
+            unsigned long long block{};
+            std::memcpy(
+				&block, 
+				ptr, 
+				constants::byte
+			);
+
+            if (has_escape_char(block)) {
+                break;
+            }
+
+            std::memcpy(
+				out, 
+				ptr, 
+				constants::byte
+			);
+
+            out += constants::byte;
+            ptr += constants::byte;
+        }
+
+        if (ptr >= end) {
+			break;
+		}
+
         if (*ptr == '\\') {
             ++ptr;
             if (ptr >= end)
@@ -162,15 +202,19 @@ Parser::JsonValue Parser::buildBoolean() noexcept {
 }
 
 Parser::JsonValue Parser::buildInteger() noexcept {
-    long long value{};
-    auto [ptr, ec] = std::from_chars(current_->begin_, current_->begin_ + current_->size_, value);
-
-    if (ec != std::errc{} || ptr != current_->begin_ + current_->size_) {
-        status_ = core::JsonError::InvalidValue;
+	if(
+		auto res = utils::parse<long long>(
+			current_->begin_, 
+			current_->begin_ + current_->size_
+		);
+		res
+	) {
+		current_++;
+    	return Parser::JsonValue::Integer(*res);
+	} else {
+		status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
-    }
-    current_++;
-    return Parser::JsonValue::Integer(value);
+	}
 }
 
 Parser::JsonValue Parser::buildDouble() noexcept {
@@ -216,8 +260,21 @@ Parser::JsonValue Parser::buildArray() noexcept {
     const unsigned long long start_offset = res_.getArrayOffset();
 
     while (true) {
-        auto value = buildValue();
-        if (has_error()) {
+        Parser::JsonValue value;
+        switch (current_->type_) {
+            case TokenType::String:            value = buildString(); break;
+            case TokenType::Integer:           value = buildInteger(); break;
+            case TokenType::Boolean:           value = buildBoolean(); break;
+            case TokenType::Double:            value = buildDouble(); break;
+            case TokenType::Null:              value = buildNull(); break;
+            case TokenType::LeftCurlyBracket:  value = buildObject(); break;
+            case TokenType::LeftSquareBracket: value = buildArray(); break;
+            default:
+                status_ = core::JsonError::InvalidValue;
+                return JsonValue::Null();
+        }
+
+        if (has_error()) [[unlikely]] {
             return JsonValue::Null();
         }
 
@@ -258,12 +315,12 @@ Parser::JsonValue Parser::buildObject() noexcept {
             return JsonValue::Null();
         }
 
-        // Terapkan Zero-copy fallback atau Unescaping untuk Key objek JSON
         std::string_view key_val = current_->value();
         if (current_->has_escape_) {
             key_val = unescapeString(key_val);
-            if (has_error()) [[unlikely]]
+            if (has_error()) [[unlikely]] {
                 return JsonValue::Null();
+			}
         }
 
         const auto key_index = res_.commitString(key_val);
@@ -275,7 +332,20 @@ Parser::JsonValue Parser::buildObject() noexcept {
         }
         ++current_;
 
-        auto value = buildValue();
+        Parser::JsonValue value;
+        switch (current_->type_) {
+            case TokenType::String: value = buildString(); break;
+            case TokenType::Integer: value = buildInteger(); break;
+            case TokenType::Boolean: value = buildBoolean(); break;
+            case TokenType::Double: value = buildDouble(); break;
+            case TokenType::Null: value = buildNull(); break;
+            case TokenType::LeftCurlyBracket: value = buildObject(); break;
+            case TokenType::LeftSquareBracket: value = buildArray(); break;
+            default:
+                status_ = core::JsonError::InvalidValue;
+                return JsonValue::Null();
+        }
+
         if (has_error()) [[unlikely]] {
             return JsonValue::Null();
         }
@@ -303,20 +373,13 @@ Parser::JsonValue Parser::buildObject() noexcept {
 
 Parser::JsonValue Parser::buildValue() noexcept {
     switch (current_->type_) {
-        case TokenType::Null:
-            return buildNull();
-        case TokenType::Boolean:
-            return buildBoolean();
-        case TokenType::Integer:
-            return buildInteger();
-        case TokenType::Double:
-            return buildDouble();
-        case TokenType::String:
-            return buildString();
-        case TokenType::LeftSquareBracket:
-            return buildArray();
-        case TokenType::LeftCurlyBracket:
-            return buildObject();
+        case TokenType::Null: return buildNull();
+        case TokenType::Boolean: return buildBoolean();
+        case TokenType::Integer: return buildInteger();
+        case TokenType::Double: return buildDouble();
+        case TokenType::String: return buildString();
+        case TokenType::LeftSquareBracket: return buildArray();
+        case TokenType::LeftCurlyBracket: return buildObject();
         case TokenType::RightSquareBracket:
         case TokenType::RightCurlyBracket:
         case TokenType::Comma:

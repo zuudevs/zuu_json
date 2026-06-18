@@ -10,15 +10,13 @@
 
 #pragma once
 
+#include <expected>
 #include "traits/lookup_trait.hpp"
 #include "traits/parser_trait.hpp"
 #include "utils/strings.hpp"
 #include "zuu_json/core/error.hpp"
-#include <expected>
 
-namespace zuu {
-
-namespace traits {
+namespace zuu::traits {
 
 template <>
 struct LookupTrait<double> {
@@ -77,19 +75,20 @@ struct LookupTrait<double> {
 
 template <>
 struct ParserTrait<double> {
+	using type = double;
     using Error = core::ParseError;
     using Result = std::expected<double, Error>;
     
     [[nodiscard]] inline constexpr Result
     operator()(const char* first, const char* last) const noexcept {
-        unsigned long long mantissa = 0;
-        int decimal_shift = 0;
-        bool is_negative = false;
-        bool has_digits = false;
-
-        if (first == last) {
+		if (first == last) {
             return std::unexpected{Error::InvalidFormat};
         }
+
+        unsigned long long mantissa{};
+        int decimal_shift{};
+        bool is_negative{};
+        bool has_digits{};
 
         if (*first == '-') { 
             is_negative = true; ++first; 
@@ -145,27 +144,27 @@ struct ParserTrait<double> {
             }
         }
 
-        auto result = static_cast<double>(mantissa);
+        auto result = static_cast<type>(mantissa);
 
         if (decimal_shift > 0) {
-            if (decimal_shift <= 22) result *= traits::LookupTrait<double>::pow10_negative[decimal_shift];
+            if (decimal_shift <= 22) result *= traits::LookupTrait<type>::pow10_negative[decimal_shift];
             else {
                 while(decimal_shift > 22) { 
                     result *= 0.1; 
                     decimal_shift--; 
                 }
-                result *= traits::LookupTrait<double>::pow10_negative[22];
+                result *= traits::LookupTrait<type>::pow10_negative[22];
             }
         } else if (decimal_shift < 0) {
             int pos_shift = -decimal_shift;
             if (pos_shift <= 22) {
-                result *= traits::LookupTrait<double>::pow10_positive[pos_shift];
+                result *= traits::LookupTrait<type>::pow10_positive[pos_shift];
             }
             else {
                 while(pos_shift > 22) { 
                     result *= 10.0; pos_shift--; 
                 }
-                result *= traits::LookupTrait<double>::pow10_positive[22];
+                result *= traits::LookupTrait<type>::pow10_positive[22];
             }
         }
 
@@ -176,23 +175,5 @@ struct ParserTrait<double> {
         return result;
     }
 };
-
-} // namespace traits
-
-namespace utils {
-
-template <typename T>
-[[nodiscard]] inline constexpr auto 
-parse(const char* first, const char* last) noexcept {
-	return traits::ParserTrait<double>{}(first, last);
-}
-
-template <typename T>
-[[nodiscard]] inline constexpr auto 
-parse(std::string_view str) noexcept {
-    return traits::ParserTrait<T>{}(str.data(), str.data() + str.size());
-}
-
-} // namespace utils
 
 } // namespace zuu

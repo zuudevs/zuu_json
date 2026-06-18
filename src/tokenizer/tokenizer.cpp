@@ -8,6 +8,7 @@
  * @copyright Copyright (c) 2026
  */
 
+#include <bit>
 #include "constants/general.hpp"
 #include <cstring>
 #include "tokenizer/tokenizer.hpp"
@@ -24,6 +25,21 @@ namespace {
     return has_zero_byte(quote_mask) | has_zero_byte(escape_mask);
 }
 
+// --- COMPILE-TIME SWAR CONSTANTS ---
+// Struktur 4 byte persis untuk memanipulasi std::bit_cast
+struct Bytes4 { char c[4]; };
+
+// consteval: Memaksa fungsi ini dieksekusi SAAT KOMPILASI, 0% beban saat runtime!
+[[nodiscard]] consteval unsigned make_word(const char* str) noexcept {
+	return std::bit_cast<unsigned>(Bytes4{str[0], str[1], str[2], str[3]});
+}
+
+// Nilai-nilai ini akan menjadi angka konstan 32-bit yang menyesuaikan 
+// dengan Endianness arsitektur CPU Rara (Little-Endian / Big-Endian)
+constexpr unsigned null_word = make_word("null");
+constexpr unsigned true_word = make_word("true");
+constexpr unsigned fals_word = make_word("fals");
+
 } // namespace
 
 namespace zuu::tokenizer {
@@ -32,7 +48,7 @@ Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
     : current_(json_content.data())
     , end_(json_content.data() + json_content.size()) {
 
-    res_.reserve((json_content.size() >> 1) + 16);
+    res_.reserve((json_content.size() >> 1) + constants::word);
     tokenize();
 }
 
@@ -58,14 +74,18 @@ void Tokenizer::readString() noexcept {
     bool has_escape = false;
 
     // Fast-path SWAR: Pindai 8 bytes sekaligus
-    while (ptr + 8 <= end) {
+    while (ptr + constants::byte <= end) {
         unsigned long long block{};
-        std::memcpy(&block, ptr, 8);
+        std::memcpy(
+			&block, 
+			ptr, 
+			constants::byte
+		);
 
         if (has_quote_or_escape(block)) {
             break; // Jika ada '"' atau '\', keluar dan evaluasi secara presisi di slow-path
         }
-        ptr += 8;
+        ptr += constants::byte;
     }
 
     // Slow-path skalar untuk resolusi akhir dan tracking escape character
@@ -73,7 +93,10 @@ void Tokenizer::readString() noexcept {
         char c = *ptr;
         if (c == '"') {
             res_.emplace_back(
-                Token::Type::String, std::string_view(begin, ptr - begin), has_escape);
+                Token::Type::String, 
+				std::string_view(begin, ptr - begin), 
+				has_escape
+			);
 
             // Catat kebutuhan buffer jika string memiliki escape
             if (has_escape) {
@@ -164,41 +187,36 @@ void Tokenizer::readNumeric() noexcept {
 
 void Tokenizer::readAlphabet() noexcept {
     const auto rem = end_ - current_;
-    switch (*current_) {
-        case 'n': {
-            const auto size = sizeof("null") - 1;
-            if (rem >= size && *(current_ + 1) == 'u' && *(current_ + 2) == 'l' &&
-                *(current_ + 3) == 'l') {
-                res_.emplace_back(Token::Type::Null, std::string_view(current_, size));
-                current_ += size;
+    
+    // Tarik 4 byte sekaligus dan bandingkan 32-bit angkanya!
+    if (rem >= 4) [[likely]] {
+        unsigned val;
+        std::memcpy(&val, current_, 4); // Di-optimasi compiler jadi 1x MOV
+
+        switch (val) {
+            case null_word:
+                res_.emplace_back(Token::Type::Null, std::string_view(current_, 4));
+                current_ += 4;
                 return;
-            }
-            break;
-        }
-        case 't': {
-            const auto size = sizeof("true") - 1;
-            if (rem >= size && *(current_ + 1) == 'r' && *(current_ + 2) == 'u' &&
-                *(current_ + 3) == 'e') {
-                res_.emplace_back(Token::Type::Boolean, std::string_view(current_, size));
-                current_ += size;
+                
+            case true_word:
+                res_.emplace_back(Token::Type::Boolean, std::string_view(current_, 4));
+                current_ += 4;
                 return;
-            }
-            break;
-        }
-        case 'f': {
-            const auto size = sizeof("false") - 1;
-            if (rem >= size && *(current_ + 1) == 'a' && *(current_ + 2) == 'l' &&
-                *(current_ + 3) == 's' && *(current_ + 4) == 'e') {
-                res_.emplace_back(Token::Type::Boolean, std::string_view(current_, size));
-                current_ += size;
-                return;
-            }
-            break;
-        }
-        default: {
-            status_ = Error::InvalidValue;
+                
+            case fals_word:
+                // "false" panjangnya 5, jadi kita cek byte terakhirnya
+                if (rem >= 5 && current_[4] == 'e') {
+                    res_.emplace_back(Token::Type::Boolean, std::string_view(current_, 5));
+                    current_ += 5;
+                    return;
+                }
+                break;
+			default:
+				break;
         }
     }
+	status_ = Error::InvalidValue;
 }
 
 void Tokenizer::tokenize() noexcept {
