@@ -74,12 +74,10 @@ void Tokenizer::readString() noexcept {
     const char* end = end_;
     bool has_escape = false;
 
-    // Fast-path SWAR: Pindai 8 bytes sekaligus
-    // Trik countr_zero untuk indeks byte ini hanya valid di arsitektur Little-Endian (Mayoritas CPU modern)
     if constexpr (std::endian::native == std::endian::little) {
         while (ptr + 8 <= end) {
             unsigned long long block{};
-            std::memcpy(&block, ptr, 8);
+            std::memcpy(&block, ptr, constants::byte);
 
             unsigned long long match_mask = get_quote_or_escape_mask(block);
 
@@ -88,7 +86,10 @@ void Tokenizer::readString() noexcept {
 
                 if (ptr[byte_idx] == '"') {
                     res_.emplace_back(
-                        Token::Type::String, std::string_view(begin, (ptr + byte_idx) - begin), has_escape);
+                        Token::Type::String, 
+						std::string_view(begin, (ptr + byte_idx) - begin), 
+						has_escape
+					);
 
                     if (has_escape) {
                         hint_.string_escape_bytes_ += ((ptr + byte_idx) - begin);
@@ -97,22 +98,22 @@ void Tokenizer::readString() noexcept {
                     current_ = ptr + byte_idx + 1;
                     return;
                 } else {
-                    // Ini adalah karakter escape '\'. 
-                    // Kita majukan pointer persis ke posisi '\', lalu biarkan slow-path yang menangani.
                     ptr += byte_idx;
                     break;
                 }
             }
-            ptr += 8;
+            ptr += constants::byte;
         }
     }
 
-    // Slow-path skalar (Akan menangani sisa string atau string yang memuat escape char)
     while (ptr < end) {
         char c = *ptr;
-        if (c == '"') {
+        if (c == '\"') {
             res_.emplace_back(
-                Token::Type::String, std::string_view(begin, ptr - begin), has_escape);
+                Token::Type::String, 
+				std::string_view(begin, ptr - begin), 
+				has_escape
+			);
 
             if (has_escape) {
                 hint_.string_escape_bytes_ += (ptr - begin);
@@ -123,7 +124,7 @@ void Tokenizer::readString() noexcept {
         }
         if (c == '\\') {
             has_escape = true;
-            ptr += 2; // Lewati karakter escape dan karakter di sebelahnya
+            ptr += 2;
             if (ptr > end) {
                 status_ = core::JsonError::InvalidValue;
                 return;
@@ -203,26 +204,33 @@ void Tokenizer::readNumeric() noexcept {
 void Tokenizer::readAlphabet() noexcept {
     const auto rem = end_ - current_;
     
-    // Tarik 4 byte sekaligus dan bandingkan 32-bit angkanya!
     if (rem >= 4) [[likely]] {
         unsigned val{};
-        std::memcpy(&val, current_, 4); // Di-optimasi compiler jadi 1x MOV
+        std::memcpy(&val, current_, 4);
 
         switch (val) {
             case null_word:
-                res_.emplace_back(Token::Type::Null, std::string_view(current_, 4));
+                res_.emplace_back(
+					Token::Type::Null, 
+					std::string_view(current_, 4)
+				);
                 current_ += 4;
                 return;
                 
             case true_word:
-                res_.emplace_back(Token::Type::Boolean, std::string_view(current_, 4));
+                res_.emplace_back(
+					Token::Type::Boolean, 
+					std::string_view(current_, 4)
+				);
                 current_ += 4;
                 return;
                 
             case fals_word:
-                // "false" panjangnya 5, jadi kita cek byte terakhirnya
                 if (rem >= 5 && current_[4] == 'e') {
-                    res_.emplace_back(Token::Type::Boolean, std::string_view(current_, 5));
+                    res_.emplace_back(
+						Token::Type::Boolean, 
+						std::string_view(current_, 5)
+					);
                     current_ += 5;
                     return;
                 }
