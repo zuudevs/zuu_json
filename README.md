@@ -99,50 +99,50 @@ For full environment setup, see [BUILD.md](BUILD.md).
 
 ## Benchmark
 
-Performance measurements from `bin/zuu_json_benchmark` on a 12-core CPU @ 2.1 GHz with `min_time: 2.000` (best of N iterations, values in ns; throughput shown as Mi/s for raw byte rates and M/s / G/s for tokens or lookups).
+Performance measurements from `bin/zuu_json_benchmark` on a 20-core CPU @ 2.9 GHz with `min_time: 2.000` (best of N iterations, values in ns; throughput shown as Mi/s for raw byte rates and M/s / G/s for tokens or lookups).
 
 ```bash
-2026-06-16T13:41:26+07:00
-Running D:\Project\zuu_json\bin\zuu_json_benchmark.exe
-Run on (12 X 2096 MHz CPU s)
+2026-06-18T18:41:43+07:00
+Running zuu_json_benchmark.exe
+Run on (20 X 2918 MHz CPU s)
 CPU Caches:
-  L1 Data 32 KiB (x6)
-  L1 Instruction 32 KiB (x6)
-  L2 Unified 512 KiB (x6)
-  L3 Unified 4096 KiB (x2)
+  L1 Data 48 KiB (x10)
+  L1 Instruction 32 KiB (x10)
+  L2 Unified 1280 KiB (x10)
+  L3 Unified 24576 KiB (x1)
 --------------------------------------------------------------------------------------------------------
 Benchmark                                              Time             CPU   Iterations UserCounters...
 --------------------------------------------------------------------------------------------------------
-Benchmark::SmallTokenizer/min_time:2.000          416724 ns       412598 ns         6400 bytes_per_second=747.108Mi/s
-Benchmark::MediumTokenizer/min_time:2.000        1198951 ns      1195208 ns         2327 bytes_per_second=516.248Mi/s
-Benchmark::BigTokenizer/min_time:2.000           5410716 ns      5396586 ns          498 bytes_per_second=314.147Mi/s
-Benchmark::HugeTokenizer/min_time:2.000         65968571 ns     65848214 ns           42 bytes_per_second=804.593Mi/s
-Benchmark::NumericTokenizer/min_time:2.000       2734880 ns      2713981 ns          996 bytes_per_second=791.007Mi/s
-Benchmark::StringTokenizer/min_time:2.000        1197999 ns      1192748 ns         2358 bytes_per_second=517.313Mi/s
-Benchmark::ArrayTokenizer/min_time:2.000          424266 ns       426115 ns         6637 bytes_per_second=723.409Mi/s
-Benchmark::ObjectTokenizer/min_time:2.000        5235470 ns      5179558 ns          543 bytes_per_second=327.31Mi/s
-Benchmark::LiteralTokenizer/min_time:2.000           670 ns          667 ns      4167442 bytes_per_second=587.315Mi/s
-Benchmark::SmallParser/min_time:2.000             388788 ns       388009 ns         7168 Tokens/s=159.795M/s
-Benchmark::MediumParser/min_time:2.000           3272838 ns      3260551 ns          853 Tokens/s=16.9493M/s
-Benchmark::BigParser/min_time:2.000              2988825 ns      2982503 ns          943 Tokens/s=45.5963M/s
-Benchmark::HugeParser/min_time:2.000            49184641 ns     48828125 ns           56 Tokens/s=133.282M/s
-Benchmark::NumericParser/min_time:2.000         13993068 ns     14054648 ns          199 Tokens/s=23.791M/s
-Benchmark::StringParser/min_time:2.000           3252706 ns      3223916 ns          853 Tokens/s=17.1419M/s
-Benchmark::ArrayParser/min_time:2.000             390330 ns       390189 ns         7168 Tokens/s=158.902M/s
-Benchmark::ObjectParser/min_time:2.000           2982692 ns      2982503 ns          943 Tokens/s=45.5963M/s
-Benchmark::LiteralParser/min_time:2.000              249 ns          250 ns     11200000 Tokens/s=296.331M/s
-Benchmark::SmallFullPipeline/min_time:2.000       839646 ns       837978 ns         3319 bytes_per_second=367.856Mi/s
-Benchmark::MediumFullPipeline/min_time:2.000     4521319 ns      4525688 ns          618 bytes_per_second=136.338Mi/s
-Benchmark::BigFullPipeline/min_time:2.000        8342277 ns      8321006 ns          338 bytes_per_second=203.74Mi/s
-Benchmark::HugeFullPipeline/min_time:2.000     115480300 ns    115234375 ns           24 bytes_per_second=459.767Mi/s
-Benchmark::NumericFullPipeline/min_time:2.000   16831487 ns     16841317 ns          167 bytes_per_second=127.471Mi/s
-Benchmark::StringFullPipeline/min_time:2.000     4517022 ns      4500405 ns          618 bytes_per_second=137.104Mi/s
-Benchmark::ArrayFullPipeline/min_time:2.000       831214 ns       831854 ns         3381 bytes_per_second=370.564Mi/s
-Benchmark::ObjectFullPipeline/min_time:2.000     8407771 ns      8387653 ns          326 bytes_per_second=202.121Mi/s
-Benchmark::LiteralFullPipeline/min_time:2.000        961 ns          957 ns      2890323 bytes_per_second=409.633Mi/s
-Benchmark::DomTraversalArray/min_time:2.000        0.758 ns        0.758 ns   3733333333 Lookups/s=1.32007G/s
-Benchmark::DomTraversalObject/min_time:2.000         156 ns          156 ns     17742574 Lookups/s=12.8308M/s
-Benchmark::DomTraversalDeep/min_time:2.000          98.5 ns         98.2 ns     28000000 Lookups/s=40.7273M/s
+Benchmark::SmallTokenizer/min_time:2.000          336623 ns       331434 ns         8533 bytes_per_second=930.066Mi/s
+Benchmark::MediumTokenizer/min_time:2.000         415679 ns       403548 ns         6892 bytes_per_second=1.49316Gi/s
+Benchmark::BigTokenizer/min_time:2.000           1046557 ns      1039720 ns         2675 bytes_per_second=1.59234Gi/s
+Benchmark::HugeTokenizer/min_time:2.000         44401763 ns     42086694 ns           62 bytes_per_second=1.22935Gi/s
+Benchmark::NumericTokenizer/min_time:2.000       1932048 ns      1930706 ns         1481 bytes_per_second=1.08585Gi/s
+Benchmark::StringTokenizer/min_time:2.000         397221 ns       396729 ns         7168 bytes_per_second=1.51883Gi/s
+Benchmark::ArrayTokenizer/min_time:2.000          319177 ns       317383 ns         8960 bytes_per_second=971.241Mi/s
+Benchmark::ObjectTokenizer/min_time:2.000        1137154 ns      1119858 ns         2358 bytes_per_second=1.47839Gi/s
+Benchmark::LiteralTokenizer/min_time:2.000           329 ns          324 ns      8533333 bytes_per_second=1.18105Gi/s
+Benchmark::SmallParser/min_time:2.000             314560 ns       310407 ns         8960 Tokens/s=199.744M/s
+Benchmark::MediumParser/min_time:2.000           3058099 ns      3032211 ns          943 Tokens/s=18.2256M/s
+Benchmark::BigParser/min_time:2.000              2158827 ns      2097696 ns         1378 Tokens/s=64.8287M/s
+Benchmark::HugeParser/min_time:2.000            50339716 ns     46622984 ns           62 Tokens/s=139.586M/s
+Benchmark::NumericParser/min_time:2.000          2501966 ns      2392782 ns         1195 Tokens/s=139.743M/s
+Benchmark::StringParser/min_time:2.000           3129988 ns      2999072 ns          943 Tokens/s=18.427M/s
+Benchmark::ArrayParser/min_time:2.000             364920 ns       344413 ns         7168 Tokens/s=180.022M/s
+Benchmark::ObjectParser/min_time:2.000           2176930 ns      2063679 ns         1378 Tokens/s=65.8974M/s
+Benchmark::LiteralParser/min_time:2.000             92.9 ns         88.5 ns     33185185 Tokens/s=835.984M/s
+Benchmark::SmallFullPipeline/min_time:2.000       695601 ns       647020 ns         4371 bytes_per_second=476.423Mi/s
+Benchmark::MediumFullPipeline/min_time:2.000     3550375 ns      3393405 ns          815 bytes_per_second=181.83Mi/s
+Benchmark::BigFullPipeline/min_time:2.000        3328354 ns      3069196 ns          896 bytes_per_second=552.366Mi/s
+Benchmark::HugeFullPipeline/min_time:2.000      94826155 ns     90725806 ns           31 bytes_per_second=583.969Mi/s
+Benchmark::NumericFullPipeline/min_time:2.000    4360941 ns      4331459 ns          689 bytes_per_second=495.625Mi/s
+Benchmark::StringFullPipeline/min_time:2.000     3355534 ns      3355061 ns          815 bytes_per_second=183.909Mi/s
+Benchmark::ArrayFullPipeline/min_time:2.000       665827 ns       666452 ns         4267 bytes_per_second=462.532Mi/s
+Benchmark::ObjectFullPipeline/min_time:2.000     3200090 ns      3156390 ns          896 bytes_per_second=537.107Mi/s
+Benchmark::LiteralFullPipeline/min_time:2.000        457 ns          458 ns      6179310 bytes_per_second=856.413Mi/s
+Benchmark::DomTraversalArray/min_time:2.000        0.629 ns        0.624 ns   4480000000 Lookups/s=1.60179G/s
+Benchmark::DomTraversalObject/min_time:2.000         135 ns          132 ns     20837209 Lookups/s=15.1543M/s
+Benchmark::DomTraversalDeep/min_time:2.000          72.1 ns         69.8 ns     39822222 Lookups/s=57.2724M/s
 ```
 
 Highlights:
