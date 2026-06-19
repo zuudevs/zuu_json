@@ -51,10 +51,10 @@ void Tokenizer::readString() noexcept {
 
             unsigned long long match_mask = utils::get_quote_or_escape_mask(block);
 
-            if (match_mask != constants::zero) {
+            if (match_mask != constants::zero) [[unlikely]] {
                 unsigned int byte_idx = std::countr_zero(match_mask) >> 3;
 
-                if (ptr[byte_idx] == '"') {
+                if (ptr[byte_idx] == '\"') [[likely]] {
                     res_.emplace_back(
                         Token::Type::String, 
 						std::string_view(begin, (ptr + byte_idx) - begin), 
@@ -68,8 +68,9 @@ void Tokenizer::readString() noexcept {
                     current_ = ptr + byte_idx + 1;
                     return;
                 } else {
-                    ptr += byte_idx;
-                    break;
+                    has_escape = true;
+                    ptr += byte_idx + 2;
+                    continue;
                 }
             }
             ptr += constants::byte;
@@ -78,7 +79,7 @@ void Tokenizer::readString() noexcept {
 
     while (ptr < end) {
         char c = *ptr;
-        if (c == '\"') {
+        if (c == '\"') [[likely]] {
             res_.emplace_back(
                 Token::Type::String, 
 				std::string_view(begin, ptr - begin), 
@@ -92,10 +93,10 @@ void Tokenizer::readString() noexcept {
             current_ = ptr + 1;
             return;
         }
-        if (c == '\\') {
+        if (c == '\\') [[unlikely]] {
             has_escape = true;
             ptr += 2;
-            if (ptr > end) {
+            if (ptr > end) [[unlikely]] {
                 status_ = core::JsonError::InvalidValue;
                 return;
             }
@@ -136,7 +137,7 @@ void Tokenizer::readNumeric() noexcept {
         type = Token::Type::Double;
         current_++;
 
-        if (current_ >= end_ || (static_cast<unsigned char>(*current_ - '0') >= constants::digit)) {
+        if (current_ >= end_ || (static_cast<unsigned char>(*current_ - '0') >= constants::digit)) [[unlikely]] {
             status_ = Error::InvalidValue;
             return;
         }
@@ -155,7 +156,7 @@ void Tokenizer::readNumeric() noexcept {
             current_++;
         }
 
-        if (current_ >= end_ || (static_cast<unsigned char>(*current_ - '0') >= constants::digit)) {
+        if (current_ >= end_ || (static_cast<unsigned char>(*current_ - '0') >= constants::digit)) [[unlikely]] {
             status_ = Error::InvalidValue;
             return;
         }
@@ -166,7 +167,7 @@ void Tokenizer::readNumeric() noexcept {
         }
     }
 
-    if (!is_error()) {
+    if (!is_error()) [[likely]] {
         res_.emplace_back(type, std::string_view(begin, current_ - begin));
     }
 }
@@ -217,9 +218,23 @@ void Tokenizer::tokenize() noexcept {
         auto actionType = Lookup{}[*current_];
         switch (actionType) {
             case Lookup::Type::WhiteSpace: {
+				if constexpr (std::endian::native == std::endian::little) {
+                    while (current_ + constants::byte <= end_) {
+                        unsigned long long block{};
+                        std::memcpy(&block, current_, constants::byte);
+						if (
+							block == constants::swar_space_bytes ||
+							block == constants::swar_htab_bytes
+						) {
+							current_ += constants::byte;
+						} else {
+							break;
+						}
+                    }
+                }
 				do {
 					++current_;
-				} while (current_ < end_ && Lookup{}[*current_] == Lookup::Type::WhiteSpace);
+				} while (current_ < end_ && static_cast<unsigned char>(*current_) <= 0x20);
                 continue;
             }
             case Lookup::Type::LeftCurlyBracket: {
@@ -244,34 +259,37 @@ void Tokenizer::tokenize() noexcept {
                 current_++;
                 continue;
             }
-            case Lookup::Type::Colon: {
+            case Lookup::Type::Colon: [[likely]] {
                 res_.emplace_back(Token::Type::Colon);
                 current_++;
                 continue;
             }
-            case Lookup::Type::Comma: {
+            case Lookup::Type::Comma: [[likely]] {
                 res_.emplace_back(Token::Type::Comma);
                 hint_.comma_count_++;
                 current_++;
                 continue;
             }
-            case Lookup::Type::DoubleQuote: {
+            case Lookup::Type::DoubleQuote: [[likely]] {
                 readString();
-                if (is_error())
+                if (is_error()) [[unlikely]] {
                     return;
+				}
                 hint_.string_count_++;
                 continue;
             }
             case Lookup::Type::Numeric: {
                 readNumeric();
-                if (is_error())
+                if (is_error()) [[unlikely]] {
                     return;
+				}
                 continue;
             }
             case Lookup::Type::Alphabet: {
                 readAlphabet();
-                if (is_error())
+                if (is_error()) [[unlikely]] {
                     return;
+				}
                 continue;
             }
             case Lookup::Type::SigleQuote: {
