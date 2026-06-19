@@ -116,21 +116,25 @@ void Storage::pushObjectMember(const JsonMember& member) noexcept {
 
 unsigned long long Storage::sealObject(unsigned long long start_offset) noexcept {
     const auto size = static_cast<unsigned>(object_elements_size_ - start_offset);
-	if (size > 16) {
+	if (size > constants::word) {
         auto begin = object_elements_ + start_offset;
         auto end = begin + size;
-        std::sort(begin, end, [this](const JsonMember& a, const JsonMember& b) {
-            const size_t len_a = a.key_index_ >> 32;
-            const size_t len_b = b.key_index_ >> 32;
-            
-            if (len_a != len_b) {
-                return len_a < len_b;
-            }
-            
-            const auto sa = string(a.key_index_ & 0xFFFFFFFF);
-            const auto sb = string(b.key_index_ & 0xFFFFFFFF);
-            return sa < sb;
-        });
+        std::sort(
+			begin, 
+			end, 
+			[this](const JsonMember& a, const JsonMember& b) {
+				const unsigned long long prefix_a = a.key_index_ >> constants::dword;
+				const unsigned long long prefix_b = b.key_index_ >> constants::dword;
+				
+				if (prefix_a != prefix_b) {
+					return prefix_a < prefix_b;
+				}
+				
+				const auto sa = string(a.key_index_ & 0xFFFFFFFFULL);
+				const auto sb = string(b.key_index_ & 0xFFFFFFFFULL);
+				return sa < sb;
+			}
+		);
     }
 	
     objects_[objects_size_] = {static_cast<unsigned>(start_offset), size};

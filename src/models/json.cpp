@@ -8,10 +8,11 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "zuu_json/models/json.hpp"
+#include <algorithm>
 #include "parser/parser.hpp"
 #include "tokenizer/tokenizer.hpp"
-#include <algorithm>
+#include "utils/strings.hpp"
+#include "zuu_json/models/json.hpp"
 
 namespace zuu::models {
 
@@ -52,25 +53,42 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
     }
 
     const auto obj = storage_->object(root_val.as_index());
+    
+    const unsigned long long target_prefix = utils::build_string_prefix(key);
 
-    if (obj.size() <= 16) {
-        auto it = std::ranges::find_if(obj, [this, key](const JsonMember& member) {
-            size_t member_len = member.key_index_ >> 32;
-            if (member_len != key.size()) return false;
-            return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
-        });
+    if (obj.size() <= constants::word) {
+        auto it = std::ranges::find_if(
+			obj, 
+			[this, key, target_prefix](const JsonMember& member) {
+				if ((member.key_index_ >> constants::dword) != target_prefix) {
+					return false;
+				}
+				return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
+			}
+		);
 
         if (it != obj.end()) {
             return Value::fromInternal(storage_.get(), it->value_);
         }
     } else {
-        auto it = std::lower_bound(obj.begin(), obj.end(), key, [this](const JsonMember& member, std::string_view k) {
-            size_t member_len = member.key_index_ >> 32;
-            if (member_len != k.size()) return member_len < k.size();
-            return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
-        });
+        auto it = std::lower_bound(
+			obj.begin(), 
+			obj.end(), 
+			key, 
+			[this, target_prefix](const JsonMember& member, std::string_view k) {
+				const unsigned long long member_prefix = member.key_index_ >> constants::dword;
+				if (member_prefix != target_prefix) {
+					return member_prefix < target_prefix;
+				}
+				return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
+			}
+		);
 
-        if (it != obj.end() && (it->key_index_ >> 32) == key.size() && storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key) {
+        if (
+			it != obj.end() && 
+			(it->key_index_ >> constants::dword) == target_prefix && 
+			storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key
+		) {
             return Value::fromInternal(storage_.get(), it->value_);
         }
     }

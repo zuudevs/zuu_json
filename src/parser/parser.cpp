@@ -330,9 +330,12 @@ Parser::JsonValue Parser::buildObject() noexcept {
         }
 
         res_.pushObjectMember(JsonMember{
-			.key_index_ = (static_cast<unsigned long long>(key_val.size()) << 32) | (key_index & 0xFFFFFFFFULL), 
-			.value_ = value
-		});
+				.key_index_ = 
+				(utils::build_string_prefix(key_val) << constants::dword) | 
+				(key_index & 0xFFFFFFFFULL), 
+				.value_ = value
+			}
+		);
 
         if (current_->type_ == TokenType::Comma) [[likely]] {
             ++current_;
