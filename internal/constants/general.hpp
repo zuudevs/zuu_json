@@ -18,7 +18,7 @@ constexpr unsigned char byte = 8;
 constexpr unsigned char word = 16;
 constexpr unsigned char dword = 32;
 
-constexpr unsigned char uint8_max = 0xffui8;
+constexpr unsigned char uint8_max = 0xff;
 
 constexpr unsigned char hex_alpha_max_val = 15;
 constexpr unsigned char hex_alpha_min_val = digit;
