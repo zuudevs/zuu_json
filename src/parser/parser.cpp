@@ -11,20 +11,7 @@
 #include <cstring>
 #include "parser/parser.hpp"
 #include "utils/parser.hpp"
-
-namespace {
-
-[[nodiscard]] inline constexpr unsigned long long 
-find_zero_byte_mask(unsigned long long v) noexcept {
-	return (v - 0x0101010101010101ULL) & ~v & 0x8080808080808080ULL;
-}
-
-[[nodiscard]] inline constexpr unsigned long long 
-get_escape_mask(unsigned long long v) noexcept {
-	return find_zero_byte_mask(v ^ 0x5C5C5C5C5C5C5C5CULL);
-}
-
-} // namespace
+#include "utils/swar.hpp"
 
 namespace zuu::parser {
 
@@ -78,50 +65,46 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
     const char* end = ptr + src.size();
 
     while (ptr < end) {
-        
-        // --- PRECISION SWAR ACCELERATION ZONE ---
         if constexpr (std::endian::native == std::endian::little) {
             while (ptr + constants::byte <= end) {
                 unsigned long long block{};
-                std::memcpy(&block, ptr, 8);
+                std::memcpy(&block, ptr, constants::byte);
 
-                unsigned long long match_mask = get_escape_mask(block);
-
-                if (match_mask != 0) {
-                    // Radar menemukan karakter '\'! Hitung di byte ke berapa posisinya.
+                unsigned long long match_mask = utils::get_escape_mask(block);
+                if (match_mask != constants::zero) {
                     unsigned int byte_idx = std::countr_zero(match_mask) >> 3;
                     
-                    // Salin karakter aman tepat SEBELUM '\', lalu hentikan SWAR.
                     std::memcpy(out, ptr, byte_idx);
                     out += byte_idx;
                     ptr += byte_idx;
                     break; 
                 }
 
-                // Copy instan 8 byte jika aman semua
                 std::memcpy(out, ptr, constants::byte);
                 out += constants::byte;
                 ptr += constants::byte;
             }
         } else {
-            // Fallback klasik untuk arsitektur Big Endian
             while (ptr + constants::byte <= end) {
                 unsigned long long block{};
                 std::memcpy(&block, ptr, constants::byte);
-                if (get_escape_mask(block) != 0) break;
+                if (utils::get_escape_mask(block) != constants::zero) break;
                 std::memcpy(out, ptr, constants::byte);
                 out += constants::byte;
                 ptr += constants::byte;
             }
         }
 
-        if (ptr >= end) break; 
+        if (ptr >= end) {
+			break; 
+		}
 
-        // --- SLOW PATH (Hanya menangani escape sequence-nya saja) ---
         if (*ptr == '\\') {
             ++ptr;
-            if (ptr >= end)
+            if (ptr >= end) {
                 break;
+			}
+			
             switch (*ptr) {
                 case '"':  *out++ = '"';  break;
                 case '\\': *out++ = '\\'; break;
@@ -233,7 +216,6 @@ Parser::JsonValue Parser::buildDouble() noexcept {
 Parser::JsonValue Parser::buildString() noexcept {
     std::string_view val = current_->value();
 
-    // Lazy Evaluation: Decode hanya jika terbukti ada karakter escape
     if (current_->has_escape_) {
         val = unescapeString(val);
         if (has_error()) {
@@ -347,7 +329,10 @@ Parser::JsonValue Parser::buildObject() noexcept {
             return JsonValue::Null();
         }
 
-        res_.pushObjectMember(JsonMember{.key_index_ = key_index, .value_ = value});
+        res_.pushObjectMember(JsonMember{
+			.key_index_ = (static_cast<unsigned long long>(key_val.size()) << 32) | (key_index & 0xFFFFFFFFULL), 
+			.value_ = value
+		});
 
         if (current_->type_ == TokenType::Comma) [[likely]] {
             ++current_;

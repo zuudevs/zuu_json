@@ -9,39 +9,9 @@
  */
 
 #include <bit>
-#include "constants/general.hpp"
 #include <cstring>
 #include "tokenizer/tokenizer.hpp"
-
-namespace {
-
-[[nodiscard]] inline constexpr unsigned long long find_zero_byte_mask(unsigned long long v) noexcept {
-	return (v - 0x0101010101010101ULL) & ~v & 0x8080808080808080ULL;
-}
-
-// Mengembalikan MASK (bukan bool) untuk mencari tahu posisi pastinya
-[[nodiscard]] inline constexpr unsigned long long get_quote_or_escape_mask(unsigned long long v) noexcept {
-	const unsigned long long quote_mask = v ^ 0x2222222222222222ULL;
-	const unsigned long long escape_mask = v ^ 0x5C5C5C5C5C5C5C5CULL;
-	return find_zero_byte_mask(quote_mask) | find_zero_byte_mask(escape_mask);
-}
-
-// --- COMPILE-TIME SWAR CONSTANTS ---
-// Struktur 4 byte persis untuk memanipulasi std::bit_cast
-struct Bytes4 { char c[4]{}; };
-
-// consteval: Memaksa fungsi ini dieksekusi SAAT KOMPILASI, 0% beban saat runtime!
-[[nodiscard]] consteval unsigned make_word(const char* str) noexcept {
-	return std::bit_cast<unsigned>(Bytes4{str[0], str[1], str[2], str[3]});
-}
-
-// Nilai-nilai ini akan menjadi angka konstan 32-bit yang menyesuaikan 
-// dengan Endianness arsitektur CPU Rara (Little-Endian / Big-Endian)
-constexpr unsigned null_word = make_word("null");
-constexpr unsigned true_word = make_word("true");
-constexpr unsigned fals_word = make_word("fals");
-
-} // namespace
+#include "utils/swar.hpp"
 
 namespace zuu::tokenizer {
 
@@ -75,13 +45,13 @@ void Tokenizer::readString() noexcept {
     bool has_escape = false;
 
     if constexpr (std::endian::native == std::endian::little) {
-        while (ptr + 8 <= end) {
+        while (ptr + constants::byte <= end) {
             unsigned long long block{};
             std::memcpy(&block, ptr, constants::byte);
 
-            unsigned long long match_mask = get_quote_or_escape_mask(block);
+            unsigned long long match_mask = utils::get_quote_or_escape_mask(block);
 
-            if (match_mask != 0) {
+            if (match_mask != constants::zero) {
                 unsigned int byte_idx = std::countr_zero(match_mask) >> 3;
 
                 if (ptr[byte_idx] == '"') {
@@ -209,7 +179,7 @@ void Tokenizer::readAlphabet() noexcept {
         std::memcpy(&val, current_, 4);
 
         switch (val) {
-            case null_word:
+            case constants::null_word:
                 res_.emplace_back(
 					Token::Type::Null, 
 					std::string_view(current_, 4)
@@ -217,7 +187,7 @@ void Tokenizer::readAlphabet() noexcept {
                 current_ += 4;
                 return;
                 
-            case true_word:
+            case constants::true_word:
                 res_.emplace_back(
 					Token::Type::Boolean, 
 					std::string_view(current_, 4)
@@ -225,7 +195,7 @@ void Tokenizer::readAlphabet() noexcept {
                 current_ += 4;
                 return;
                 
-            case fals_word:
+            case constants::fals_word:
                 if (rem >= 5 && current_[4] == 'e') {
                     res_.emplace_back(
 						Token::Type::Boolean, 
