@@ -10,6 +10,7 @@
 
 #include "zuu_json/models/value.hpp"
 #include "models/storage.hpp"
+#include "utils/strings.hpp"
 #include <algorithm>
 
 namespace zuu::models {
@@ -66,7 +67,6 @@ Value::Result<long long> Value::as_integer() const noexcept {
 }
 
 Value::Result<long double> Value::as_double() const noexcept {
-    // Toleransi: Integer dapat dibaca sebagai double secara strict
     if (value_.get_type() == Type::Integer)
         return static_cast<long double>(value_.as_integer());
     if (value_.get_type() != Type::Double)
@@ -123,22 +123,35 @@ bool Value::contains(std::string_view key) const noexcept {
         return false;
 
     const auto obj = storage_->object(value_.as_index());
+    const unsigned long long target_prefix = utils::build_string_prefix(key);
     
-    if (obj.size() <= 16) {
-        auto it = std::ranges::find_if(obj, [this, key](const JsonMember& member) {
-            // Unpack Metadata
-            size_t member_len = member.key_index_ >> 32;
-            if (member_len != key.size()) return false;
-            return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
-        });
+    if (obj.size() <= constants::word) {
+        auto it = std::ranges::find_if(
+			obj, 
+			[this, key, target_prefix](const JsonMember& member) {
+				if ((member.key_index_ >> constants::dword) != target_prefix) return false;
+            	return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
+			}
+		);
         return it != obj.end();
     } else {
-        auto it = std::lower_bound(obj.begin(), obj.end(), key, [this](const JsonMember& member, std::string_view k) {
-            size_t member_len = member.key_index_ >> 32;
-            if (member_len != k.size()) return member_len < k.size();
-            return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
-        });
-        return (it != obj.end() && (it->key_index_ >> 32) == key.size() && storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key);
+        auto it = std::lower_bound(
+			obj.begin(), 
+			obj.end(), 
+			key, 
+			[this, target_prefix](const JsonMember& member, std::string_view k) {
+            	const unsigned long long member_prefix = member.key_index_ >> constants::dword;
+            	if (member_prefix != target_prefix) {
+					return member_prefix < target_prefix;
+				}
+            	return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
+    	    }
+		);
+        return (
+			it != obj.end() && 
+			(it->key_index_ >> constants::dword) == target_prefix && 
+			storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key
+		);
     }
 }
 
@@ -160,25 +173,39 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
     }
 
     const auto obj = storage_->object(value_.as_index());
+    const unsigned long long target_prefix = utils::build_string_prefix(key);
     
-    if (obj.size() <= 16) {
-        auto it = std::ranges::find_if(obj, [this, key](const JsonMember& member) {
-            // Unpack Metadata
-            size_t member_len = member.key_index_ >> 32;
-            if (member_len != key.size()) return false;
-            return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
-        });
+    if (obj.size() <= constants::word) {
+        auto it = std::ranges::find_if(
+			obj, 
+			[this, key, target_prefix](const JsonMember& member) {
+				if ((member.key_index_ >> constants::dword) != target_prefix) {
+					return false;
+				}
+				return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
+			}
+		);
         if (it != obj.end()) {
             return fromInternal(storage_, it->value_);
         }
     } else {
-        // 🚀 FIXED: std::lower_bound klasik
-        auto it = std::lower_bound(obj.begin(), obj.end(), key, [this](const JsonMember& member, std::string_view k) {
-            size_t member_len = member.key_index_ >> 32;
-            if (member_len != k.size()) return member_len < k.size();
-            return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
-        });
-        if (it != obj.end() && (it->key_index_ >> 32) == key.size() && storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key) {
+        auto it = std::lower_bound(
+			obj.begin(), 
+			obj.end(), 
+			key, 
+			[this, target_prefix](const JsonMember& member, std::string_view k) {
+				const unsigned long long member_prefix = member.key_index_ >> constants::dword;
+				if (member_prefix != target_prefix) {
+					return member_prefix < target_prefix;
+				}
+				return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
+			}
+		);
+        if (
+			it != obj.end() && 
+			(it->key_index_ >> constants::dword) == target_prefix && 
+			storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key
+		) {
             return fromInternal(storage_, it->value_);
         }
     }

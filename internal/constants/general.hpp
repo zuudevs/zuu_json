@@ -16,11 +16,16 @@ constexpr unsigned char zero = 0;
 constexpr unsigned char digit = 10;
 constexpr unsigned char byte = 8;
 constexpr unsigned char word = 16;
+constexpr unsigned char dword = 32;
+
+constexpr unsigned char uint8_max = 0xffui8;
+
 constexpr unsigned char hex_alpha_max_val = 15;
 constexpr unsigned char hex_alpha_min_val = digit;
 constexpr unsigned char hex_digit_max_val = 9;
 constexpr unsigned char hex_digit_min_val = zero;
 constexpr unsigned char cache_line_size = 64;
+
 constexpr unsigned long long swar_one_per_byte  = 0x0101010101010101ULL;
 constexpr unsigned long long swar_high_bit_mask = 0x8080808080808080ULL;
 constexpr unsigned long long swar_quote_bytes  = 0x2222222222222222ULL;

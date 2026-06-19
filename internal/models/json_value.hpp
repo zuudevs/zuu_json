@@ -11,6 +11,8 @@
 #pragma once
 
 #include <bit>
+#include "constants/general.hpp"
+#include <string_view>
 
 namespace zuu::models {
 
@@ -23,6 +25,7 @@ struct JsonValue {
         String,
         Array,
         Object,
+		ShortString 
     };
 
     using Data = unsigned long long;
@@ -39,6 +42,7 @@ struct JsonValue {
     static constexpr Data TAG_STRING = static_cast<Data>(Type::String);
     static constexpr Data TAG_ARRAY = static_cast<Data>(Type::Array);
     static constexpr Data TAG_OBJECT = static_cast<Data>(Type::Object);
+	static constexpr Data TAG_SHORT_STRING = static_cast<Data>(Type::ShortString);
 
     Data data_;
 
@@ -64,6 +68,18 @@ struct JsonValue {
     }
     [[nodiscard]] static inline constexpr JsonValue Object(unsigned long long index) noexcept {
         return JsonValue(NAN_MASK | (TAG_OBJECT << TAG_SHIFT) | (index & PAYLOAD_MASK));
+    }
+
+	[[nodiscard]] static inline constexpr JsonValue ShortString(std::string_view s) noexcept {
+        Data payload = (static_cast<Data>(s.size()) << 40); // Size di Byte ke-5
+        switch (s.size()) {
+            case 5: payload |= (static_cast<Data>(static_cast<unsigned char>(s[4])) << 32); [[fallthrough]];
+            case 4: payload |= (static_cast<Data>(static_cast<unsigned char>(s[3])) << 24); [[fallthrough]];
+            case 3: payload |= (static_cast<Data>(static_cast<unsigned char>(s[2])) << 16); [[fallthrough]];
+            case 2: payload |= (static_cast<Data>(static_cast<unsigned char>(s[1])) << 8);  [[fallthrough]];
+            case 1: payload |= (static_cast<Data>(static_cast<unsigned char>(s[0])));
+        }
+        return JsonValue(NAN_MASK | (TAG_SHORT_STRING << TAG_SHIFT) | payload);
     }
 
     [[nodiscard]] inline constexpr auto is_double() const noexcept {
