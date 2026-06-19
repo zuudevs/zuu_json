@@ -30,6 +30,8 @@ constexpr unsigned long long swar_one_per_byte  = 0x0101010101010101ULL;
 constexpr unsigned long long swar_high_bit_mask = 0x8080808080808080ULL;
 constexpr unsigned long long swar_quote_bytes  = 0x2222222222222222ULL;
 constexpr unsigned long long swar_escape_bytes = 0x5C5C5C5C5C5C5C5CULL;
+constexpr unsigned long long swar_space_bytes = 0x2020202020202020ULL;
+constexpr unsigned long long swar_htab_bytes = 0x0909090909090909ULL;
 
 #if  __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 
