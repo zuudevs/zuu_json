@@ -53,18 +53,26 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
 
     const auto obj = storage_->object(root_val.as_index());
 
-    // Binary Search: O(log N) Lookup
-    auto it = std::ranges::lower_bound(
-        obj, 
-		key, 
-		{}, 
-		[this](const JsonMember& member) {
-            return storage_->string(member.key_index_);
-        }
-	);
+    if (obj.size() <= 16) {
+        auto it = std::ranges::find_if(obj, [this, key](const JsonMember& member) {
+            size_t member_len = member.key_index_ >> 32;
+            if (member_len != key.size()) return false;
+            return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
+        });
 
-    if (it != obj.end() && storage_->string(it->key_index_) == key) {
-        return Value::fromInternal(storage_.get(), it->value_);
+        if (it != obj.end()) {
+            return Value::fromInternal(storage_.get(), it->value_);
+        }
+    } else {
+        auto it = std::lower_bound(obj.begin(), obj.end(), key, [this](const JsonMember& member, std::string_view k) {
+            size_t member_len = member.key_index_ >> 32;
+            if (member_len != k.size()) return member_len < k.size();
+            return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
+        });
+
+        if (it != obj.end() && (it->key_index_ >> 32) == key.size() && storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key) {
+            return Value::fromInternal(storage_.get(), it->value_);
+        }
     }
 
     return std::unexpected{Error::InvalidValue};

@@ -123,11 +123,23 @@ bool Value::contains(std::string_view key) const noexcept {
         return false;
 
     const auto obj = storage_->object(value_.as_index());
-    auto it = std::ranges::lower_bound(obj, key, {}, [this](const JsonMember& member) {
-        return storage_->string(member.key_index_);
-    });
-
-    return (it != obj.end() && storage_->string(it->key_index_) == key);
+    
+    if (obj.size() <= 16) {
+        auto it = std::ranges::find_if(obj, [this, key](const JsonMember& member) {
+            // Unpack Metadata
+            size_t member_len = member.key_index_ >> 32;
+            if (member_len != key.size()) return false;
+            return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
+        });
+        return it != obj.end();
+    } else {
+        auto it = std::lower_bound(obj.begin(), obj.end(), key, [this](const JsonMember& member, std::string_view k) {
+            size_t member_len = member.key_index_ >> 32;
+            if (member_len != k.size()) return member_len < k.size();
+            return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
+        });
+        return (it != obj.end() && (it->key_index_ >> 32) == key.size() && storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key);
+    }
 }
 
 // Strict at()
@@ -148,12 +160,27 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
     }
 
     const auto obj = storage_->object(value_.as_index());
-    auto it = std::ranges::lower_bound(obj, key, {}, [this](const JsonMember& member) {
-        return storage_->string(member.key_index_);
-    });
-
-    if (it != obj.end() && storage_->string(it->key_index_) == key) {
-        return fromInternal(storage_, it->value_);
+    
+    if (obj.size() <= 16) {
+        auto it = std::ranges::find_if(obj, [this, key](const JsonMember& member) {
+            // Unpack Metadata
+            size_t member_len = member.key_index_ >> 32;
+            if (member_len != key.size()) return false;
+            return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
+        });
+        if (it != obj.end()) {
+            return fromInternal(storage_, it->value_);
+        }
+    } else {
+        // 🚀 FIXED: std::lower_bound klasik
+        auto it = std::lower_bound(obj.begin(), obj.end(), key, [this](const JsonMember& member, std::string_view k) {
+            size_t member_len = member.key_index_ >> 32;
+            if (member_len != k.size()) return member_len < k.size();
+            return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
+        });
+        if (it != obj.end() && (it->key_index_ >> 32) == key.size() && storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key) {
+            return fromInternal(storage_, it->value_);
+        }
     }
 
     return std::unexpected{core::JsonError::InvalidValue};
