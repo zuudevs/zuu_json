@@ -46,6 +46,19 @@ namespace zuu::utils {
     return prefix;
 }
 
+[[nodiscard]] inline constexpr unsigned long long 
+encode_stoull(std::string_view str) noexcept {
+    unsigned long long result = 0;
+    const char* d = str.data();
+    const size_t sz = str.size();
+    if (sz > 0) result |= static_cast<unsigned long long>(static_cast<unsigned char>(d[0]));
+    if (sz > 1) result |= static_cast<unsigned long long>(static_cast<unsigned char>(d[1])) << constants::byte;
+    if (sz > 2) result |= static_cast<unsigned long long>(static_cast<unsigned char>(d[2])) << constants::word;
+    if (sz > 3) result |= static_cast<unsigned long long>(static_cast<unsigned char>(d[3])) << 24;
+    if (sz > 4) result |= static_cast<unsigned long long>(static_cast<unsigned char>(d[4])) << constants::dword;
+    return result;
+}
+
 inline void encode_utf8(unsigned cp, std::string& out) noexcept {
     if (cp <= 0x7F) {
         // 1-byte (ASCII)
