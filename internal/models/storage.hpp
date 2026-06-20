@@ -16,6 +16,24 @@
 #include <memory>
 #include <span>
 #include <string_view>
+#include "traits/meta_trait.hpp"
+
+namespace zuu::models {
+
+class Storage;
+
+} // namespace zuu::models
+
+namespace zuu::traits {
+
+template <>
+struct MetaTrait<models::Storage> {
+	uint32_t offset{};
+    uint32_t size{};
+    bool is_sorted{};
+};
+
+} // namespace zuu::traits
 
 namespace zuu::models {
 
@@ -49,6 +67,8 @@ class Storage {
     [[nodiscard]] uint64_t getObjectOffset() const noexcept;
     void pushObjectMember(const JsonMember& member) noexcept;
     [[nodiscard]] uint64_t sealObject(uint64_t start_offset) noexcept;
+	[[nodiscard]] bool isObjectSorted(uint64_t index) const noexcept;
+	void sortAllObjects() noexcept;
 
     [[nodiscard]] JsonArray array(uint64_t index) const noexcept;
     [[nodiscard]] JsonObject object(uint64_t index) const noexcept;
@@ -57,26 +77,21 @@ class Storage {
 
   private:
     std::unique_ptr<std::byte[]> arena_;
-
     std::string_view* strings_{nullptr};
-    uint32_t strings_size_{0};
-
-    JsonValue* array_elements_{nullptr};
-    uint32_t array_elements_size_{0};
-
     std::pair<uint32_t, uint32_t>* arrays_{nullptr};
-    uint32_t arrays_size_{0};
-
+	traits::MetaTrait<Storage>* objects_{nullptr};
+	JsonValue* array_elements_{nullptr};
     JsonMember* object_elements_{nullptr};
-    uint32_t object_elements_size_{0};
-
-    std::pair<uint32_t, uint32_t>* objects_{nullptr};
-    uint32_t objects_size_{0};
-
     char* string_buffer_{nullptr};
+    JsonValue root_{};
+
+	uint32_t strings_size_{0};
+    uint32_t array_elements_size_{0};
+	uint32_t arrays_size_{0};
+    uint32_t object_elements_size_{0};
+    uint32_t objects_size_{0};
     uint32_t string_buffer_size_{0};
 
-    JsonValue root_{};
     bool root_set_{false};
 };
 

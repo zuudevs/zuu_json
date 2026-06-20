@@ -23,11 +23,11 @@ class Storage;
  *
  * Usage:
  * @code
- *   auto doc = Json::parse(R"({"name":"zuu","age":21})");
- *   if (!doc) { handle(doc.error()); }
- *
- *   auto name = (*doc)["name"]->as_string().value();  // "zuu"
- *   auto age  = (*doc)["age"]->as_integer().value();  // 21
+ * auto doc = Json::parse(R"({"name":"zuu","age":21})");
+ * if (!doc) { handle(doc.error()); }
+ * * doc->sort(); // Call this manually if you need fast (O(log N)) lookups later
+ * * auto name = (*doc)["name"]->as_string().value();  // "zuu"
+ * auto age  = (*doc)["age"]->as_integer().value();  // 21
  * @endcode
  */
 class Json {
@@ -44,14 +44,12 @@ class Json {
 	Json& operator=(const Json&) = delete;
 
     [[nodiscard]] static Result<Json> parse(std::string_view content) noexcept;
-
+	void sort() noexcept;
     [[nodiscard]] Value root() const noexcept;
-
     [[nodiscard]] Result<Value> operator[](std::string_view key) const noexcept;
 
   private:
     explicit Json(std::unique_ptr<Storage> storage) noexcept;
-
     std::unique_ptr<Storage> storage_;
 };
 
