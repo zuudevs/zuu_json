@@ -123,6 +123,8 @@ flowchart TB
 
 The hint computed by the tokenizer (`Hint<Token>`: string/array/object/comma counts + escape byte count) lets the arena pre-reserve all six sub-regions up front, so parsing does no reallocation.
 
+**Cache-line alignment.** The backing `std::byte[]` is over-allocated by `cache_line_size - 1` bytes so the base can be rounded up to a cache-line boundary before the sub-region pointers (`strings_`, `array_elements_`, …) are carved out. Without this padding, the base address returned by `std::make_unique_for_overwrite<std::byte[]>` is unaligned, and a later cast to `std::string_view*` (or any larger type) would be UB on platforms that require aligned loads.
+
 ### Sorted object members
 
 When an object is sealed via `Storage::sealObject(start_offset)`, its members are sorted by key. The sort is skipped when `size <= 1` to avoid overhead on trivial objects. The sort enables **O(log N) binary search** for `operator[]` and `contains()`.
@@ -195,6 +197,7 @@ Recursive-descent. Owns a `Storage`, a `current_` pointer into the token stream,
 | SWAR whitespace scan | Tokenizer loop | Skips up to 8 bytes per iteration. |
 | Bump-allocated arena | `Storage` | No per-token allocation; arena grows in big chunks. |
 | Hint-driven reservation | `Storage` ctor | Eliminates reallocations during parsing. |
+| Cache-line aligned sub-regions | `Storage` ctor | Over-allocates `cache_line_size - 1` bytes so the cast to `std::string_view*` / `JsonValue*` etc. lands on a cache line. Avoids misaligned-load UB and false sharing between regions. |
 | Type-tagged 64-bit `JsonValue` | Everywhere | Single-word values; type checks are bit ops. |
 | **Sorted object members + `std::lower_bound`** | `Json::operator[]`, `Value::operator[]`, `Value::contains` | **O(log N) object key lookups.** |
 | `-O3 -march=native` + IPO/LTO | Release build | Whole-program optimization. |
@@ -217,3 +220,21 @@ flowchart LR
 ```
 
 The library is delivered as a single static archive, `cpp_json_lib`. The demo and the benchmark binary both link against it. See [../BUILD.md](../BUILD.md) for configuration.
+
+## Benchmark layout
+
+The benchmark suite is split into per-domain files under `tests/`:
+
+| File | Concern |
+| --- | --- |
+| `bm_main.cpp` | `main()` — Google Benchmark `Initialize` / `RunSpecifiedBenchmarks` / `Shutdown`. |
+| `bm_tokenizer.cpp` | Lexical analysis: `BM_Tokenizer_<Sample>` over every sample fixture. |
+| `bm_parser.cpp` | Recursive-descent parser: `BM_Parser_<Sample>` over real samples. |
+| `bm_pipeline.cpp` | End-to-end `Json::parse` throughput: `BM_Pipeline_<Sample>`. |
+| `bm_storage.cpp` | Micro-benchmark: arena vs `std::vector`-based storage, ranged over element counts. |
+| `bm_dom.cpp` | DOM traversal / object-lookup / deep-chained access. |
+| `bm_strings.cpp` | String-heavy samples: tokenizer and parser runs on escaped / plain string data. |
+| `bm_number.cpp` | Number parsing: `BM_ParseInt_Zuu` vs `BM_ParseInt_StdFromChars`, same for `Double`. |
+| `bm_error_path.cpp` | Adversarial inputs (deep nesting, trailing commas, unquoted keys) and a valid baseline. |
+
+Sample loading is centralised in `internal/utils/fs_util.hpp` (`zuu::tests::utils::get_sample_path`, `load_sample`). The helper walks up to four parent directories looking for `samples/<filename>` so the benchmark works regardless of the build directory.

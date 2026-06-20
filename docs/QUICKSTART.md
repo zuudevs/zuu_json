@@ -95,4 +95,22 @@ target_link_libraries(your_app PRIVATE cpp_json_lib)
 
 - Read [API.md](API.md) for the full public surface.
 - Read [ARCHITECTURE.md](ARCHITECTURE.md) to understand the tokenizer → parser → storage pipeline.
-- Run the benchmark suite for performance work: `cmake -B build -DENABLE_BENCHMARK=ON ...`
+
+## Running the benchmark suite
+
+Performance work uses the per-domain benchmark files in `tests/`. Enable the benchmark target at configure time:
+
+```bash
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_BENCHMARK=ON
+cmake --build build --target zuu_json_benchmark
+```
+
+The benchmark binary pulls in sample fixtures from `samples/` via `internal/utils/fs_util.hpp` — the loader walks up to four parent directories from the working directory, so it works no matter where you launch it from.
+
+Filter by benchmark name with `--benchmark_filter`. Example: only the DOM and end-to-end pipeline runs:
+
+```bash
+./bin/zuu_json_benchmark --benchmark_filter='BM_DOM_|BM_Pipeline_'
+```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md#benchmark-layout) for a list of the per-domain files.

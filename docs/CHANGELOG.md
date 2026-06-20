@@ -8,10 +8,15 @@ All notable changes to `zuu_json` are documented here. The format follows [Keep 
 - **O(log N) object lookups** — `Json::operator[]`, `Value::operator[]`, and `Value::contains` now use `std::lower_bound` over sorted object members.
 - **Sorted object members** — `Storage::sealObject` sorts members by key when `size > 1`, enabling binary search.
 - **Arena pool (bump allocator)** — single contiguous byte buffer; all parser allocations are amortized.
+- **Cache-line aligned arena allocation** — `Storage` over-allocates by `cache_line_size - 1` bytes so the sub-region pointers can be aligned regardless of the `std::byte[]` base address.
+- **Per-domain benchmark files** — the single `tests/benchmark.cpp` was split into `bm_main.cpp` (Google Benchmark entry point) plus one file per concern: `bm_tokenizer`, `bm_parser`, `bm_pipeline`, `bm_storage`, `bm_dom`, `bm_strings`, `bm_number`, `bm_error_path`.
+- **`internal/utils/fs_util.hpp`** — new internal header that exposes `zuu::tests::utils::get_sample_path()` and `load_sample()`. Replaces the sample-loading helpers that previously lived on the old `Benchmark` helper class.
 
 ### Changed
 - Replaced O(N) linear scans in `Json::operator[]` and `Value::operator[]` / `Value::contains` with binary search.
 - Refactored object member storage to a sorted layout; `sealObject` now performs an in-place `std::sort` over the just-sealed range.
+- Benchmark target (`${PROJECT_NAME}_benchmark`) now compiles the per-domain `bm_*.cpp` files. The benchmark include path now also adds `${CMAKE_SOURCE_DIR}/tests` so files can include `"utils/fs_util.hpp"`.
+- Release link on MSVC switched from `/OPT:REF` to `/OPT:NOREF` to keep arena-aligned symbols alive (the address arithmetic in `Storage` references the arena base pointer and would otherwise be stripped by `/OPT:REF`).
 
 ## [1.0.0] - 2026-06-05
 
