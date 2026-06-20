@@ -1,7 +1,7 @@
 /**
  * @file swar.hpp
  * @author zuudevs (zuudevs@gmail.com)
- * @brief Brief description
+ * @brief SIMD Within A Register utilities
  * @version 0.1.0
  * @date 2026-06-20
  * 
@@ -10,23 +10,22 @@
 
 #pragma once
 
+#include <bit>
 #include "constants/general.hpp"
 
 namespace zuu::utils {
 
-[[nodiscard]] inline constexpr bool 
-find_zero_byte_mask(unsigned short v) noexcept {
-	return (v - constants::swar2_ones) & ~v & constants::swar2_msb;
-}
+static_assert(std::endian::native == std::endian::little, "SWAR implementation currently requires Little Endian architecture");
 
-[[nodiscard]] inline constexpr bool 
-find_zero_byte_mask(unsigned v) noexcept {
-	return (v - constants::swar4_ones) & ~v & constants::swar4_msb;
-}
-
-[[nodiscard]] inline constexpr bool 
-find_zero_byte_mask(unsigned long long v) noexcept {
-	return (v - constants::swar8_ones) & ~v & constants::swar8_msb;
+/**
+ * @brief Mencari lokasi byte nol dalam block T (umumnya uint64_t).
+ * @return T Masker bit (bukan bool), di mana bit dengan posisi byte nol akan memiliki MSB = 1.
+ */
+template <typename T>
+[[nodiscard]] inline constexpr T find_zero_byte_mask(T v) noexcept {
+    constexpr T ones = constants::repeat_byte<T>(0x01);
+    constexpr T msb  = constants::repeat_byte<T>(0x80);
+    return (v - constants::swar8_one) & ~v & constants::swar8_msb;
 }
 
 

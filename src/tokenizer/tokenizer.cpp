@@ -9,8 +9,10 @@
  */
 
 #include <bit>
+#include <cstdint>
 #include <cstring>
 #include "tokenizer/tokenizer.hpp"
+#include "constants/general.hpp"
 #include "utils/swar.hpp"
 
 namespace zuu::tokenizer {
@@ -44,20 +46,27 @@ void Tokenizer::readString() noexcept {
     const char* end = end_;
     bool has_escape = false;
 
-	// START FIX SECTION
-	// Request fallback into swar with lower size if not match
-    while (ptr + sizeof(unsigned long long) <= end) {
-		unsigned long long block{};
-		std::memcpy(&block, ptr, constants::byte);
+    while (ptr + sizeof(uint64_t) <= end) {
+		uint64_t block{};
+		std::memcpy(&block, ptr, sizeof(uint64_t));
 
-		unsigned long long match_mask = 
-		utils::find_zero_byte_mask(block ^ constants::swar8_dquote) | 
+		uint64_t match_mask = 
+		utils::find_zero_byte_mask(block ^ constants::swar8_doublequote) | 
 		utils::find_zero_byte_mask(block ^ constants::swar8_escape) ;
 
-		if (match_mask != 0) {
-			unsigned int byte_idx = std::countr_zero(match_mask) >> 3;
+		uint64_t ctrl_mask = 
+		(block - constants::swar8_sp) & 
+		~block & constants::swar8_msb ;
 
-			if (ptr[byte_idx] == '"') {
+        uint64_t combined_mask = match_mask | ctrl_mask;
+		if (combined_mask != 0) {
+			uint32_t byte_idx = std::countr_zero(combined_mask) >> 3;
+			auto c = ptr[byte_idx];
+
+			if (static_cast<uint8_t>(c) < 0x20) {
+				status_ = Error::UnescapedCharacter; 
+                return;
+			} else if (ptr[byte_idx] == '\"') {
 				res_.emplace_back(
 					Token::Type::String, 
 					std::string_view(begin, (ptr + byte_idx) - begin), 
@@ -75,12 +84,16 @@ void Tokenizer::readString() noexcept {
 				break;
 			}
 		}
-		ptr += constants::byte;
+		ptr += sizeof(uint64_t);
 	}
-	// END FIX SECTION
 
     while (ptr < end) {
         char c = *ptr;
+		if (static_cast<unsigned char>(c) < 0x20) {
+            status_ = Error::UnescapedCharacter;
+            return;
+        }
+
         if (c == '\"') {
             res_.emplace_back(
                 Token::Type::String, 
@@ -111,25 +124,45 @@ void Tokenizer::readString() noexcept {
 }
 
 void Tokenizer::readNumeric() noexcept {
-    auto begin = current_;
+    const char* begin = current_;
     auto type = Token::Type::Integer;
 
-    if (current_ < end_ && *current_ == '-') {
+    auto skip_digits = [this]() noexcept {
+        while (current_ + sizeof(uint64_t) <= end_) {
+            uint64_t block{};
+            std::memcpy(&block, current_, sizeof(uint64_t));
+            
+            uint64_t val = block - constants::swar8_zero;
+            uint64_t non_digits = ((val + constants::swar8_digit_bias) | val) & constants::swar8_msb;
+            if (non_digits == constants::zero) {
+                current_ += sizeof(uint64_t);
+            } else {
+                current_ += std::countr_zero(non_digits) >> 3;
+                break;
+            }
+        }
+        
+        while (current_ < end_ && static_cast<unsigned char>(*current_ - '0') < constants::digit) {
+            current_++;
+        }
+    };
+
+    if (*current_ == '-') {
         current_++;
+        if (current_ == end_) { 
+			status_ = Error::InvalidValue; 
+			return; 
+		}
     }
 
-    if (current_ < end_ && *current_ == '0') {
+    if (*current_ == '0') {
         current_++;
-        if (current_ < end_ && (static_cast<unsigned char>(*current_ - '0') < constants::digit)) {
+        if (current_ < end_ && static_cast<unsigned char>(*current_ - '0') < constants::digit) {
             status_ = Error::LeadingZero;
             return;
         }
-    } else if (current_ < end_ &&
-               (static_cast<unsigned char>(*current_ - '0') < constants::digit)) {
-        while (current_ < end_ &&
-               (static_cast<unsigned char>(*current_ - '0') < constants::digit)) {
-            current_++;
-        }
+    } else if (static_cast<unsigned char>(*current_ - '0') < constants::digit) {
+        skip_digits();
     } else {
         status_ = Error::InvalidValue;
         return;
@@ -138,35 +171,27 @@ void Tokenizer::readNumeric() noexcept {
     if (current_ < end_ && *current_ == '.') {
         type = Token::Type::Double;
         current_++;
-
-        if (current_ >= end_ || (static_cast<unsigned char>(*current_ - '0') >= constants::digit)) {
+        
+        if (current_ == end_ || static_cast<unsigned char>(*current_ - '0') >= constants::digit) {
             status_ = Error::InvalidValue;
             return;
         }
-
-        while (current_ < end_ &&
-               (static_cast<unsigned char>(*current_ - '0') < constants::digit)) {
-            current_++;
-        }
+        skip_digits();
     }
 
     if (current_ < end_ && (*current_ == 'e' || *current_ == 'E')) {
         type = Token::Type::Double;
         current_++;
-
+        
         if (current_ < end_ && (*current_ == '+' || *current_ == '-')) {
             current_++;
         }
-
-        if (current_ >= end_ || (static_cast<unsigned char>(*current_ - '0') >= constants::digit)) {
+        
+        if (current_ == end_ || static_cast<unsigned char>(*current_ - '0') >= constants::digit) {
             status_ = Error::InvalidValue;
             return;
         }
-
-        while (current_ < end_ &&
-               (static_cast<unsigned char>(*current_ - '0') < constants::digit)) {
-            current_++;
-        }
+        skip_digits();
     }
 
     if (!is_error()) {
@@ -174,57 +199,69 @@ void Tokenizer::readNumeric() noexcept {
     }
 }
 
-// START REVIEW
 void Tokenizer::readAlphabet() noexcept {
     const auto rem = end_ - current_;
     
-    if (rem >= 4) [[likely]] {
-        unsigned long long val{};
-        std::memcpy(&val, current_, 5);
+    if (rem >= constants::nibble) [[likely]] {
+        uint32_t val{};
+        std::memcpy(&val, current_, constants::nibble);
 
         switch (val) {
             case constants::null_word:
                 res_.emplace_back(
 					Token::Type::Null, 
-					std::string_view(current_, 4)
+					std::string_view(current_, constants::nibble)
 				);
-                current_ += 4;
+                current_ += constants::nibble;
                 return;
                 
             case constants::true_word:
                 res_.emplace_back(
 					Token::Type::Boolean, 
-					std::string_view(current_, 4)
+					std::string_view(current_, constants::nibble)
 				);
-                current_ += 4;
+                current_ += constants::nibble;
                 return;
                 
-            case constants::false_word:
-				res_.emplace_back(
-					Token::Type::Boolean, 
-					std::string_view(current_, 5)
-				);
-				current_ += 5;
-                return;
+            case constants::fals_word:
+				if (rem >= 5 && current_[4] == 'e') {
+                    res_.emplace_back(
+                        Token::Type::Boolean, 
+                        std::string_view(current_, 5)
+                    );
+                    current_ += 5;
+                    return;
+                }
 			default:
 				break;
         }
     }
 	status_ = Error::InvalidValue;
 }
-// END REVIEW
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
         auto actionType = Lookup{}[*current_];
         switch (actionType) {
             case Lookup::Type::WhiteSpace: {
-				// START FIX SECTION
-				// Request fallback into swar with lower size if not match
-				do {
-					++current_;
-				} while (current_ < end_ && Lookup{}[*current_] == Lookup::Type::WhiteSpace);
-				// END FIX SECTION
+				while (current_ + sizeof(uint64_t) <= end_) {
+                    uint64_t block{};
+                    std::memcpy(&block, current_, sizeof(uint64_t));
+                    uint64_t non_ws = ((block + constants::swar8_underscore) | block) & constants::swar8_msb;
+                    
+                    if (non_ws == 0) {
+                        current_ += sizeof(uint64_t);
+                    } else {
+                        unsigned int byte_idx = std::countr_zero(non_ws) >> 3;
+                        current_ += byte_idx;
+                        break;
+                    }
+                }
+
+                // ── Slow Path (Sisa byte & Penyesuaian presisi LookUp table) ──
+                while (current_ < end_ && Lookup{}[*current_] == Lookup::Type::WhiteSpace) {
+                    ++current_;
+                }
                 continue;
             }
             case Lookup::Type::LeftCurlyBracket: {

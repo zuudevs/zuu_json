@@ -10,8 +10,9 @@
 
 #pragma once 
 
-#include <expected>
 #include "constants/general.hpp"
+#include <cstdint>
+#include <expected>
 #include "traits/parser_trait.hpp"
 #include "utils/strings.hpp"
 #include "zuu_json/core/error.hpp"
@@ -20,9 +21,8 @@ namespace zuu::traits {
 
 template <>
 struct ParserTrait<long long> {
-	using type = long long;
     using Error = core::ParseError;
-    using Result = std::expected<type, Error>;
+    using Result = std::expected<uint64_t, Error>;
     
     [[nodiscard]] inline constexpr Result
     operator()(const char* first, const char* last) const noexcept {
@@ -30,7 +30,7 @@ struct ParserTrait<long long> {
             return std::unexpected{Error::InvalidFormat};
         }
 
-		unsigned long long value{};
+		uint64_t value{};
 		bool is_negative{};
 		bool has_digits{};
 
@@ -49,7 +49,7 @@ struct ParserTrait<long long> {
             return std::unexpected{Error::InvalidFormat};
         }
 
-		return Result{(is_negative ? -static_cast<type>(value) : static_cast<type>(value))};
+		return Result{(is_negative ? -static_cast<uint64_t>(value) : static_cast<uint64_t>(value))};
     }
 };
 

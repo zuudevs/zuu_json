@@ -8,8 +8,10 @@
  * @copyright Copyright (c) 2026
  */
 
+#include <cstdint>
 #include <cstring>
 #include "parser/parser.hpp"
+#include "constants/general.hpp"
 #include "utils/parser.hpp"
 #include "utils/swar.hpp"
 
@@ -37,10 +39,10 @@ Parser::Expected Parser::Parse(Raw tokens, Hint hint) noexcept {
     return Parser(tokens, hint).result();
 }
 
-unsigned Parser::decodeUnicodeHex(const char* ptr) noexcept {
-    unsigned value{};
-    for (int i = 0; i < 4; ++i) {
-        auto c = static_cast<unsigned char>(ptr[i]);
+uint32_t Parser::decodeUnicodeHex(const char* ptr) noexcept {
+    uint32_t value{};
+    for (int i = constants::zero; i < constants::nibble; ++i) {
+        auto c = static_cast<uint8_t>(ptr[i]);
         
         if (!(
 			(c >= '0' && c <= '9') || 
@@ -48,12 +50,12 @@ unsigned Parser::decodeUnicodeHex(const char* ptr) noexcept {
 			(c >= 'A' && c <= 'F')
 		)) {
             status_ = core::JsonError::InvalidValue;
-            return 0;
+            return constants::zero;
         }
 
-        unsigned hex_val = (c & constants::hex_alpha_max_val) + 
-		(c >= 'A' ? constants::hex_digit_max_val : 0);
-        value = (value << 4) | (hex_val & constants::hex_alpha_max_val);
+        uint32_t hex_val = (c & constants::hex_alpha_max_val) + 
+		(c >= 'A' ? constants::hex_digit_max_val : constants::zero);
+        value = (value << constants::nibble) | (hex_val & constants::hex_alpha_max_val);
     }
     return value;
 }
@@ -66,12 +68,12 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
     const char* end = ptr + src.size();
 
     while (ptr < end) {
-        while (ptr + constants::byte <= end) {
-            unsigned long long block{};
+        while (ptr + sizeof(uint64_t) <= end) {
+            uint64_t block{};
             std::memcpy(
 				&block, 
 				ptr, 
-				constants::byte
+				sizeof(uint64_t)
 			);
 
             if (utils::find_zero_byte_mask(block ^ constants::swar8_escape)) {
@@ -81,11 +83,11 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
             std::memcpy(
 				out, 
 				ptr, 
-				constants::byte
+				sizeof(uint64_t)
 			);
 
-            out += constants::byte;
-            ptr += constants::byte;
+            out += sizeof(uint64_t);
+            ptr += sizeof(uint64_t);
         }
 
         if (ptr >= end) {
@@ -126,14 +128,14 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
                         status_ = core::JsonError::InvalidValue;
                         return {};
                     }
-                    unsigned cp = decodeUnicodeHex(ptr + 1);
-                    ptr += 4;
+                    uint32_t cp = decodeUnicodeHex(ptr + 1);
+                    ptr += constants::nibble;
 
                     if (cp >= 0xD800 && cp <= 0xDBFF) {
                         if (ptr + 6 <= end && ptr[1] == '\\' && ptr[2] == 'u') {
-                            unsigned cp2 = decodeUnicodeHex(ptr + 3);
+                            uint32_t cp2 = decodeUnicodeHex(ptr + 3);
                             if (cp2 >= 0xDC00 && cp2 <= 0xDFFF) {
-                                cp = 0x10000 + (((cp - 0xD800) << 10) | (cp2 - 0xDC00));
+                                cp = 0x10000 + (((cp - 0xD800) << constants::digit) | (cp2 - 0xDC00));
                                 ptr += 6;
                             } else {
                                 status_ = core::JsonError::InvalidValue;
@@ -174,7 +176,7 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
         }
         ++ptr;
     }
-    return {dest, static_cast<unsigned long long>(out - dest)};
+    return {dest, static_cast<uint64_t>(out - dest)};
 }
 
 Parser::JsonValue Parser::buildNull() noexcept {
@@ -243,7 +245,7 @@ Parser::JsonValue Parser::buildArray() noexcept {
         return JsonValue::Array(res_.sealArray(res_.getArrayOffset()));
     }
 
-    const unsigned long long start_offset = res_.getArrayOffset();
+    const uint64_t start_offset = res_.getArrayOffset();
 
     while (true) {
         Parser::JsonValue value;
@@ -293,7 +295,7 @@ Parser::JsonValue Parser::buildObject() noexcept {
         return JsonValue::Object(res_.sealObject(res_.getObjectOffset()));
     }
 
-    const unsigned long long start_offset = res_.getObjectOffset();
+    const uint64_t start_offset = res_.getObjectOffset();
 
     while (true) {
         if (current_->type_ != TokenType::String) [[unlikely]] {
