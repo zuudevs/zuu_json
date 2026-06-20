@@ -31,6 +31,9 @@ constexpr uint8_t hex_digit_min_val = zero;
 
 constexpr unsigned char cache_line_size = 64;
 
+constexpr uint8_t sso_tag = 0x80;
+constexpr uint8_t sso_max_len = 7;
+
 template <typename T>
 [[nodiscard]] consteval T repeat_byte(uint8_t b) noexcept {
     T result = 0;

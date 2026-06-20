@@ -10,12 +10,19 @@
 
 #pragma once
 
+#include <cstdint>
 #include "models/json_value.hpp"
 
 namespace zuu::models {
 
 struct JsonMember {
-    unsigned long long key_index_{};
+	union KeyStore {
+        uint64_t index_;
+        struct {
+            char chars_[sizeof(uint64_t) - 1];
+            uint8_t length_tag_;
+        } sso_;
+    } key_{};
     JsonValue value_{};
 };
 
