@@ -46,56 +46,29 @@ Value Json::root() const noexcept {
 }
 
 Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
-    const auto& root_val = storage_->root();
+     const auto& root_val = storage_->root();
 
     if (root_val.get_type() != JsonValue::Type::Object) {
         return std::unexpected{Error::IsNotObject};
     }
 
     const auto obj = storage_->object(root_val.as_index());
-    const unsigned long long target_prefix = utils::build_string_prefix(key);
 
-    if (obj.size() <= constants::word) {
-        auto it = std::ranges::find_if(
-			obj, 
-			[this, key, target_prefix](const JsonMember& member) {
-				if ((member.key_index_ >> constants::dword) != target_prefix) {
-					return false;
-				}
-                // 🚀 BOTTLE-NECK FIXED: O(1) Instan jika panjang key <= 3
-                if (key.size() <= 3) return true;
-				return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
-			}
-		);
-
-        if (it != obj.end()) {
-            return Value::fromInternal(storage_.get(), it->value_);
+    // Binary Search: O(log N) Lookup
+    auto it = std::ranges::lower_bound(
+        obj, 
+		key, 
+		{}, 
+		[this](const JsonMember& member) {
+            return storage_->string(member.key_index_);
         }
-    } else {
-        auto it = std::lower_bound(
-			obj.begin(), 
-			obj.end(), 
-			key, 
-			[this, target_prefix](const JsonMember& member, std::string_view k) {
-				const unsigned long long member_prefix = member.key_index_ >> constants::dword;
-				if (member_prefix != target_prefix) {
-					return member_prefix < target_prefix;
-				}
-                // 🚀 BOTTLE-NECK FIXED: Hindari pemanggilan memory storage!
-                if (k.size() <= 3) return false;
-				return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
-			}
-		);
+	);
 
-        if (
-			it != obj.end() && 
-			(it->key_index_ >> constants::dword) == target_prefix
-		) {
-            // 🚀 BOTTLE-NECK FIXED
-            if (key.size() <= 3 || storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key) {
-                return Value::fromInternal(storage_.get(), it->value_);
-            }
-        }
+    if (
+		it != obj.end() && 
+		storage_->string(it->key_index_) == key
+	) {
+        return Value::fromInternal(storage_.get(), it->value_);
     }
 
     return std::unexpected{Error::InvalidValue};

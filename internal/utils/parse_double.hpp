@@ -10,7 +10,9 @@
 
 #pragma once
 
+#include <cstdint>
 #include <expected>
+#include "constants/general.hpp"
 #include "traits/lookup_trait.hpp"
 #include "traits/parser_trait.hpp"
 #include "utils/strings.hpp"
@@ -75,7 +77,6 @@ struct LookupTrait<double> {
 
 template <>
 struct ParserTrait<double> {
-	using type = double;
     using Error = core::ParseError;
     using Result = std::expected<double, Error>;
     
@@ -85,95 +86,63 @@ struct ParserTrait<double> {
             return std::unexpected{Error::InvalidFormat};
         }
 
-        unsigned long long mantissa{};
-        int decimal_shift{};
-        bool is_negative{};
-        bool has_digits{};
-
-        if (*first == '-') { 
-            is_negative = true; ++first; 
-        }
-        else if (*first == '+') {
-            ++first; 
-        }
-
-        while (first != last && utils::is_numeric(*first)) {
-            has_digits = true;
-            if (mantissa < 1844674407370955161ULL) [[likely]] {
-                mantissa = mantissa * constants::digit + (*first - '0');
-            } else {
-                decimal_shift++;
-            }
+        uint64_t mantissa{};
+        int32_t decimal_shift{};
+        bool is_negative = (*first == '-');
+        first += is_negative;
+        while (first != last && *first != '.' && *first != 'e' && *first != 'E') {
+            mantissa = mantissa * constants::digit + (*first - '0');
             ++first;
         }
 
         if (first != last && *first == '.') {
             ++first;
-            while (first != last && utils::is_numeric(*first)) {
-                has_digits = true;
-                if (mantissa < 1844674407370955161ULL) [[likely]] {
-                    mantissa = mantissa * constants::digit + (*first - '0');
-                    decimal_shift--; 
-                }
+            while (first != last && *first != 'e' && *first != 'E') {
+                mantissa = mantissa * constants::digit + (*first - '0');
+                decimal_shift++;
                 ++first;
             }
         }
 
-        if (!has_digits) {
-            return std::unexpected{Error::InvalidFormat};
-        }
-
         if (first != last && (*first == 'e' || *first == 'E')) {
-            const char* exp_ptr = first;
             ++first;
 
-            if (first != last) {
-                bool exp_negative = (*first == '-');
-                if (*first == '-' || *first == '+') ++first;
-
-                bool has_exp_digits = false;
-                int exponent = 0;
-                while (first != last && utils::is_numeric(*first)) {
-                    has_exp_digits = true;
-                    // Mencegah overflow pada exponent
-                    if (exponent < 1000000) {
-                        exponent = exponent * constants::digit + (*first - '0');
-                    }
-                    ++first;
-                }
-
-                if (has_exp_digits) {
-                    if (exp_negative) decimal_shift -= exponent;
-                    else decimal_shift += exponent;
-                } else {
-                    first = exp_ptr; 
-                }
-            } else {
-                first = exp_ptr;
+            bool exp_negative = (*first == '-');
+            first += (exp_negative || *first == '+'); 
+            int32_t exponent = constants::zero;
+            while (first != last) {
+                exponent = exponent * constants::digit + (*first - '0');
+                ++first;
             }
+
+            if (exp_negative) {
+				decimal_shift += exponent;
+			} else {
+				decimal_shift -= exponent;
+			}
         }
 
-        auto result = static_cast<type>(mantissa);
+        auto result = static_cast<double>(mantissa);
 
-        if (decimal_shift < 0) {
-            int neg_shift = -decimal_shift;
-            if (neg_shift <= 22) result *= traits::LookupTrait<type>::pow10_negative[neg_shift];
-            else {
-                while(neg_shift > 22) { 
-                    result *= 0.1; 
-                    neg_shift--; 
-                }
-                result *= traits::LookupTrait<type>::pow10_negative[22];
-            }
-        } else if (decimal_shift > 0) {
+        if (decimal_shift > constants::zero) {
             if (decimal_shift <= 22) {
-                result *= traits::LookupTrait<type>::pow10_positive[decimal_shift];
-            }
-            else {
+				result *= traits::LookupTrait<double>::pow10_negative[decimal_shift];
+			} else {
                 while(decimal_shift > 22) { 
-                    result *= 10.0; decimal_shift--; 
+                    result *= 0.1; 
+                    decimal_shift--; 
                 }
-                result *= traits::LookupTrait<type>::pow10_positive[22];
+                result *= traits::LookupTrait<double>::pow10_negative[22];
+            }
+        } else if (decimal_shift < constants::zero) {
+            int pos_shift = -decimal_shift;
+            if (pos_shift <= 22) {
+                result *= traits::LookupTrait<double>::pow10_positive[pos_shift];
+            } else {
+                while(pos_shift > 22) { 
+                    result *= 10.0; pos_shift--; 
+                }
+                result *= traits::LookupTrait<double>::pow10_positive[22];
             }
         }
 

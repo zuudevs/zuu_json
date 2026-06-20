@@ -12,15 +12,11 @@
 #include "constants/general.hpp"
 #include "models/storage.hpp"
 
-namespace {
+namespace zuu::models {
 
 [[nodiscard]] inline constexpr std::size_t align_to_cache_line(std::size_t size) noexcept {
-    return (size + zuu::constants::cache_line_size - 1) & ~(zuu::constants::cache_line_size - 1);
+    return (size + constants::cache_line_size - 1) & ~(constants::cache_line_size - 1);
 }
-
-} // namespace
-
-namespace zuu::models {
 
 Storage::Storage(Hint hint) noexcept {
     const unsigned long long max_strings = hint.string_count_;
@@ -40,9 +36,7 @@ Storage::Storage(Hint hint) noexcept {
                                            obj_elem_bytes + objects_bytes + str_buf_bytes;
 
     if (total_bytes > 0) {
-        arena_ = std::make_unique_for_overwrite<std::byte[]>(
-			total_bytes + constants::cache_line_size
-		);
+        arena_ = std::make_unique_for_overwrite<std::byte[]>(total_bytes);
         auto raw_address = reinterpret_cast<std::uintptr_t>(arena_.get());
         auto aligned_address = 
 		(raw_address + constants::cache_line_size - 1) & ~(constants::cache_line_size - 1);
@@ -116,27 +110,6 @@ void Storage::pushObjectMember(const JsonMember& member) noexcept {
 
 unsigned long long Storage::sealObject(unsigned long long start_offset) noexcept {
     const auto size = static_cast<unsigned>(object_elements_size_ - start_offset);
-	if (size > constants::word) {
-        auto begin = object_elements_ + start_offset;
-        auto end = begin + size;
-        std::sort(
-			begin, 
-			end, 
-			[this](const JsonMember& a, const JsonMember& b) {
-				const unsigned long long prefix_a = a.key_index_ >> constants::dword;
-				const unsigned long long prefix_b = b.key_index_ >> constants::dword;
-				
-				if (prefix_a != prefix_b) {
-					return prefix_a < prefix_b;
-				}
-				
-				const auto sa = string(a.key_index_ & 0xFFFFFFFFULL);
-				const auto sb = string(b.key_index_ & 0xFFFFFFFFULL);
-				return sa < sb;
-			}
-		);
-    }
-	
     objects_[objects_size_] = {static_cast<unsigned>(start_offset), size};
     return objects_size_++;
 }

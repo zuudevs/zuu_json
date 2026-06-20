@@ -1,32 +1,32 @@
 /**
  * @file swar.hpp
  * @author zuudevs (zuudevs@gmail.com)
- * @brief Brief description
+ * @brief SIMD Within A Register utilities
  * @version 0.1.0
- * @date 2026-06-19
+ * @date 2026-06-20
  * 
  * @copyright Copyright (c) 2026
  */
 
 #pragma once
 
+#include <bit>
 #include "constants/general.hpp"
 
 namespace zuu::utils {
 
-[[nodiscard]] inline constexpr unsigned long long 
-find_zero_byte_mask(unsigned long long v) noexcept {
-	return (v - constants::swar_one_per_byte) & ~v & constants::swar_high_bit_mask;
+static_assert(std::endian::native == std::endian::little, "SWAR implementation currently requires Little Endian architecture");
+
+/**
+ * @brief Mencari lokasi byte nol dalam block T (umumnya uint64_t).
+ * @return T Masker bit (bukan bool), di mana bit dengan posisi byte nol akan memiliki MSB = 1.
+ */
+template <typename T>
+[[nodiscard]] inline constexpr T find_zero_byte_mask(T v) noexcept {
+    constexpr T ones = constants::repeat_byte<T>(0x01);
+    constexpr T msb  = constants::repeat_byte<T>(0x80);
+    return (v - constants::swar8_one) & ~v & constants::swar8_msb;
 }
 
-[[nodiscard]] inline constexpr unsigned long long 
-get_escape_mask(unsigned long long v) noexcept {
-	return find_zero_byte_mask(v ^ constants::swar_escape_bytes);
-}
-
-[[nodiscard]] inline constexpr unsigned long long 
-get_quote_or_escape_mask(unsigned long long v) noexcept {
-	return find_zero_byte_mask(v ^ constants::swar_quote_bytes) | get_escape_mask(v);
-}
 
 } // namespace zuu::utils
