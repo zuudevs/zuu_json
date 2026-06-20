@@ -54,7 +54,6 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
 
     const auto obj = storage_->object(root_val.as_index());
 
-    // Binary Search: O(log N) Lookup
     auto it = std::ranges::lower_bound(
         obj, 
 		key, 

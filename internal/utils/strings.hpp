@@ -13,6 +13,37 @@
 #include "constants/general.hpp"
 #include <cstdint>
 #include <string>
+#include "traits/lookup_trait.hpp"
+
+namespace zuu::traits {
+
+namespace detail {
+    struct HexTable {
+        uint8_t datas_[256]{};
+        
+        constexpr HexTable() noexcept {
+            for (auto& data_ : datas_) {
+				data_ = UINT8_MAX;
+			};
+            for (int i = '0'; i <= '9'; ++i) {
+				datas_[i] = i - '0';
+			}
+            for (int i = 'A'; i <= 'F'; ++i) {
+				datas_[i] = i - 'A' + constants::digit;
+			}
+            for (int i = 'a'; i <= 'f'; ++i) {
+				datas_[i] = i - 'a' + constants::digit;
+			}
+        }
+    };
+}
+
+template <>
+struct LookupTrait<char> {
+    alignas(64) static inline constexpr detail::HexTable hex{};
+};
+
+} // namespace zuu::traits
 
 namespace zuu::utils {
 
@@ -21,40 +52,44 @@ namespace zuu::utils {
 }
 
 [[nodiscard]] inline constexpr bool is_alphabet(char c) noexcept {
-    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+    return static_cast<uint8_t>((c | 0x20) - 'a') <= 25;
 }
 
 [[nodiscard]] inline constexpr bool is_whitespace(char c) noexcept {
-    return c == '\v' || c == '\t' || c == '\r' || c == '\n' || c == '\f' || c == ' ';
+    bool is_valid = (c >= '0' && c <= '9') || ((c | 0x20) >= 'a' && (c | 0x20) <= 'f');
+    
+    if (!is_valid) [[unlikely]] {
+		return -1;
+	}
+    return (c & constants::hex_alpha_max_val) + (c >> 6) * constants::hex_digit_max_val;
 }
-[[nodiscard]] inline constexpr int32_t hex_to_int(char c) noexcept {
-    if (c >= '0' && c <= '9')
-        return c - '0';
-    if (c >= 'a' && c <= 'f')
-        return c - 'a' + constants::digit;
-    if (c >= 'A' && c <= 'F')
-        return c - 'A' + constants::digit;
-    return -1;
+[[nodiscard]] inline constexpr bool is_control_character(char c) noexcept {
+    return static_cast<unsigned char>(c) < 0x20;
 }
 inline void encode_utf8(uint32_t cp, std::string& out) noexcept {
     if (cp <= 0x7F) {
-        // 1-byte (ASCII)
-        out.push_back(static_cast<char>(cp));
+        out += static_cast<char>(cp);
     } else if (cp <= 0x7FF) {
-        // 2-byte
-        out.push_back(static_cast<char>(0xC0 | ((cp >> 6) & 0x1F)));
-        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        char buf[2] = {
+            static_cast<char>(0xC0 | ((cp >> 6) & 0x1F)),
+            static_cast<char>(0x80 | (cp & 0x3F))
+        };
+        out.append(buf, 2);
     } else if (cp <= 0xFFFF) {
-        // 3-byte
-        out.push_back(static_cast<char>(0xE0 | ((cp >> 12) & 0x0F)));
-        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
-        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        char buf[3] = {
+            static_cast<char>(0xE0 | ((cp >> 12) & 0x0F)),
+            static_cast<char>(0x80 | ((cp >> 6) & 0x3F)),
+            static_cast<char>(0x80 | (cp & 0x3F))
+        };
+        out.append(buf, 3);
     } else if (cp <= 0x10FFFF) {
-        // 4-byte (Biasanya Emoji)
-        out.push_back(static_cast<char>(0xF0 | ((cp >> 18) & 0x07)));
-        out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
-        out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
-        out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        char buf[4] = {
+            static_cast<char>(0xF0 | ((cp >> 18) & 0x07)),
+            static_cast<char>(0x80 | ((cp >> 12) & 0x3F)),
+            static_cast<char>(0x80 | ((cp >> 6) & 0x3F)),
+            static_cast<char>(0x80 | (cp & 0x3F))
+        };
+        out.append(buf, 4);
     }
 }
 
