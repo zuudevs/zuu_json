@@ -11,8 +11,8 @@
 #pragma once
 
 #include <bit>
-#include "constants/general.hpp"
 #include <string_view>
+#include "utils/strings.hpp"
 
 namespace zuu::models {
 
@@ -71,14 +71,7 @@ struct JsonValue {
     }
 
 	[[nodiscard]] static inline constexpr JsonValue ShortString(std::string_view s) noexcept {
-        Data payload = (static_cast<Data>(s.size()) << 40); // Size di Byte ke-5
-        switch (s.size()) {
-            case 5: payload |= (static_cast<Data>(static_cast<unsigned char>(s[4])) << 32); [[fallthrough]];
-            case 4: payload |= (static_cast<Data>(static_cast<unsigned char>(s[3])) << 24); [[fallthrough]];
-            case 3: payload |= (static_cast<Data>(static_cast<unsigned char>(s[2])) << 16); [[fallthrough]];
-            case 2: payload |= (static_cast<Data>(static_cast<unsigned char>(s[1])) << 8);  [[fallthrough]];
-            case 1: payload |= (static_cast<Data>(static_cast<unsigned char>(s[0])));
-        }
+        Data payload = (static_cast<Data>(s.size()) << 40) | utils::encode_stoull(s);
         return JsonValue(NAN_MASK | (TAG_SHORT_STRING << TAG_SHIFT) | payload);
     }
 

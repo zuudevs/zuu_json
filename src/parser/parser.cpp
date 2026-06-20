@@ -223,6 +223,13 @@ Parser::JsonValue Parser::buildString() noexcept {
         }
     }
 
+	if constexpr (std::endian::native == std::endian::little) {
+        if (val.size() <= 5) [[unlikely]] {
+            ++current_;
+            return Parser::JsonValue::ShortString(val);
+        }
+    }
+
     const auto index = res_.commitString(val);
     ++current_;
     return Parser::JsonValue::String(index);
@@ -304,13 +311,12 @@ Parser::JsonValue Parser::buildObject() noexcept {
 
         const auto key_index = res_.commitString(key_val);
         ++current_;
-
         if (current_->type_ != TokenType::Colon) [[unlikely]] {
             status_ = core::JsonError::InvalidType;
             return JsonValue::Null();
         }
-        ++current_;
 
+        ++current_;
         Parser::JsonValue value;
         switch (current_->type_) {
             case TokenType::String: value = buildString(); break;
