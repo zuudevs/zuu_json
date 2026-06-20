@@ -8,10 +8,11 @@
  * @copyright Copyright (c) 2026
  */
 
+#include "constants/general.hpp"
 #include <cstdint>
 #include <cstring>
+#include "models/depth_guard.hpp"
 #include "parser/parser.hpp"
-#include "constants/general.hpp"
 #include "utils/parser.hpp"
 #include "utils/swar.hpp"
 
@@ -63,35 +64,42 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
         while (ptr + sizeof(uint64_t) <= end) {
             uint64_t block{};
             std::memcpy(
-				&block, 
-				ptr, 
-				sizeof(uint64_t)
-			);
+                &block, 
+                ptr, 
+                sizeof(uint64_t)
+            );
 
-            if (utils::find_zero_byte_mask(block ^ constants::swar8_escape)) {
+            uint64_t mask = utils::find_zero_byte_mask(block ^ constants::swar8_escape);
+            if (mask != 0) {
+                uint32_t offset = std::countr_zero(mask) >> 3;
+                std::memcpy(out, ptr, offset);
+
+                out += offset;
+                ptr += offset;
+                
                 break;
             }
 
             std::memcpy(
-				out, 
-				ptr, 
-				sizeof(uint64_t)
-			);
+                out, 
+                ptr, 
+                sizeof(uint64_t)
+            );
 
             out += sizeof(uint64_t);
             ptr += sizeof(uint64_t);
         }
 
         if (ptr >= end) {
-			break; 
-		}
+            break; 
+        }
 
         if (*ptr == '\\') {
             ++ptr;
             if (ptr >= end) {
                 break;
-			}
-			
+            }
+            
             switch (*ptr) {
                 case '"':  *out++ = '"';  break;
                 case '\\': *out++ = '\\'; break;
@@ -169,35 +177,35 @@ Parser::JsonValue Parser::buildBoolean() noexcept {
 }
 
 Parser::JsonValue Parser::buildInteger() noexcept {
-	if(
-		auto res = utils::parse<long long>(
-			current_->begin_, 
-			current_->begin_ + current_->size_
-		);
-		res
-	) {
-		current_++;
-    	return Parser::JsonValue::Integer(*res);
-	} else {
-		status_ = core::JsonError::InvalidValue;
+    if(
+        auto res = utils::parse<long long>(
+            current_->begin_, 
+            current_->begin_ + current_->size_
+        );
+        res
+    ) {
+        current_++;
+        return Parser::JsonValue::Integer(*res);
+    } else {
+        status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
-	}
+    }
 }
 
 Parser::JsonValue Parser::buildDouble() noexcept {
     if(
-		auto res = utils::parse<double>(
-			current_->begin_, 
-			current_->begin_ + current_->size_
-		);
-		res
-	) {
-		current_++;
-    	return Parser::JsonValue::Double(*res);
-	} else {
-		status_ = core::JsonError::InvalidValue;
+        auto res = utils::parse<double>(
+            current_->begin_, 
+            current_->begin_ + current_->size_
+        );
+        res
+    ) {
+        current_++;
+        return Parser::JsonValue::Double(*res);
+    } else {
+        status_ = core::JsonError::InvalidValue;
         return Parser::JsonValue::Null();
-	}
+    }
 }
 
 Parser::JsonValue Parser::buildString() noexcept {
@@ -216,6 +224,12 @@ Parser::JsonValue Parser::buildString() noexcept {
 }
 
 Parser::JsonValue Parser::buildArray() noexcept {
+    if (current_depth_ >= kMaxDepth) [[unlikely]] {
+        status_ = core::JsonError::DepthLimitExceeded;
+        return JsonValue::Null();
+    }
+    models::DepthGuard guard(current_depth_);
+
     ++current_;
 
     if (current_->type_ == TokenType::RightSquareBracket) {
@@ -266,6 +280,12 @@ Parser::JsonValue Parser::buildArray() noexcept {
 }
 
 Parser::JsonValue Parser::buildObject() noexcept {
+    if (current_depth_ >= kMaxDepth) [[unlikely]] {
+        status_ = core::JsonError::DepthLimitExceeded;
+        return JsonValue::Null();
+    }
+    models::DepthGuard guard(current_depth_);
+
     ++current_;
 
     if (current_->type_ == TokenType::RightCurlyBracket) {
@@ -286,7 +306,7 @@ Parser::JsonValue Parser::buildObject() noexcept {
             key_val = unescapeString(key_val);
             if (has_error()) [[unlikely]] {
                 return JsonValue::Null();
-			}
+            }
         }
 
         JsonMember member{};
