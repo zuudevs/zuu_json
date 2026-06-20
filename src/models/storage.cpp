@@ -8,8 +8,17 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "models/storage.hpp"
 #include <algorithm>
+#include "constants/general.hpp"
+#include "models/storage.hpp"
+
+namespace {
+
+[[nodiscard]] inline constexpr std::size_t align_to_cache_line(std::size_t size) noexcept {
+    return (size + zuu::constants::cache_line_size - 1) & ~(zuu::constants::cache_line_size - 1);
+}
+
+} // namespace
 
 namespace zuu::models {
 
@@ -20,23 +29,24 @@ Storage::Storage(Hint hint) noexcept {
     const unsigned long long max_elements =
         hint.comma_count_ + hint.array_count_ + hint.object_count_;
 
-    const unsigned long long strings_bytes = max_strings * sizeof(std::string_view);
-    const unsigned long long array_elem_bytes = max_elements * sizeof(JsonValue);
-    const unsigned long long arrays_bytes = max_arrays * sizeof(std::pair<unsigned, unsigned>);
-    const unsigned long long obj_elem_bytes = max_elements * sizeof(JsonMember);
-    const unsigned long long objects_bytes = max_objects * sizeof(std::pair<unsigned, unsigned>);
-
-    // Alokasi ruang untuk unescaped characters (beserta margin aman 10%)
-    const unsigned long long str_buf_bytes = hint.string_escape_bytes_;
+    const unsigned long long strings_bytes    = align_to_cache_line(max_strings * sizeof(std::string_view));
+    const unsigned long long array_elem_bytes = align_to_cache_line(max_elements * sizeof(JsonValue));
+    const unsigned long long arrays_bytes     = align_to_cache_line(max_arrays * sizeof(std::pair<unsigned, unsigned>));
+    const unsigned long long obj_elem_bytes   = align_to_cache_line(max_elements * sizeof(JsonMember));
+    const unsigned long long objects_bytes    = align_to_cache_line(max_objects * sizeof(std::pair<unsigned, unsigned>));
+    const unsigned long long str_buf_bytes    = align_to_cache_line(hint.string_escape_bytes_);
 
     const unsigned long long total_bytes = strings_bytes + array_elem_bytes + arrays_bytes +
                                            obj_elem_bytes + objects_bytes + str_buf_bytes;
 
     if (total_bytes > 0) {
-        arena_ = std::make_unique<std::byte[]>(total_bytes);
-
-        std::byte* ptr = arena_.get();
-
+        arena_ = std::make_unique_for_overwrite<std::byte[]>(
+			total_bytes + constants::cache_line_size
+		);
+        auto raw_address = reinterpret_cast<std::uintptr_t>(arena_.get());
+        auto aligned_address = 
+		(raw_address + constants::cache_line_size - 1) & ~(constants::cache_line_size - 1);
+        auto ptr = reinterpret_cast<std::byte*>(aligned_address);
         strings_ = reinterpret_cast<std::string_view*>(ptr);
         ptr += strings_bytes;
 
@@ -52,7 +62,6 @@ Storage::Storage(Hint hint) noexcept {
         objects_ = reinterpret_cast<std::pair<unsigned, unsigned>*>(ptr);
         ptr += objects_bytes;
 
-        // Ditempatkan paling akhir agar tidak merusak byte alignment dari tipe data lain di atasnya
         string_buffer_ = reinterpret_cast<char*>(ptr);
     }
 }
@@ -107,20 +116,27 @@ void Storage::pushObjectMember(const JsonMember& member) noexcept {
 
 unsigned long long Storage::sealObject(unsigned long long start_offset) noexcept {
     const auto size = static_cast<unsigned>(object_elements_size_ - start_offset);
-    if (size > 1) {
+	if (size > constants::word) {
         auto begin = object_elements_ + start_offset;
-        auto end = object_elements_ + object_elements_size_;
-        
-        auto comp = [this](
-			const JsonMember& a, 
-			const JsonMember& b) noexcept {
-            	return strings_[a.key_index_] < strings_[b.key_index_];
-        };
-
-        if (!std::is_sorted(begin, end, comp)) {
-            std::sort(begin, end, comp);
-        }
+        auto end = begin + size;
+        std::sort(
+			begin, 
+			end, 
+			[this](const JsonMember& a, const JsonMember& b) {
+				const unsigned long long prefix_a = a.key_index_ >> constants::dword;
+				const unsigned long long prefix_b = b.key_index_ >> constants::dword;
+				
+				if (prefix_a != prefix_b) {
+					return prefix_a < prefix_b;
+				}
+				
+				const auto sa = string(a.key_index_ & 0xFFFFFFFFULL);
+				const auto sb = string(b.key_index_ & 0xFFFFFFFFULL);
+				return sa < sb;
+			}
+		);
     }
+	
     objects_[objects_size_] = {static_cast<unsigned>(start_offset), size};
     return objects_size_++;
 }

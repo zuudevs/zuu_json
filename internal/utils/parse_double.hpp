@@ -130,7 +130,7 @@ struct ParserTrait<double> {
 			} else {
                 while(decimal_shift > 22) { 
                     result *= 0.1; 
-                    decimal_shift--; 
+                    neg_shift--; 
                 }
                 result *= traits::LookupTrait<double>::pow10_negative[22];
             }
