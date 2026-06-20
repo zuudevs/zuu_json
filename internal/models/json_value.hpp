@@ -11,6 +11,8 @@
 #pragma once
 
 #include <bit>
+#include <string_view>
+#include "utils/strings.hpp"
 
 namespace zuu::models {
 
@@ -23,6 +25,7 @@ struct JsonValue {
         String,
         Array,
         Object,
+		ShortString 
     };
 
     using Data = unsigned long long;
@@ -39,6 +42,7 @@ struct JsonValue {
     static constexpr Data TAG_STRING = static_cast<Data>(Type::String);
     static constexpr Data TAG_ARRAY = static_cast<Data>(Type::Array);
     static constexpr Data TAG_OBJECT = static_cast<Data>(Type::Object);
+	static constexpr Data TAG_SHORT_STRING = static_cast<Data>(Type::ShortString);
 
     Data data_;
 
@@ -64,6 +68,11 @@ struct JsonValue {
     }
     [[nodiscard]] static inline constexpr JsonValue Object(unsigned long long index) noexcept {
         return JsonValue(NAN_MASK | (TAG_OBJECT << TAG_SHIFT) | (index & PAYLOAD_MASK));
+    }
+
+	[[nodiscard]] static inline constexpr JsonValue ShortString(std::string_view s) noexcept {
+        Data payload = (static_cast<Data>(s.size()) << 40) | utils::encode_stoull(s);
+        return JsonValue(NAN_MASK | (TAG_SHORT_STRING << TAG_SHIFT) | payload);
     }
 
     [[nodiscard]] inline constexpr auto is_double() const noexcept {

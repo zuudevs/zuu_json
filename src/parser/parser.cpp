@@ -61,7 +61,6 @@ uint32_t Parser::decodeUnicodeHex(const char* ptr) noexcept {
 }
 
 std::string_view Parser::unescapeString(std::string_view src) noexcept {
-    // Alokasikan ruang buffer di dalam Memory Arena
     char* dest = res_.allocateStringBuffer(src.size());
     char* out = dest;
     const char* ptr = src.data();
@@ -91,38 +90,24 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
         }
 
         if (ptr >= end) {
-			break;
+			break; 
 		}
 
         if (*ptr == '\\') {
             ++ptr;
-            if (ptr >= end)
+            if (ptr >= end) {
                 break;
+			}
+			
             switch (*ptr) {
-                case '"':
-                    *out++ = '"';
-                    break;
-                case '\\':
-                    *out++ = '\\';
-                    break;
-                case '/':
-                    *out++ = '/';
-                    break;
-                case 'b':
-                    *out++ = '\b';
-                    break;
-                case 'f':
-                    *out++ = '\f';
-                    break;
-                case 'n':
-                    *out++ = '\n';
-                    break;
-                case 'r':
-                    *out++ = '\r';
-                    break;
-                case 't':
-                    *out++ = '\t';
-                    break;
+                case '"':  *out++ = '"';  break;
+                case '\\': *out++ = '\\'; break;
+                case '/':  *out++ = '/';  break;
+                case 'b':  *out++ = '\b'; break;
+                case 'f':  *out++ = '\f'; break;
+                case 'n':  *out++ = '\n'; break;
+                case 'r':  *out++ = '\r'; break;
+                case 't':  *out++ = '\t'; break;
                 case 'u': {
                     if (ptr + 5 > end) {
                         status_ = core::JsonError::InvalidValue;
@@ -232,6 +217,13 @@ Parser::JsonValue Parser::buildString() noexcept {
         }
     }
 
+	if constexpr (std::endian::native == std::endian::little) {
+        if (val.size() <= 5) [[unlikely]] {
+            ++current_;
+            return Parser::JsonValue::ShortString(val);
+        }
+    }
+
     const auto index = res_.commitString(val);
     ++current_;
     return Parser::JsonValue::String(index);
@@ -313,13 +305,12 @@ Parser::JsonValue Parser::buildObject() noexcept {
 
         const auto key_index = res_.commitString(key_val);
         ++current_;
-
         if (current_->type_ != TokenType::Colon) [[unlikely]] {
             status_ = core::JsonError::InvalidType;
             return JsonValue::Null();
         }
-        ++current_;
 
+        ++current_;
         Parser::JsonValue value;
         switch (current_->type_) {
             case TokenType::String: value = buildString(); break;
@@ -338,7 +329,13 @@ Parser::JsonValue Parser::buildObject() noexcept {
             return JsonValue::Null();
         }
 
-        res_.pushObjectMember(JsonMember{.key_index_ = key_index, .value_ = value});
+        res_.pushObjectMember(JsonMember{
+				.key_index_ = 
+				(utils::build_string_prefix(key_val) << constants::dword) | 
+				(key_index & 0xFFFFFFFFULL), 
+				.value_ = value
+			}
+		);
 
         if (current_->type_ == TokenType::Comma) [[likely]] {
             ++current_;
