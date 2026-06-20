@@ -108,7 +108,7 @@ void Tokenizer::readString() noexcept {
             current_ = ptr + 1;
             return;
         }
-        if (c == '\\') {
+        if (c == '\\') [[unlikely]] {
             has_escape = true;
             ptr += 2;
             if (ptr > end) {
@@ -194,7 +194,7 @@ void Tokenizer::readNumeric() noexcept {
         skip_digits();
     }
 
-    if (!is_error()) {
+    if (!is_error()) [[likely]] {
         res_.emplace_back(type, std::string_view(begin, current_ - begin));
     }
 }
@@ -286,18 +286,18 @@ void Tokenizer::tokenize() noexcept {
                 current_++;
                 continue;
             }
-            case Lookup::Type::Colon: {
+            case Lookup::Type::Colon: [[likely]] {
                 res_.emplace_back(Token::Type::Colon);
                 current_++;
                 continue;
             }
-            case Lookup::Type::Comma: {
+            case Lookup::Type::Comma: [[likely]] {
                 res_.emplace_back(Token::Type::Comma);
                 hint_.comma_count_++;
                 current_++;
                 continue;
             }
-            case Lookup::Type::DoubleQuote: {
+            case Lookup::Type::DoubleQuote: [[likely]] {
                 readString();
                 if (is_error()) {
                     return;

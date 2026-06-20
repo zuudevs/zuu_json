@@ -77,9 +77,9 @@ class Value {
     friend class Json;
 
     const Storage* storage_{nullptr};
-    JsonValue value_;
+    const JsonValue* value_{nullptr};
 
-    explicit Value(const Storage* storage, JsonValue value) noexcept;
+    explicit Value(const Storage* storage, const JsonValue* value) noexcept;
 
     [[nodiscard]] static Value fromInternal(const Storage* storage, const JsonValue& v) noexcept;
     [[nodiscard]] static Value createNull(const Storage* storage) noexcept;
