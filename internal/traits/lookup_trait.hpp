@@ -12,9 +12,9 @@
 
 namespace zuu::traits {
 
-template <typename>
+template <typename T>
 struct LookupTrait {
-    static_assert(sizeof(LookupTrait) == 0, "invalid size lookup trait");
+    static_assert(sizeof(T) == 0, "invalid size type specialized lookup trait");
 };
 
 } // namespace zuu::traits

@@ -54,87 +54,109 @@ bool Value::is_object() const noexcept {
 // ── Strict Extraction ──
 
 Value::Result<bool> Value::as_bool() const noexcept {
-    if (value_.get_type() != Type::Boolean)
+    if (value_.get_type() != Type::Boolean) {
         return std::unexpected{core::JsonError::InvalidType};
+	}
     return value_.as_bool();
 }
 
 Value::Result<long long> Value::as_integer() const noexcept {
-    if (value_.get_type() != Type::Integer)
+    if (value_.get_type() != Type::Integer) {
         return std::unexpected{core::JsonError::InvalidType};
+	}
     return value_.as_integer();
 }
 
 Value::Result<long double> Value::as_double() const noexcept {
-    if (value_.get_type() == Type::Integer)
+    if (value_.get_type() == Type::Integer) {
         return static_cast<long double>(value_.as_integer());
-    if (value_.get_type() != Type::Double)
+	}
+    if (value_.get_type() != Type::Double) {
         return std::unexpected{core::JsonError::InvalidType};
+	}
     return value_.as_double();
 }
 
 Value::Result<std::string_view> Value::as_string() const noexcept {
-    if (value_.get_type() == Type::String)
+    if (value_.get_type() == Type::String) {
         return storage_->string(value_.as_index());
+	}
     return std::unexpected{core::JsonError::InvalidType};
 }
 
 // ── Fluent / Default Extraction ──
 
 bool Value::get_bool(bool default_val) const noexcept {
-    if (value_.get_type() != Type::Boolean)
+    if (value_.get_type() != Type::Boolean) {
         return default_val;
+	}
     return value_.as_bool();
 }
 
 long long Value::get_integer(long long default_val) const noexcept {
-    if (value_.get_type() != Type::Integer)
+    if (value_.get_type() != Type::Integer) {
         return default_val;
+	}
     return value_.as_integer();
 }
 
 double Value::get_double(double default_val) const noexcept {
-    if (value_.get_type() == Type::Integer)
+    if (value_.get_type() == Type::Integer) {
         return static_cast<double>(value_.as_integer());
-    if (value_.get_type() != Type::Double)
+	}
+    if (value_.get_type() != Type::Double) {
         return default_val;
+	}
     return static_cast<double>(value_.as_double());
 }
 
 std::string_view Value::get_string(std::string_view default_val) const noexcept {
-    if (value_.get_type() == Type::String)
+    if (value_.get_type() == Type::String) {
         return storage_->string(value_.as_index());
+	}
     return default_val;
 }
 
 // ── Container & Traversal ──
 
 unsigned long long Value::size() const noexcept {
-    if (value_.get_type() == Type::Array)
+    if (value_.get_type() == Type::Array) {
         return storage_->array(value_.as_index()).size();
-    if (value_.get_type() == Type::Object)
+	}
+    if (value_.get_type() == Type::Object) {
         return storage_->object(value_.as_index()).size();
+	}
     return 0;
 }
 
 bool Value::contains(std::string_view key) const noexcept {
-    if (value_.get_type() != Type::Object)
+    if (value_.get_type() != Type::Object) {
         return false;
+	}
 
-    const auto obj = storage_->object(value_.as_index());
-    auto it = std::ranges::lower_bound(
-		obj, 
-		key, 
-		{}, 
-		[this](const JsonMember& member) {
-			return storage_->resolveKey(member);
-		}
-	);
+    const auto obj_index = value_.as_index();
+    const auto obj = storage_->object(obj_index);
+    const bool is_sorted = storage_->isObjectSorted(obj_index);
 
-    return (
-		it != obj.end() && 
-		storage_->resolveKey(*it) == key
-	);
+    if (is_sorted) {
+        auto it = std::ranges::lower_bound(
+            obj, 
+            key, 
+            {}, 
+            [this](const JsonMember& member) {
+                return storage_->resolveKey(member);
+            }
+        );
+        return (it != obj.end() && storage_->resolveKey(*it) == key);
+    } else {
+        auto it = std::ranges::find_if(
+            obj, 
+            [this, key](const JsonMember& member) {
+                return storage_->resolveKey(member) == key;
+            }
+        );
+        return it != obj.end();
+    }
 }
 
 // Strict at()
@@ -154,21 +176,34 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
         return std::unexpected{core::JsonError::IsNotObject};
     }
 
-    const auto obj = storage_->object(value_.as_index());
-    auto it = std::ranges::lower_bound(
-		obj, 
-		key, 
-		{}, 
-		[this](const JsonMember& member) {
-			return storage_->resolveKey(member);
-		}
-	);
+    const auto obj_index = value_.as_index();
+    const auto obj = storage_->object(obj_index);
+    const bool is_sorted = storage_->isObjectSorted(obj_index);
 
-    if (
-		it != obj.end() && 
-		storage_->resolveKey(*it) == key
-	) {
-        return fromInternal(storage_, it->value_);
+    if (is_sorted) {
+        auto it = std::ranges::lower_bound(
+            obj, 
+            key, 
+            {}, 
+            [this](const JsonMember& member) {
+                return storage_->resolveKey(member);
+            }
+        );
+
+        if (it != obj.end() && storage_->resolveKey(*it) == key) {
+            return fromInternal(storage_, it->value_);
+        }
+    } else {
+        auto it = std::ranges::find_if(
+            obj, 
+            [this, key](const JsonMember& member) {
+                return storage_->resolveKey(member) == key;
+            }
+        );
+
+        if (it != obj.end()) {
+            return fromInternal(storage_, it->value_);
+        }
     }
 
     return std::unexpected{core::JsonError::InvalidValue};
@@ -177,15 +212,17 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
 // Fluent operator[] (Optional Chaining safe)
 Value Value::operator[](unsigned long long index) const noexcept {
     auto res = at(index);
-    if (res)
+    if (res) {
         return res.value();
+	}
     return createNull(storage_);
 }
 
 Value Value::operator[](std::string_view key) const noexcept {
     auto res = at(key);
-    if (res)
+    if (res) {
         return res.value();
+	}
     return createNull(storage_);
 }
 
