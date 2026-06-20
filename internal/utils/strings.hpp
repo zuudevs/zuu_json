@@ -36,12 +36,6 @@ namespace zuu::utils {
         return c - 'A' + constants::digit;
     return -1;
 }
-[[nodiscard]] inline uint64_t
-encode_stoull(std::string_view str) noexcept {
-	uint64_t result{};
-	std::memcpy(&result, str.data(), str.size());
-	return result;
-}
 inline void encode_utf8(uint32_t cp, std::string& out) noexcept {
     if (cp <= 0x7F) {
         // 1-byte (ASCII)
