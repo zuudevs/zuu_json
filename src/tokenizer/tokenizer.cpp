@@ -9,39 +9,9 @@
  */
 
 #include <bit>
-#include "constants/general.hpp"
 #include <cstring>
 #include "tokenizer/tokenizer.hpp"
-
-namespace {
-
-[[nodiscard]] inline constexpr unsigned long long find_zero_byte_mask(unsigned long long v) noexcept {
-	return (v - 0x0101010101010101ULL) & ~v & 0x8080808080808080ULL;
-}
-
-// Mengembalikan MASK (bukan bool) untuk mencari tahu posisi pastinya
-[[nodiscard]] inline constexpr unsigned long long get_quote_or_escape_mask(unsigned long long v) noexcept {
-	const unsigned long long quote_mask = v ^ 0x2222222222222222ULL;
-	const unsigned long long escape_mask = v ^ 0x5C5C5C5C5C5C5C5CULL;
-	return find_zero_byte_mask(quote_mask) | find_zero_byte_mask(escape_mask);
-}
-
-// --- COMPILE-TIME SWAR CONSTANTS ---
-// Struktur 4 byte persis untuk memanipulasi std::bit_cast
-struct Bytes4 { char c[4]{}; };
-
-// consteval: Memaksa fungsi ini dieksekusi SAAT KOMPILASI, 0% beban saat runtime!
-[[nodiscard]] consteval unsigned make_word(const char* str) noexcept {
-	return std::bit_cast<unsigned>(Bytes4{str[0], str[1], str[2], str[3]});
-}
-
-// Nilai-nilai ini akan menjadi angka konstan 32-bit yang menyesuaikan 
-// dengan Endianness arsitektur CPU Rara (Little-Endian / Big-Endian)
-constexpr unsigned null_word = make_word("null");
-constexpr unsigned true_word = make_word("true");
-constexpr unsigned fals_word = make_word("fals");
-
-} // namespace
+#include "utils/swar.hpp"
 
 namespace zuu::tokenizer {
 
@@ -74,37 +44,40 @@ void Tokenizer::readString() noexcept {
     const char* end = end_;
     bool has_escape = false;
 
-    if constexpr (std::endian::native == std::endian::little) {
-        while (ptr + 8 <= end) {
-            unsigned long long block{};
-            std::memcpy(&block, ptr, constants::byte);
+	// START FIX SECTION
+	// Request fallback into swar with lower size if not match
+    while (ptr + sizeof(unsigned long long) <= end) {
+		unsigned long long block{};
+		std::memcpy(&block, ptr, constants::byte);
 
-            unsigned long long match_mask = get_quote_or_escape_mask(block);
+		unsigned long long match_mask = 
+		utils::find_zero_byte_mask(block ^ constants::swar8_dquote) | 
+		utils::find_zero_byte_mask(block ^ constants::swar8_escape) ;
 
-            if (match_mask != 0) {
-                unsigned int byte_idx = std::countr_zero(match_mask) >> 3;
+		if (match_mask != 0) {
+			unsigned int byte_idx = std::countr_zero(match_mask) >> 3;
 
-                if (ptr[byte_idx] == '"') {
-                    res_.emplace_back(
-                        Token::Type::String, 
-						std::string_view(begin, (ptr + byte_idx) - begin), 
-						has_escape
-					);
+			if (ptr[byte_idx] == '"') {
+				res_.emplace_back(
+					Token::Type::String, 
+					std::string_view(begin, (ptr + byte_idx) - begin), 
+					has_escape
+				);
 
-                    if (has_escape) {
-                        hint_.string_escape_bytes_ += ((ptr + byte_idx) - begin);
-                    }
+				if (has_escape) {
+					hint_.string_escape_bytes_ += ((ptr + byte_idx) - begin);
+				}
 
-                    current_ = ptr + byte_idx + 1;
-                    return;
-                } else {
-                    ptr += byte_idx;
-                    break;
-                }
-            }
-            ptr += constants::byte;
-        }
-    }
+				current_ = ptr + byte_idx + 1;
+				return;
+			} else {
+				ptr += byte_idx;
+				break;
+			}
+		}
+		ptr += constants::byte;
+	}
+	// END FIX SECTION
 
     while (ptr < end) {
         char c = *ptr;
@@ -201,15 +174,16 @@ void Tokenizer::readNumeric() noexcept {
     }
 }
 
+// START REVIEW
 void Tokenizer::readAlphabet() noexcept {
     const auto rem = end_ - current_;
     
     if (rem >= 4) [[likely]] {
-        unsigned val{};
-        std::memcpy(&val, current_, 4);
+        unsigned long long val{};
+        std::memcpy(&val, current_, 5);
 
         switch (val) {
-            case null_word:
+            case constants::null_word:
                 res_.emplace_back(
 					Token::Type::Null, 
 					std::string_view(current_, 4)
@@ -217,7 +191,7 @@ void Tokenizer::readAlphabet() noexcept {
                 current_ += 4;
                 return;
                 
-            case true_word:
+            case constants::true_word:
                 res_.emplace_back(
 					Token::Type::Boolean, 
 					std::string_view(current_, 4)
@@ -225,31 +199,32 @@ void Tokenizer::readAlphabet() noexcept {
                 current_ += 4;
                 return;
                 
-            case fals_word:
-                if (rem >= 5 && current_[4] == 'e') {
-                    res_.emplace_back(
-						Token::Type::Boolean, 
-						std::string_view(current_, 5)
-					);
-                    current_ += 5;
-                    return;
-                }
-                break;
+            case constants::false_word:
+				res_.emplace_back(
+					Token::Type::Boolean, 
+					std::string_view(current_, 5)
+				);
+				current_ += 5;
+                return;
 			default:
 				break;
         }
     }
 	status_ = Error::InvalidValue;
 }
+// END REVIEW
 
 void Tokenizer::tokenize() noexcept {
     while (current_ < end_) {
         auto actionType = Lookup{}[*current_];
         switch (actionType) {
             case Lookup::Type::WhiteSpace: {
+				// START FIX SECTION
+				// Request fallback into swar with lower size if not match
 				do {
 					++current_;
 				} while (current_ < end_ && Lookup{}[*current_] == Lookup::Type::WhiteSpace);
+				// END FIX SECTION
                 continue;
             }
             case Lookup::Type::LeftCurlyBracket: {
@@ -287,21 +262,24 @@ void Tokenizer::tokenize() noexcept {
             }
             case Lookup::Type::DoubleQuote: {
                 readString();
-                if (is_error())
+                if (is_error()) {
                     return;
+				}
                 hint_.string_count_++;
                 continue;
             }
             case Lookup::Type::Numeric: {
                 readNumeric();
-                if (is_error())
+                if (is_error()) {
                     return;
+				}
                 continue;
             }
             case Lookup::Type::Alphabet: {
                 readAlphabet();
-                if (is_error())
+                if (is_error()) {
                     return;
+				}
                 continue;
             }
             case Lookup::Type::SigleQuote: {

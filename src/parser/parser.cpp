@@ -11,18 +11,7 @@
 #include <cstring>
 #include "parser/parser.hpp"
 #include "utils/parser.hpp"
-
-namespace {
-
-[[nodiscard]] inline constexpr bool has_zero_byte(unsigned long long v) noexcept {
-	return (v - 0x0101010101010101ULL) & ~v & 0x8080808080808080ULL;
-}
-
-[[nodiscard]] inline constexpr bool has_escape_char(unsigned long long v) noexcept {
-	return has_zero_byte(v ^ 0x5C5C5C5C5C5C5C5CULL);
-}
-
-} // namespace
+#include "utils/swar.hpp"
 
 namespace zuu::parser {
 
@@ -85,7 +74,7 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
 				constants::byte
 			);
 
-            if (has_escape_char(block)) {
+            if (utils::find_zero_byte_mask(block ^ constants::swar8_escape)) {
                 break;
             }
 
@@ -140,7 +129,6 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
                     unsigned cp = decodeUnicodeHex(ptr + 1);
                     ptr += 4;
 
-                    // Konversi UTF-16 Surrogate Pairs ke format UTF-8
                     if (cp >= 0xD800 && cp <= 0xDBFF) {
                         if (ptr + 6 <= end && ptr[1] == '\\' && ptr[2] == 'u') {
                             unsigned cp2 = decodeUnicodeHex(ptr + 3);
@@ -157,7 +145,6 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
                         }
                     }
 
-                    // Tulis hasil UTF-8 ke tujuan memory arena
                     if (cp <= 0x7F) {
                         *out++ = static_cast<char>(cp);
                     } else if (cp <= 0x7FF) {
@@ -236,7 +223,6 @@ Parser::JsonValue Parser::buildDouble() noexcept {
 Parser::JsonValue Parser::buildString() noexcept {
     std::string_view val = current_->value();
 
-    // Lazy Evaluation: Decode hanya jika terbukti ada karakter escape
     if (current_->has_escape_) {
         val = unescapeString(val);
         if (has_error()) {

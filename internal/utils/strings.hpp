@@ -22,7 +22,7 @@ namespace zuu::utils {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
 [[nodiscard]] inline constexpr bool is_whitespace(char c) noexcept {
-    return c == '\t' || c == '\r' || c == '\n' || c == '\f' || c == ' ';
+    return c == '\v' || c == '\t' || c == '\r' || c == '\n' || c == '\f' || c == ' ';
 }
 [[nodiscard]] inline constexpr int hex_to_int(char c) noexcept {
     if (c >= '0' && c <= '9')
@@ -32,6 +32,12 @@ namespace zuu::utils {
     if (c >= 'A' && c <= 'F')
         return c - 'A' + constants::digit;
     return -1;
+}
+[[nodiscard]] inline unsigned long long
+encode_stoull(std::string_view str) noexcept {
+	unsigned long long result{};
+	std::memcpy(&result, str.data(), str.size());
+	return result;
 }
 inline void encode_utf8(unsigned cp, std::string& out) noexcept {
     if (cp <= 0x7F) {
