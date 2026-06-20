@@ -258,7 +258,6 @@ void Tokenizer::tokenize() noexcept {
                     }
                 }
 
-                // ── Slow Path (Sisa byte & Penyesuaian presisi LookUp table) ──
                 while (current_ < end_ && Lookup{}[*current_] == Lookup::Type::WhiteSpace) {
                     ++current_;
                 }

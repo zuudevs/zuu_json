@@ -40,24 +40,17 @@ Parser::Expected Parser::Parse(Raw tokens, Hint hint) noexcept {
 }
 
 uint32_t Parser::decodeUnicodeHex(const char* ptr) noexcept {
-    uint32_t value{};
-    for (int i = constants::zero; i < constants::nibble; ++i) {
-        auto c = static_cast<uint8_t>(ptr[i]);
-        
-        if (!(
-			(c >= '0' && c <= '9') || 
-			(c >= 'a' && c <= 'f') || 
-			(c >= 'A' && c <= 'F')
-		)) {
-            status_ = core::JsonError::InvalidValue;
-            return constants::zero;
-        }
+    uint32_t d0 = traits::LookupTrait<char>::hex.datas_[static_cast<uint8_t>(ptr[0])];
+    uint32_t d1 = traits::LookupTrait<char>::hex.datas_[static_cast<uint8_t>(ptr[1])];
+    uint32_t d2 = traits::LookupTrait<char>::hex.datas_[static_cast<uint8_t>(ptr[2])];
+    uint32_t d3 = traits::LookupTrait<char>::hex.datas_[static_cast<uint8_t>(ptr[3])];
 
-        uint32_t hex_val = (c & constants::hex_alpha_max_val) + 
-		(c >= 'A' ? constants::hex_digit_max_val : constants::zero);
-        value = (value << constants::nibble) | (hex_val & constants::hex_alpha_max_val);
+    if ((d0 | d1 | d2 | d3) > constants::hex_alpha_max_val) [[unlikely]] {
+        status_ = core::JsonError::InvalidValue;
+        return constants::zero;
     }
-    return value;
+
+    return (d0 << 12) | (d1 << constants::byte) | (d2 << constants::nibble) | d3;
 }
 
 std::string_view Parser::unescapeString(std::string_view src) noexcept {
@@ -298,12 +291,8 @@ Parser::JsonValue Parser::buildObject() noexcept {
 
         JsonMember member{};
         
-        // Zuu Optimization: SSO untuk Key Object (maks 7 byte)
-        if (key_val.size() <= constants::sso_max_len) {
+        if (key_val.size() <= constants::sso_max_len) [[likely]] {
             std::memcpy(member.key_.sso_.chars_, key_val.data(), key_val.size());
-            for (std::size_t i = key_val.size(); i < constants::sso_max_len; ++i) {
-                member.key_.sso_.chars_[i] = '\0';
-            }
             member.key_.sso_.length_tag_ = constants::sso_tag | static_cast<unsigned char>(key_val.size());
         } else {
             member.key_.index_ = res_.commitString(key_val);
