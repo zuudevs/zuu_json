@@ -32,6 +32,7 @@ enum class JsonError : unsigned char {
     RootNotObjectType,
     InvalidUnicode,
     InvalidSurrogate,
+	DepthLimitExceeded,
     Unknown
 };
 

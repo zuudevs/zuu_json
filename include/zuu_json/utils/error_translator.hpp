@@ -14,7 +14,8 @@
 
 namespace zuu::utils {
 
-[[nodiscard]] inline constexpr const char* TranslateError(core::JsonError errc) noexcept {
+[[nodiscard]] inline constexpr const char* 
+TranslateError(core::JsonError errc) noexcept {
     switch (errc) {
         case core::JsonError::None:
             return "No error";
@@ -54,6 +55,8 @@ namespace zuu::utils {
             return "Invalid unicode sequence";
         case core::JsonError::InvalidSurrogate:
             return "Invalid unicode surrogate pair";
+        case core::JsonError::DepthLimitExceeded:
+            return "Depth limit exceeded (nested too deep)";
         default:
             return "Unknown error";
     }

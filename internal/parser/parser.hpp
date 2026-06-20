@@ -39,7 +39,10 @@ class Parser {
     Storage res_;
     const Token* current_;
     const Token* end_;
+	uint32_t current_depth_{0};
     Error status_{core::JsonError::None};
+
+    static constexpr uint32_t kMaxDepth = 512;
 
     [[nodiscard]] unsigned decodeUnicodeHex(const char* ptr) noexcept;
     [[nodiscard]] std::string_view unescapeString(std::string_view src) noexcept;
