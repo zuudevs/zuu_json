@@ -127,11 +127,14 @@ bool Value::contains(std::string_view key) const noexcept {
 		key, 
 		{}, 
 		[this](const JsonMember& member) {
-			return storage_->string(member.key_index_);
+			return storage_->resolveKey(member);
 		}
 	);
 
-    return (it != obj.end() && storage_->string(it->key_index_) == key);
+    return (
+		it != obj.end() && 
+		storage_->resolveKey(*it) == key
+	);
 }
 
 // Strict at()
@@ -157,13 +160,13 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
 		key, 
 		{}, 
 		[this](const JsonMember& member) {
-			return storage_->string(member.key_index_);
+			return storage_->resolveKey(member);
 		}
 	);
 
     if (
 		it != obj.end() && 
-		storage_->string(it->key_index_) == key
+		storage_->resolveKey(*it) == key
 	) {
         return fromInternal(storage_, it->value_);
     }

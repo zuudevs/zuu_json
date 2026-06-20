@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include "constants/general.hpp"
+#include <cstdint>
 #include "models/storage.hpp"
 
 namespace zuu::models {
@@ -19,20 +20,20 @@ namespace zuu::models {
 }
 
 Storage::Storage(Hint hint) noexcept {
-    const unsigned long long max_strings = hint.string_count_;
-    const unsigned long long max_arrays = hint.array_count_;
-    const unsigned long long max_objects = hint.object_count_;
-    const unsigned long long max_elements =
+    const uint64_t max_strings = hint.string_count_;
+    const uint64_t max_arrays = hint.array_count_;
+    const uint64_t max_objects = hint.object_count_;
+    const uint64_t max_elements =
         hint.comma_count_ + hint.array_count_ + hint.object_count_;
 
-    const unsigned long long strings_bytes    = align_to_cache_line(max_strings * sizeof(std::string_view));
-    const unsigned long long array_elem_bytes = align_to_cache_line(max_elements * sizeof(JsonValue));
-    const unsigned long long arrays_bytes     = align_to_cache_line(max_arrays * sizeof(std::pair<unsigned, unsigned>));
-    const unsigned long long obj_elem_bytes   = align_to_cache_line(max_elements * sizeof(JsonMember));
-    const unsigned long long objects_bytes    = align_to_cache_line(max_objects * sizeof(std::pair<unsigned, unsigned>));
-    const unsigned long long str_buf_bytes    = align_to_cache_line(hint.string_escape_bytes_);
+    const uint64_t strings_bytes    = align_to_cache_line(max_strings * sizeof(std::string_view));
+    const uint64_t array_elem_bytes = align_to_cache_line(max_elements * sizeof(JsonValue));
+    const uint64_t arrays_bytes     = align_to_cache_line(max_arrays * sizeof(std::pair<uint32_t, uint32_t>));
+    const uint64_t obj_elem_bytes   = align_to_cache_line(max_elements * sizeof(JsonMember));
+    const uint64_t objects_bytes    = align_to_cache_line(max_objects * sizeof(std::pair<uint32_t, uint32_t>));
+    const uint64_t str_buf_bytes    = align_to_cache_line(hint.string_escape_bytes_);
 
-    const unsigned long long total_bytes = strings_bytes + array_elem_bytes + arrays_bytes +
+    const uint64_t total_bytes = strings_bytes + array_elem_bytes + arrays_bytes +
                                            obj_elem_bytes + objects_bytes + str_buf_bytes;
 
     if (total_bytes > 0) {
@@ -47,13 +48,13 @@ Storage::Storage(Hint hint) noexcept {
         array_elements_ = reinterpret_cast<JsonValue*>(ptr);
         ptr += array_elem_bytes;
 
-        arrays_ = reinterpret_cast<std::pair<unsigned, unsigned>*>(ptr);
+        arrays_ = reinterpret_cast<std::pair<uint32_t, uint32_t>*>(ptr);
         ptr += arrays_bytes;
 
         object_elements_ = reinterpret_cast<JsonMember*>(ptr);
         ptr += obj_elem_bytes;
 
-        objects_ = reinterpret_cast<std::pair<unsigned, unsigned>*>(ptr);
+        objects_ = reinterpret_cast<std::pair<uint32_t, uint32_t>*>(ptr);
         ptr += objects_bytes;
 
         string_buffer_ = reinterpret_cast<char*>(ptr);
@@ -75,18 +76,18 @@ const JsonValue& Storage::root() const noexcept {
 
 // ── BUMP ALLOCATOR OPERATIONS ───────────────────────────────────────────────
 
-unsigned long long Storage::commitString(std::string_view value) noexcept {
+uint64_t Storage::commitString(std::string_view value) noexcept {
     strings_[strings_size_] = value;
     return strings_size_++;
 }
 
-char* Storage::allocateStringBuffer(unsigned long long length) noexcept {
+char* Storage::allocateStringBuffer(uint64_t length) noexcept {
     char* allocated = string_buffer_ + string_buffer_size_;
-    string_buffer_size_ += static_cast<unsigned>(length);
+    string_buffer_size_ += static_cast<uint32_t>(length);
     return allocated;
 }
 
-unsigned long long Storage::getArrayOffset() const noexcept {
+uint64_t Storage::getArrayOffset() const noexcept {
     return array_elements_size_;
 }
 
@@ -94,13 +95,13 @@ void Storage::pushArrayElement(const JsonValue& val) noexcept {
     array_elements_[array_elements_size_++] = val;
 }
 
-unsigned long long Storage::sealArray(unsigned long long start_offset) noexcept {
-    const auto size = static_cast<unsigned>(array_elements_size_ - start_offset);
-    arrays_[arrays_size_] = {static_cast<unsigned>(start_offset), size};
+uint64_t Storage::sealArray(uint64_t start_offset) noexcept {
+    const auto size = static_cast<uint32_t>(array_elements_size_ - start_offset);
+    arrays_[arrays_size_] = {static_cast<uint32_t>(start_offset), size};
     return arrays_size_++;
 }
 
-unsigned long long Storage::getObjectOffset() const noexcept {
+uint64_t Storage::getObjectOffset() const noexcept {
     return object_elements_size_;
 }
 
@@ -108,26 +109,42 @@ void Storage::pushObjectMember(const JsonMember& member) noexcept {
     object_elements_[object_elements_size_++] = member;
 }
 
-unsigned long long Storage::sealObject(unsigned long long start_offset) noexcept {
-    const auto size = static_cast<unsigned>(object_elements_size_ - start_offset);
-    objects_[objects_size_] = {static_cast<unsigned>(start_offset), size};
+uint64_t Storage::sealObject(uint64_t start_offset) noexcept {
+    const auto size = static_cast<uint32_t>(object_elements_size_ - start_offset);
+	if (size > 1) {
+        std::ranges::sort(
+            object_elements_ + start_offset, 
+            object_elements_ + object_elements_size_,
+            [this](const JsonMember& a, const JsonMember& b) {
+                return resolveKey(a) < resolveKey(b);
+            }
+        );
+    }
+    objects_[objects_size_] = {static_cast<uint32_t>(start_offset), size};
     return objects_size_++;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-Storage::JsonArray Storage::array(unsigned long long index) const noexcept {
+Storage::JsonArray Storage::array(uint64_t index) const noexcept {
     const auto& [offset, size] = arrays_[index];
     return {array_elements_ + offset, size};
 }
 
-Storage::JsonObject Storage::object(unsigned long long index) const noexcept {
+Storage::JsonObject Storage::object(uint64_t index) const noexcept {
     const auto& [offset, size] = objects_[index];
     return {object_elements_ + offset, size};
 }
 
-std::string_view Storage::string(unsigned long long index) const noexcept {
+std::string_view Storage::string(uint64_t index) const noexcept {
     return strings_[index];
+}
+
+std::string_view Storage::resolveKey(const JsonMember& member) const noexcept {
+    if ((member.key_.sso_.length_tag_ & constants::sso_tag) != 0) {
+        return {member.key_.sso_.chars_, static_cast<std::size_t>(member.key_.sso_.length_tag_ & ~constants::sso_tag)};
+    }
+    return strings_[member.key_.index_];
 }
 
 } // namespace zuu::models

@@ -60,13 +60,13 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
 		key, 
 		{}, 
 		[this](const JsonMember& member) {
-            return storage_->string(member.key_index_);
+            return storage_->resolveKey(member);
         }
 	);
 
     if (
 		it != obj.end() && 
-		storage_->string(it->key_index_) == key
+		storage_->resolveKey(*it) == key
 	) {
         return Value::fromInternal(storage_.get(), it->value_);
     }

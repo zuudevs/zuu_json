@@ -39,11 +39,8 @@ class Storage {
     [[nodiscard]] const JsonValue& root() const noexcept;
 
     [[nodiscard]] unsigned long long commitString(std::string_view value) noexcept;
-
-    // Fast-path untuk unescaping
     [[nodiscard]] char* allocateStringBuffer(unsigned long long length) noexcept;
 
-    // Fast-path untuk Parser (Bump Allocation)
     [[nodiscard]] unsigned long long getArrayOffset() const noexcept;
     void pushArrayElement(const JsonValue& val) noexcept;
     [[nodiscard]] unsigned long long sealArray(unsigned long long start_offset) noexcept;
@@ -55,6 +52,7 @@ class Storage {
     [[nodiscard]] JsonArray array(unsigned long long index) const noexcept;
     [[nodiscard]] JsonObject object(unsigned long long index) const noexcept;
     [[nodiscard]] std::string_view string(unsigned long long index) const noexcept;
+	[[nodiscard]] std::string_view resolveKey(const JsonMember& member) const noexcept;
 
   private:
     std::unique_ptr<std::byte[]> arena_;
@@ -74,7 +72,6 @@ class Storage {
     std::pair<unsigned, unsigned>* objects_{nullptr};
     unsigned objects_size_{0};
 
-    // Buffer mentah untuk teks string yang membutuhkan Unescaping
     char* string_buffer_{nullptr};
     unsigned string_buffer_size_{0};
 

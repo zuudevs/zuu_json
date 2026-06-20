@@ -296,7 +296,18 @@ Parser::JsonValue Parser::buildObject() noexcept {
 			}
         }
 
-        const auto key_index = res_.commitString(key_val);
+        JsonMember member{};
+        
+        // Zuu Optimization: SSO untuk Key Object (maks 7 byte)
+        if (key_val.size() <= constants::sso_max_len) {
+            std::memcpy(member.key_.sso_.chars_, key_val.data(), key_val.size());
+            for (std::size_t i = key_val.size(); i < constants::sso_max_len; ++i) {
+                member.key_.sso_.chars_[i] = '\0';
+            }
+            member.key_.sso_.length_tag_ = constants::sso_tag | static_cast<unsigned char>(key_val.size());
+        } else {
+            member.key_.index_ = res_.commitString(key_val);
+        }
         ++current_;
 
         if (current_->type_ != TokenType::Colon) [[unlikely]] {
@@ -323,7 +334,8 @@ Parser::JsonValue Parser::buildObject() noexcept {
             return JsonValue::Null();
         }
 
-        res_.pushObjectMember(JsonMember{.key_index_ = key_index, .value_ = value});
+        member.value_ = value;
+        res_.pushObjectMember(member);
 
         if (current_->type_ == TokenType::Comma) [[likely]] {
             ++current_;
