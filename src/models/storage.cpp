@@ -36,14 +36,14 @@ Storage::Storage(Hint hint) noexcept {
     const uint64_t str_buf_bytes       = align_to_cache_line(hint.string_escape_bytes_);
 
     const uint64_t total_bytes = 
-	strings_bytes + array_elem_bytes + 
-	arrays_bytes + object_elem_bytes + 
-	objects_bytes + str_buf_bytes;
+        strings_bytes + array_elem_bytes + 
+        arrays_bytes + object_elem_bytes + 
+        objects_bytes + str_buf_bytes;
 
     if (total_bytes > 0) {
-        arena_ = std::make_unique_for_overwrite<std::byte[]>(total_bytes);
-        auto raw_address = reinterpret_cast<std::uintptr_t>(arena_.get());
-        auto aligned_address = 
+		arena_ = std::make_unique_for_overwrite<std::byte[]>(total_bytes + constants::cache_line_size - 1);
+		auto raw_address = reinterpret_cast<std::uintptr_t>(arena_.get());
+		auto aligned_address = 
 		(raw_address + constants::cache_line_size - 1) & 
 		~(constants::cache_line_size - 1);
 

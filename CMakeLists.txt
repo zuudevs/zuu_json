@@ -140,9 +140,16 @@ endforeach()
 if(ENABLE_BENCHMARK)
 
     add_subdirectory(third_party/google-benchmark)
-
     add_executable(${PROJECT_NAME}_benchmark
-        ${CMAKE_SOURCE_DIR}/tests/benchmark.cpp
+		${CMAKE_SOURCE_DIR}/tests/bm_dom.cpp
+		${CMAKE_SOURCE_DIR}/tests/bm_error_path.cpp
+		${CMAKE_SOURCE_DIR}/tests/bm_number.cpp
+		${CMAKE_SOURCE_DIR}/tests/bm_parser.cpp
+		${CMAKE_SOURCE_DIR}/tests/bm_pipeline..cpp
+		${CMAKE_SOURCE_DIR}/tests/bm_storage.cpp
+		${CMAKE_SOURCE_DIR}/tests/bm_strings.cpp
+		${CMAKE_SOURCE_DIR}/tests/bm_tokenizer.cpp
+        ${CMAKE_SOURCE_DIR}/tests/bm_main.cpp
     )
 
     target_include_directories(
@@ -150,6 +157,7 @@ if(ENABLE_BENCHMARK)
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
             ${CMAKE_SOURCE_DIR}/internal
+            ${CMAKE_SOURCE_DIR}/tests
     )
 
     target_link_libraries(
@@ -220,7 +228,7 @@ function(enable_release_optimizations TARGET_NAME)
             target_link_options(
                 ${TARGET_NAME}
                 PRIVATE
-                    $<$<CONFIG:Release>:LINKER:/OPT:REF>
+                    $<$<CONFIG:Release>:LINKER:/OPT:NOREF>
                     $<$<CONFIG:Release>:LINKER:/OPT:ICF>
             )
         else()
