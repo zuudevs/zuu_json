@@ -146,6 +146,7 @@ bool Value::contains(std::string_view key) const noexcept {
 			obj, 
 			[this, key, target_prefix](const JsonMember& member) {
 				if ((member.key_index_ >> constants::dword) != target_prefix) return false;
+                if (key.size() <= 3) return true;
             	return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
 			}
 		);
@@ -157,16 +158,15 @@ bool Value::contains(std::string_view key) const noexcept {
 			key, 
 			[this, target_prefix](const JsonMember& member, std::string_view k) {
             	const unsigned long long member_prefix = member.key_index_ >> constants::dword;
-            	if (member_prefix != target_prefix) {
-					return member_prefix < target_prefix;
-				}
+            	if (member_prefix != target_prefix) return member_prefix < target_prefix;
+                if (k.size() <= 3) return false;
             	return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
     	    }
 		);
         return (
 			it != obj.end() && 
 			(it->key_index_ >> constants::dword) == target_prefix && 
-			storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key
+			(key.size() <= 3 || storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key)
 		);
     }
 }
@@ -195,9 +195,8 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
         auto it = std::ranges::find_if(
 			obj, 
 			[this, key, target_prefix](const JsonMember& member) {
-				if ((member.key_index_ >> constants::dword) != target_prefix) {
-					return false;
-				}
+				if ((member.key_index_ >> constants::dword) != target_prefix) return false;
+                if (key.size() <= 3) return true;
 				return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
 			}
 		);
@@ -211,18 +210,18 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
 			key, 
 			[this, target_prefix](const JsonMember& member, std::string_view k) {
 				const unsigned long long member_prefix = member.key_index_ >> constants::dword;
-				if (member_prefix != target_prefix) {
-					return member_prefix < target_prefix;
-				}
+				if (member_prefix != target_prefix) return member_prefix < target_prefix;
+                if (k.size() <= 3) return false;
 				return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
 			}
 		);
         if (
 			it != obj.end() && 
-			(it->key_index_ >> constants::dword) == target_prefix && 
-			storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key
+			(it->key_index_ >> constants::dword) == target_prefix
 		) {
-            return fromInternal(storage_, it->value_);
+            if (key.size() <= 3 || storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key) {
+                return fromInternal(storage_, it->value_);
+            }
         }
     }
 

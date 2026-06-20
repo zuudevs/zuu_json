@@ -49,7 +49,7 @@ struct ParserTrait<long long> {
             return std::unexpected{Error::InvalidFormat};
         }
 
-		return Result{(is_negative ? -static_cast<type>(value) : static_cast<type>(value))};
+		return Result{static_cast<type>(is_negative ? ~value + 1 : value)};
     }
 };
 

@@ -99,7 +99,11 @@ struct ParserTrait<double> {
 
         while (first != last && utils::is_numeric(*first)) {
             has_digits = true;
-            mantissa = mantissa * constants::digit + (*first - '0');
+            if (mantissa < 1844674407370955161ULL) [[likely]] {
+                mantissa = mantissa * constants::digit + (*first - '0');
+            } else {
+                decimal_shift++;
+            }
             ++first;
         }
 
@@ -107,8 +111,10 @@ struct ParserTrait<double> {
             ++first;
             while (first != last && utils::is_numeric(*first)) {
                 has_digits = true;
-                mantissa = mantissa * constants::digit + (*first - '0');
-                decimal_shift++;
+                if (mantissa < 1844674407370955161ULL) [[likely]] {
+                    mantissa = mantissa * constants::digit + (*first - '0');
+                    decimal_shift--; 
+                }
                 ++first;
             }
         }
@@ -129,13 +135,16 @@ struct ParserTrait<double> {
                 int exponent = 0;
                 while (first != last && utils::is_numeric(*first)) {
                     has_exp_digits = true;
-                    exponent = exponent * constants::digit + (*first - '0');
+                    // Mencegah overflow pada exponent
+                    if (exponent < 1000000) {
+                        exponent = exponent * constants::digit + (*first - '0');
+                    }
                     ++first;
                 }
 
                 if (has_exp_digits) {
-                    if (exp_negative) decimal_shift += exponent;
-                    else decimal_shift -= exponent;
+                    if (exp_negative) decimal_shift -= exponent;
+                    else decimal_shift += exponent;
                 } else {
                     first = exp_ptr; 
                 }
@@ -146,23 +155,23 @@ struct ParserTrait<double> {
 
         auto result = static_cast<type>(mantissa);
 
-        if (decimal_shift > 0) {
-            if (decimal_shift <= 22) result *= traits::LookupTrait<type>::pow10_negative[decimal_shift];
+        if (decimal_shift < 0) {
+            int neg_shift = -decimal_shift;
+            if (neg_shift <= 22) result *= traits::LookupTrait<type>::pow10_negative[neg_shift];
             else {
-                while(decimal_shift > 22) { 
+                while(neg_shift > 22) { 
                     result *= 0.1; 
-                    decimal_shift--; 
+                    neg_shift--; 
                 }
                 result *= traits::LookupTrait<type>::pow10_negative[22];
             }
-        } else if (decimal_shift < 0) {
-            int pos_shift = -decimal_shift;
-            if (pos_shift <= 22) {
-                result *= traits::LookupTrait<type>::pow10_positive[pos_shift];
+        } else if (decimal_shift > 0) {
+            if (decimal_shift <= 22) {
+                result *= traits::LookupTrait<type>::pow10_positive[decimal_shift];
             }
             else {
-                while(pos_shift > 22) { 
-                    result *= 10.0; pos_shift--; 
+                while(decimal_shift > 22) { 
+                    result *= 10.0; decimal_shift--; 
                 }
                 result *= traits::LookupTrait<type>::pow10_positive[22];
             }
