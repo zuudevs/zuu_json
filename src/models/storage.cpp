@@ -52,7 +52,6 @@ Storage::Storage(Hint hint) noexcept {
         objects_ = reinterpret_cast<std::pair<unsigned, unsigned>*>(ptr);
         ptr += objects_bytes;
 
-        // Ditempatkan paling akhir agar tidak merusak byte alignment dari tipe data lain di atasnya
         string_buffer_ = reinterpret_cast<char*>(ptr);
     }
 }
