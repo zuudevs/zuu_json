@@ -1,7 +1,7 @@
 /**
  * @file general.hpp
  * @author zuudevs (zuudevs@gmail.com)
- * @brief Brief description
+ * @brief General constants and C++23 compile-time SWAR generators
  * @version 1.0.0
  * @date 2026-06-10
  *
