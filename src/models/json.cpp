@@ -53,7 +53,6 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
     }
 
     const auto obj = storage_->object(root_val.as_index());
-    
     const unsigned long long target_prefix = utils::build_string_prefix(key);
 
     if (obj.size() <= constants::word) {
@@ -63,6 +62,8 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
 				if ((member.key_index_ >> constants::dword) != target_prefix) {
 					return false;
 				}
+                // 🚀 BOTTLE-NECK FIXED: O(1) Instan jika panjang key <= 3
+                if (key.size() <= 3) return true;
 				return storage_->string(member.key_index_ & 0xFFFFFFFFULL) == key;
 			}
 		);
@@ -80,16 +81,20 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
 				if (member_prefix != target_prefix) {
 					return member_prefix < target_prefix;
 				}
+                // 🚀 BOTTLE-NECK FIXED: Hindari pemanggilan memory storage!
+                if (k.size() <= 3) return false;
 				return storage_->string(member.key_index_ & 0xFFFFFFFFULL) < k;
 			}
 		);
 
         if (
 			it != obj.end() && 
-			(it->key_index_ >> constants::dword) == target_prefix && 
-			storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key
+			(it->key_index_ >> constants::dword) == target_prefix
 		) {
-            return Value::fromInternal(storage_.get(), it->value_);
+            // 🚀 BOTTLE-NECK FIXED
+            if (key.size() <= 3 || storage_->string(it->key_index_ & 0xFFFFFFFFULL) == key) {
+                return Value::fromInternal(storage_.get(), it->value_);
+            }
         }
     }
 
