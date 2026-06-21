@@ -67,12 +67,15 @@ check_ipo_supported(
 set(LIBRARY_OUTPUT_NAME cpp_json_lib)
 
 add_library(${LIBRARY_OUTPUT_NAME}
-    ${CMAKE_SOURCE_DIR}/src/models/json.cpp
-    ${CMAKE_SOURCE_DIR}/src/models/storage.cpp
-    ${CMAKE_SOURCE_DIR}/src/models/value.cpp
-    ${CMAKE_SOURCE_DIR}/src/parser/parser.cpp
-    ${CMAKE_SOURCE_DIR}/src/serializer/serializer.cpp
-    ${CMAKE_SOURCE_DIR}/src/tokenizer/tokenizer.cpp
+	${CMAKE_SOURCE_DIR}/src/models/array_view.cpp
+	${CMAKE_SOURCE_DIR}/src/models/json.cpp
+	${CMAKE_SOURCE_DIR}/src/models/member_view.cpp
+	${CMAKE_SOURCE_DIR}/src/models/object_view.cpp
+	${CMAKE_SOURCE_DIR}/src/models/storage.cpp
+	${CMAKE_SOURCE_DIR}/src/models/value.cpp
+	${CMAKE_SOURCE_DIR}/src/parser/parser.cpp
+	${CMAKE_SOURCE_DIR}/src/serializer/serializer.cpp
+	${CMAKE_SOURCE_DIR}/src/tokenizer/tokenizer.cpp
 )
 
 target_include_directories(

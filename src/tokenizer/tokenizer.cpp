@@ -249,7 +249,7 @@ void Tokenizer::tokenize() noexcept {
                     std::memcpy(&block, current_, sizeof(uint64_t));
                     uint64_t non_ws = ((block + constants::swar8_underscore) | block) & constants::swar8_msb;
                     
-                    if (non_ws == 0) {
+                    if (non_ws == constants::zero) {
                         current_ += sizeof(uint64_t);
                     } else {
                         unsigned int byte_idx = std::countr_zero(non_ws) >> 3;
