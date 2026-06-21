@@ -170,12 +170,6 @@ std::string_view Storage::string(uint64_t index) const noexcept {
 }
 
 std::string_view Storage::resolveKey(const JsonMember& member) const noexcept {
-    if ((member.key_.sso_.length_tag_ & constants::sso_tag) != 0) {
-        return {
-			member.key_.sso_.chars_, 
-			static_cast<std::size_t>(member.key_.sso_.length_tag_ & ~constants::sso_tag)
-		};
-    }
     return strings_[member.key_.index_];
 }
 
