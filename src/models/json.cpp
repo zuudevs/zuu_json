@@ -25,13 +25,20 @@ Json::Json(std::unique_ptr<Storage> storage) noexcept
     : storage_(std::move(storage)) {}
 
 Json::Result<Json> Json::parse(std::string_view content) noexcept {
-    const auto raw = std::span<const char>(content.data(), content.size());
+    const auto raw = std::span<const char>(
+		content.data(), 
+		content.size()
+	);
     auto tokens = tokenizer::Tokenizer::Tokenize(raw);
-    if (!tokens) { return std::unexpected{tokens.error()}; }
+    if (!tokens) { 
+		return std::unexpected{tokens.error()}; 
+	}
 
     parser::Parser parser(tokens.value().first, tokens.value().second);
     auto parsed = std::move(parser).result();
-    if (!parsed) { return std::unexpected{parsed.error()}; }
+    if (!parsed) { 
+		return std::unexpected{parsed.error()}; 
+	}
 
     return Json(std::make_unique<Storage>(std::move(parsed.value())));
 }
@@ -61,16 +68,41 @@ ZUU_HOT ZUU_ALIGN(64) Json::Result<Value> Json::operator[](std::string_view key)
 
     if (is_sorted) {
         auto it = std::ranges::lower_bound(
-            obj, key, {}, [this](const JsonMember& member) { return storage_->resolveKey(member); }
+            obj, 
+			key, 
+            [](std::string_view a, std::string_view b) {
+                if (a.size() != b.size()) {
+					return a.size() < b.size();
+				}
+                return a < b;
+            },
+            [this](const JsonMember& member) { 
+				return storage_->resolveKey(member); 
+			}
         );
-        if (it != obj.end() && storage_->resolveKey(*it) == key) {
-            return Value::fromInternal(storage_.get(), it->value_);
+        if (
+			it != obj.end() && 
+			storage_->resolveKey(*it) == key
+		) {
+            return Value::fromInternal(
+				storage_.get(), 
+				it->value_
+			);
         }
     } else {
-        auto it = std::ranges::find_if(obj, [this, key](const JsonMember& member) {
-            return member.key_.length_ == key.size() && storage_->resolveKey(member) == key;
-        });
-        if (it != obj.end()) { return Value::fromInternal(storage_.get(), it->value_); }
+        auto it = std::ranges::find_if(
+			obj, 
+			[this, key](const JsonMember& member) {
+				auto m_key = storage_->resolveKey(member);
+				return m_key.size() == key.size() && m_key == key;
+			}
+		);
+        if (it != obj.end()) { 
+			return Value::fromInternal(
+				storage_.get(), 
+				it->value_
+			); 
+		}
     }
 
     return std::unexpected{Error::InvalidValue};

@@ -138,9 +138,15 @@ void Storage::sortAllObjects() noexcept {
             std::ranges::sort(
                 object_elements_ + objects_[i].offset, 
                 object_elements_ + objects_[i].offset + objects_[i].size,
-                [this](const JsonMember& a, const JsonMember& b) {
-                    return resolveKey(a) < resolveKey(b);
-                }
+                [](std::string_view a, std::string_view b) {
+                    if (a.size() != b.size()) {
+                        return a.size() < b.size();
+                    }
+                    return a < b;
+                },
+                [this](const JsonMember& member) { 
+					return resolveKey(member); 
+				}
             );
             objects_[i].is_sorted = true;
         }
@@ -170,7 +176,11 @@ std::string_view Storage::string(uint64_t index) const noexcept {
 }
 
 std::string_view Storage::resolveKey(const JsonMember& member) const noexcept {
-    return strings_[member.key_.index_];
+    if ((member.key_.sso_.tag_ & constants::sso_tag) != 0) {
+        const uint8_t len = member.key_.sso_.tag_ & ~constants::sso_tag;
+        return {member.key_.sso_.chars_, len};
+    }
+    return strings_[member.key_.ref_.index_];
 }
 
 } // namespace zuu::models
