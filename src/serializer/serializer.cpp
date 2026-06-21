@@ -9,6 +9,7 @@
  */
 
 #include "serializer/serializer.hpp"
+#include "utils/swar.hpp"
 #include <array>
 #include <charconv>
 
@@ -16,7 +17,18 @@ namespace zuu::serializer {
 
 Serializer::Serializer(const models::Storage* storage, int indent) noexcept
     : indent_(indent), storage_(storage) {
-    out_.reserve(4096);
+    
+    // HEURISTIC PRE-ALLOCATION
+    // Alih-alih 4KB statis, kita menebak kapasitas akhir berdasarkan isi DOM.
+    // Rata-rata 1 elemen/member memakan sekitar ~24 bytes (termasuk koma, kutip, spasi).
+    std::size_t estimated_size = 4096; 
+    if (storage) {
+        estimated_size += (storage->getArrayOffset() + storage->getObjectOffset()) * 24;
+    }
+    
+    // Melakukan reserve tepat di awal membunuh puluhan realokasi std::string 
+    // saat proses serialize berjalan.
+    out_.reserve(estimated_size);
 }
 
 std::string Serializer::dump(const models::Storage* storage, const models::JsonValue& root, int indent) noexcept {
@@ -64,17 +76,37 @@ void Serializer::serializeString(std::string_view str) noexcept {
     const char* start = ptr;
 
     while (ptr < end) {
+        // SWAR (SIMD-Within-A-Register) FAST-PATH
+        // Memindai 8-byte sekaligus mencari \", \\, atau control character (< 0x20)
+        while (ptr + sizeof(uint64_t) <= end) {
+            uint64_t block{};
+            std::memcpy(&block, ptr, sizeof(uint64_t));
+
+            uint64_t quote_mask  = utils::find_zero_byte_mask(block ^ constants::swar8_doublequote);
+            uint64_t escape_mask = utils::find_zero_byte_mask(block ^ constants::swar8_escape);
+            // Magic Bitwise: Mengidentifikasi byte yang nilainya < 0x20 (Control Characters)
+            // (block - 0x20...) akan memicu 'borrow' dan membalikkan MSB jika byte < 0x20.
+            uint64_t ctrl_mask   = (block - constants::swar8_sp) & ~block & constants::swar8_msb;
+
+            uint64_t mask = quote_mask | escape_mask | ctrl_mask;
+            if (mask != 0) {
+                ptr += (std::countr_zero(mask) >> 3);
+                goto escape_found;
+            }
+            ptr += sizeof(uint64_t);
+        }
+
+        // Fallback untuk sisa string di akhir blok ( < 8 bytes)
         while (ptr < end && !needs_escape[static_cast<unsigned char>(*ptr)]) {
             ++ptr;
         }
 
+    escape_found:
         if (ptr > start) {
             out_.append(start, static_cast<std::size_t>(ptr - start));
         }
 
-        if (ptr == end) {
-			break;
-		}
+        if (ptr == end) break;
 
         char c = *ptr;
         switch (c) {
