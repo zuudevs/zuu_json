@@ -8,10 +8,11 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "serializer/serializer.hpp"
-#include "utils/swar.hpp"
 #include <array>
 #include <charconv>
+#include <cstring>
+#include "serializer/serializer.hpp"
+#include "utils/swar.hpp"
 
 namespace zuu::serializer {
 
