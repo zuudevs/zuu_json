@@ -17,8 +17,17 @@ namespace zuu::models {
 
 struct JsonMember {
     struct KeyStore {
-        uint32_t index_;
-        uint32_t length_;
+        union {
+            struct {
+                uint32_t index_;
+                uint32_t length_;
+            } ref_;
+            
+            struct {
+                char chars_[7];
+                uint8_t tag_;
+            } sso_;
+        };
     } key_{};
     JsonValue value_{};
 };

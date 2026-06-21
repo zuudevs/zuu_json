@@ -114,9 +114,9 @@ std::string_view Parser::unescapeString(std::string_view src) noexcept {
                         status_ = core::JsonError::InvalidValue;
                         return {};
                     }
+					
                     uint32_t cp = decodeUnicodeHex(ptr + 1);
                     ptr += constants::nibble;
-
                     if (cp >= 0xD800 && cp <= 0xDBFF) {
                         if (ptr + 6 <= end && ptr[1] == '\\' && ptr[2] == 'u') {
                             uint32_t cp2 = decodeUnicodeHex(ptr + 3);
@@ -311,8 +311,15 @@ Parser::JsonValue Parser::buildObject() noexcept {
 
         JsonMember member{};
         
-        member.key_.length_ = static_cast<uint32_t>(key_val.size());
-        member.key_.index_  = res_.commitString(key_val);
+        if (key_val.size() <= constants::sso_max_len) {
+            uint64_t sso_block = 0;
+            std::memcpy(&sso_block, key_val.data(), key_val.size());
+            sso_block |= static_cast<uint64_t>(constants::sso_tag | key_val.size()) << 56;
+            std::memcpy(&member.key_, &sso_block, 8);
+        } else {
+            member.key_.ref_.length_ = static_cast<uint32_t>(key_val.size());
+            member.key_.ref_.index_  = res_.commitString(key_val);
+        }
 		
         ++current_;
 
