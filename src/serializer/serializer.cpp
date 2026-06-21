@@ -9,6 +9,7 @@
  */
 
 #include "serializer/serializer.hpp"
+#include <array>
 #include <charconv>
 
 namespace zuu::serializer {
@@ -21,7 +22,7 @@ Serializer::Serializer(const models::Storage* storage, int indent) noexcept
 std::string Serializer::dump(const models::Storage* storage, const models::JsonValue& root, int indent) noexcept {
     Serializer s(storage, indent);
     s.serializeValue(root);
-    return s.out_;
+    return std::move(s.out_);
 }
 
 void Serializer::writeIndent() noexcept {
@@ -33,8 +34,11 @@ void Serializer::writeIndent() noexcept {
 
 void Serializer::serializeValue(const models::JsonValue& value) noexcept {
     switch (value.get_type()) {
-        case models::JsonValue::Type::Null:    out_ += "null"; break;
-        case models::JsonValue::Type::Boolean: out_ += value.as_bool() ? "true" : "false"; break;
+        case models::JsonValue::Type::Null:    out_.append("null", 4); break;
+        case models::JsonValue::Type::Boolean: 
+            if (value.as_bool()) out_.append("true", 4);
+            else out_.append("false", 5);
+            break;
         case models::JsonValue::Type::Integer: serializeInteger(value.as_integer()); break;
         case models::JsonValue::Type::Double:  serializeDouble(value.as_double()); break;
         case models::JsonValue::Type::String:  serializeString(storage_->string(value.as_index())); break;
@@ -45,26 +49,53 @@ void Serializer::serializeValue(const models::JsonValue& value) noexcept {
 
 void Serializer::serializeString(std::string_view str) noexcept {
     out_ += '"';
-    for (char c : str) {
-        switch (c) {
-            case '"':  out_ += "\\\""; break;
-            case '\\': out_ += "\\\\"; break;
-            case '\b': out_ += "\\b"; break;
-            case '\f': out_ += "\\f"; break;
-            case '\n': out_ += "\\n"; break;
-            case '\r': out_ += "\\r"; break;
-            case '\t': out_ += "\\t"; break;
-            default:
-                if (static_cast<unsigned char>(c) < 0x20) {
-                    char buf[7] = "\\u0000";
-                    constexpr char hex_chars[] = "0123456789abcdef";
-                    buf[4] = hex_chars[(c >> 4) & 0xF];
-                    buf[5] = hex_chars[c & 0xF];
-                    out_.append(buf, 6);
-                } else {
-                    out_ += c;
-                }
+    
+    // Lookup Table untuk mendeteksi Control Characters (0x00-0x1F), '"', dan '\' secara O(1)
+    static constexpr auto needs_escape = []() {
+        std::array<bool, 256> arr{};
+        for (int i = 0; i < 0x20; ++i) arr[i] = true;
+        arr[static_cast<uint8_t>('\"')] = true;
+        arr[static_cast<uint8_t>('\\')] = true;
+        return arr;
+    }();
+
+    const char* ptr = str.data();
+    const char* end = ptr + str.size();
+    const char* start = ptr;
+
+    while (ptr < end) {
+        while (ptr < end && !needs_escape[static_cast<unsigned char>(*ptr)]) {
+            ++ptr;
         }
+
+        if (ptr > start) {
+            out_.append(start, static_cast<std::size_t>(ptr - start));
+        }
+
+        if (ptr == end) {
+			break;
+		}
+
+        char c = *ptr;
+        switch (c) {
+            case '"':  out_.append("\\\"", 2); break;
+            case '\\': out_.append("\\\\", 2); break;
+            case '\b': out_.append("\\b", 2); break;
+            case '\f': out_.append("\\f", 2); break;
+            case '\n': out_.append("\\n", 2); break;
+            case '\r': out_.append("\\r", 2); break;
+            case '\t': out_.append("\\t", 2); break;
+            default: {
+                char buf[7] = "\\u0000";
+                constexpr char hex_chars[] = "0123456789abcdef";
+                buf[4] = hex_chars[(c >> 4) & 0xF];
+                buf[5] = hex_chars[c & 0xF];
+                out_.append(buf, 6);
+                break;
+            }
+        }
+        ++ptr;
+        start = ptr;
     }
     out_ += '"';
 }
@@ -75,7 +106,7 @@ void Serializer::serializeInteger(long long val) noexcept {
     if (ec == std::errc()) {
         out_.append(buf, ptr - buf);
     } else {
-        out_ += "0";
+        out_.append("0", 1);
     }
 }
 
@@ -85,7 +116,7 @@ void Serializer::serializeDouble(double val) noexcept {
     if (ec == std::errc()) {
         out_.append(buf, ptr - buf);
     } else {
-        out_ += "0.0";
+        out_.append("0.0", 3);
     }
 }
 
