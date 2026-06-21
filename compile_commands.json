@@ -25,6 +25,12 @@
 },
 {
   "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -o CMakeFiles\\cpp_json_lib.dir\\src\\serializer\\serializer.cpp.obj -c D:\\Project\\zuu_json\\src\\serializer\\serializer.cpp",
+  "file": "D:/Project/zuu_json/src/serializer/serializer.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/serializer/serializer.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
   "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -o CMakeFiles\\cpp_json_lib.dir\\src\\tokenizer\\tokenizer.cpp.obj -c D:\\Project\\zuu_json\\src\\tokenizer\\tokenizer.cpp",
   "file": "D:/Project/zuu_json/src/tokenizer/tokenizer.cpp",
   "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/tokenizer/tokenizer.cpp.obj"
@@ -94,6 +100,12 @@
   "command": "D:\\program\\LLVM\\bin\\clang++.exe -DBENCHMARK_STATIC_DEFINE -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -ID:/Project/zuu_json/tests -ID:/Project/zuu_json/build/_deps/benchmark-src/include -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -o CMakeFiles\\zuu_json_benchmark.dir\\tests\\bm_pipeline..cpp.obj -c D:\\Project\\zuu_json\\tests\\bm_pipeline..cpp",
   "file": "D:/Project/zuu_json/tests/bm_pipeline..cpp",
   "output": "D:/Project/zuu_json/build/CMakeFiles/zuu_json_benchmark.dir/tests/bm_pipeline..cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -DBENCHMARK_STATIC_DEFINE -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -ID:/Project/zuu_json/tests -ID:/Project/zuu_json/build/_deps/benchmark-src/include -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -o CMakeFiles\\zuu_json_benchmark.dir\\tests\\bm_serializer.cpp.obj -c D:\\Project\\zuu_json\\tests\\bm_serializer.cpp",
+  "file": "D:/Project/zuu_json/tests/bm_serializer.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/zuu_json_benchmark.dir/tests/bm_serializer.cpp.obj"
 },
 {
   "directory": "D:/Project/zuu_json/build",

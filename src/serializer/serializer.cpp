@@ -1,0 +1,144 @@
+/**
+ * @file serializer.cpp
+ * @author zuudevs (zuudevs@gmail.com)
+ * @brief Brief description
+ * @version 1.0.0
+ * @date 2026-06-21
+ *
+ * @copyright Copyright (c) 2026
+ */
+
+#include "serializer/serializer.hpp"
+#include <charconv>
+
+namespace zuu::serializer {
+
+Serializer::Serializer(const models::Storage* storage, int indent) noexcept
+    : indent_(indent), storage_(storage) {
+    out_.reserve(4096);
+}
+
+std::string Serializer::dump(const models::Storage* storage, const models::JsonValue& root, int indent) noexcept {
+    Serializer s(storage, indent);
+    s.serializeValue(root);
+    return s.out_;
+}
+
+void Serializer::writeIndent() noexcept {
+    if (indent_ >= 0) {
+        out_ += '\n';
+        out_.append(current_indent_, ' ');
+    }
+}
+
+void Serializer::serializeValue(const models::JsonValue& value) noexcept {
+    switch (value.get_type()) {
+        case models::JsonValue::Type::Null:    out_ += "null"; break;
+        case models::JsonValue::Type::Boolean: out_ += value.as_bool() ? "true" : "false"; break;
+        case models::JsonValue::Type::Integer: serializeInteger(value.as_integer()); break;
+        case models::JsonValue::Type::Double:  serializeDouble(value.as_double()); break;
+        case models::JsonValue::Type::String:  serializeString(storage_->string(value.as_index())); break;
+        case models::JsonValue::Type::Array:   serializeArray(value); break;
+        case models::JsonValue::Type::Object:  serializeObject(value); break;
+    }
+}
+
+void Serializer::serializeString(std::string_view str) noexcept {
+    out_ += '"';
+    for (char c : str) {
+        switch (c) {
+            case '"':  out_ += "\\\""; break;
+            case '\\': out_ += "\\\\"; break;
+            case '\b': out_ += "\\b"; break;
+            case '\f': out_ += "\\f"; break;
+            case '\n': out_ += "\\n"; break;
+            case '\r': out_ += "\\r"; break;
+            case '\t': out_ += "\\t"; break;
+            default:
+                if (static_cast<unsigned char>(c) < 0x20) {
+                    char buf[7] = "\\u0000";
+                    constexpr char hex_chars[] = "0123456789abcdef";
+                    buf[4] = hex_chars[(c >> 4) & 0xF];
+                    buf[5] = hex_chars[c & 0xF];
+                    out_.append(buf, 6);
+                } else {
+                    out_ += c;
+                }
+        }
+    }
+    out_ += '"';
+}
+
+void Serializer::serializeInteger(long long val) noexcept {
+    char buf[32];
+    auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), val);
+    if (ec == std::errc()) {
+        out_.append(buf, ptr - buf);
+    } else {
+        out_ += "0";
+    }
+}
+
+void Serializer::serializeDouble(double val) noexcept {
+    char buf[64];
+    auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), val);
+    if (ec == std::errc()) {
+        out_.append(buf, ptr - buf);
+    } else {
+        out_ += "0.0";
+    }
+}
+
+void Serializer::serializeArray(const models::JsonValue& value) noexcept {
+    out_ += '[';
+    const auto arr = storage_->array(value.as_index());
+    if (arr.empty()) {
+        out_ += ']';
+        return;
+    }
+
+    if (indent_ >= 0) current_indent_ += indent_;
+    
+    bool first = true;
+    for (const auto& item : arr) {
+        if (!first) out_ += ',';
+        writeIndent();
+        serializeValue(item);
+        first = false;
+    }
+
+    if (indent_ >= 0) {
+        current_indent_ -= indent_;
+        writeIndent();
+    }
+    out_ += ']';
+}
+
+void Serializer::serializeObject(const models::JsonValue& value) noexcept {
+    out_ += '{';
+    const auto obj = storage_->object(value.as_index());
+    if (obj.empty()) {
+        out_ += '}';
+        return;
+    }
+
+    if (indent_ >= 0) current_indent_ += indent_;
+    
+    bool first = true;
+    for (const auto& member : obj) {
+        if (!first) out_ += ',';
+        writeIndent();
+        serializeString(storage_->resolveKey(member));
+        out_ += (indent_ >= 0) ? ": " : ":";
+        serializeValue(member.value_);
+        first = false;
+    }
+
+    if (indent_ >= 0) {
+        current_indent_ -= indent_;
+        writeIndent();
+    }
+    out_ += '}';
+}
+
+} // namespace zuu::serializer
