@@ -8,11 +8,13 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "zuu_json/models/value.hpp"
+#include <algorithm>
+#include "models/array_view.hpp"
+#include "models/object_view.hpp"
 #include "models/storage.hpp"
 #include "serializer/serializer.hpp"
 #include "utils/compiler.hpp"
-#include <algorithm>
+#include "zuu_json/models/value.hpp"
 
 namespace zuu::models {
 
@@ -84,7 +86,8 @@ unsigned long long Value::size() const noexcept {
     return 0;
 }
 
-ZUU_HOT ZUU_ALIGN(64) bool Value::contains(std::string_view key) const noexcept {
+ZUU_HOT ZUU_ALIGN(64) 
+bool Value::contains(std::string_view key) const noexcept {
     if (value_.get_type() != Type::Object) { return false; }
 
     const auto obj_index = value_.as_index();
@@ -102,6 +105,26 @@ ZUU_HOT ZUU_ALIGN(64) bool Value::contains(std::string_view key) const noexcept 
         });
         return it != obj.end();
     }
+}
+
+Value::Result<ArrayView> Value::as_array() const noexcept {
+    if (value_.get_type() != Type::Array) { return std::unexpected{core::JsonError::IsNotArray}; }
+    return ArrayView(storage_, storage_->array(value_.as_index()));
+}
+
+Value::Result<ObjectView> Value::as_object() const noexcept {
+    if (value_.get_type() != Type::Object) { return std::unexpected{core::JsonError::IsNotObject}; }
+    return ObjectView(storage_, storage_->object(value_.as_index()));
+}
+
+ArrayView Value::get_array() const noexcept {
+    if (value_.get_type() != Type::Array) { return ArrayView(storage_, {}); }
+    return ArrayView(storage_, storage_->array(value_.as_index()));
+}
+
+ObjectView Value::get_object() const noexcept {
+    if (value_.get_type() != Type::Object) { return ObjectView(storage_, {}); }
+    return ObjectView(storage_, storage_->object(value_.as_index()));
 }
 
 std::string Value::dump(int indent) const noexcept {

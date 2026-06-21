@@ -10,10 +10,13 @@
 
 #pragma once
 
+#include "models/array_view.hpp"
+#include "models/member_view.hpp"
+#include "models/object_view.hpp"
 #include "models/json_value.hpp"
-#include "zuu_json/core/error.hpp"
 #include <expected>
 #include <string_view>
+#include "zuu_json/core/error.hpp"
 
 namespace zuu::models {
 
@@ -65,6 +68,12 @@ class Value {
     [[nodiscard]] unsigned long long size() const noexcept;
     [[nodiscard]] bool contains(std::string_view key) const noexcept;
 
+	// ── Iterators & Views ──
+    [[nodiscard]] Result<ArrayView> as_array() const noexcept;
+    [[nodiscard]] Result<ObjectView> as_object() const noexcept;
+    [[nodiscard]] ArrayView get_array() const noexcept;
+    [[nodiscard]] ObjectView get_object() const noexcept;
+
 	// ── Serializer / Emitter ──
     [[nodiscard]] std::string dump(int indent = -1) const noexcept;
 
@@ -78,6 +87,9 @@ class Value {
 
   private:
     friend class Json;
+    friend class ArrayView;
+    friend class ObjectView;
+	friend struct MemberView;
 
     const Storage* storage_{nullptr};
     JsonValue value_;
@@ -88,4 +100,21 @@ class Value {
     [[nodiscard]] static Value createNull(const Storage* storage) noexcept;
 };
 
+template <std::size_t N>
+[[nodiscard]] decltype(auto) get(const MemberView& m) noexcept {
+    if constexpr (N == 0) { return m.key_; }
+    else if constexpr (N == 1) { return m.value(); }
+}
+
 } // namespace zuu::models
+
+namespace std {
+    template <>
+    struct tuple_size<zuu::models::MemberView> : std::integral_constant<std::size_t, 2> {};
+
+    template <>
+    struct tuple_element<0, zuu::models::MemberView> { using type = std::string_view; };
+
+    template <>
+    struct tuple_element<1, zuu::models::MemberView> { using type = zuu::models::Value; };
+}

@@ -1,9 +1,27 @@
 [
 {
   "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -o CMakeFiles\\cpp_json_lib.dir\\src\\models\\array_view.cpp.obj -c D:\\Project\\zuu_json\\src\\models\\array_view.cpp",
+  "file": "D:/Project/zuu_json/src/models/array_view.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/models/array_view.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
   "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -o CMakeFiles\\cpp_json_lib.dir\\src\\models\\json.cpp.obj -c D:\\Project\\zuu_json\\src\\models\\json.cpp",
   "file": "D:/Project/zuu_json/src/models/json.cpp",
   "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/models/json.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -o CMakeFiles\\cpp_json_lib.dir\\src\\models\\member_view.cpp.obj -c D:\\Project\\zuu_json\\src\\models\\member_view.cpp",
+  "file": "D:/Project/zuu_json/src/models/member_view.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/models/member_view.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -o CMakeFiles\\cpp_json_lib.dir\\src\\models\\object_view.cpp.obj -c D:\\Project\\zuu_json\\src\\models\\object_view.cpp",
+  "file": "D:/Project/zuu_json/src/models/object_view.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/models/object_view.cpp.obj"
 },
 {
   "directory": "D:/Project/zuu_json/build",
@@ -52,6 +70,12 @@
   "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o CMakeFiles\\example_basic.dir\\example\\example_basic.cpp.obj -c D:\\Project\\zuu_json\\example\\example_basic.cpp",
   "file": "D:/Project/zuu_json/example/example_basic.cpp",
   "output": "D:/Project/zuu_json/build/CMakeFiles/example_basic.dir/example/example_basic.cpp.obj"
+},
+{
+  "directory": "D:/Project/zuu_json/build",
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -o CMakeFiles\\example_iterator.dir\\example\\example_iterator.cpp.obj -c D:\\Project\\zuu_json\\example\\example_iterator.cpp",
+  "file": "D:/Project/zuu_json/example/example_iterator.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/example_iterator.dir/example/example_iterator.cpp.obj"
 },
 {
   "directory": "D:/Project/zuu_json/build",
