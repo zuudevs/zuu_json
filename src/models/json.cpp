@@ -84,7 +84,7 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
         auto it = std::ranges::find_if(
             obj, 
             [this, key](const JsonMember& member) {
-                return storage_->resolveKey(member) == key;
+                return member.key_.length_ == key.size() && storage_->resolveKey(member) == key;
             }
         );
 

@@ -311,12 +311,9 @@ Parser::JsonValue Parser::buildObject() noexcept {
 
         JsonMember member{};
         
-        if (key_val.size() <= constants::sso_max_len) [[likely]] {
-            std::memcpy(member.key_.sso_.chars_, key_val.data(), key_val.size());
-            member.key_.sso_.length_tag_ = constants::sso_tag | static_cast<unsigned char>(key_val.size());
-        } else {
-            member.key_.index_ = res_.commitString(key_val);
-        }
+        member.key_.length_ = static_cast<uint32_t>(key_val.size());
+        member.key_.index_  = res_.commitString(key_val);
+		
         ++current_;
 
         if (current_->type_ != TokenType::Colon) [[unlikely]] {
