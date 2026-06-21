@@ -71,6 +71,7 @@ add_library(${LIBRARY_OUTPUT_NAME}
     ${CMAKE_SOURCE_DIR}/src/models/storage.cpp
     ${CMAKE_SOURCE_DIR}/src/models/value.cpp
     ${CMAKE_SOURCE_DIR}/src/parser/parser.cpp
+    ${CMAKE_SOURCE_DIR}/src/serializer/serializer.cpp
     ${CMAKE_SOURCE_DIR}/src/tokenizer/tokenizer.cpp
 )
 
@@ -146,6 +147,7 @@ if(ENABLE_BENCHMARK)
 		${CMAKE_SOURCE_DIR}/tests/bm_number.cpp
 		${CMAKE_SOURCE_DIR}/tests/bm_parser.cpp
 		${CMAKE_SOURCE_DIR}/tests/bm_pipeline..cpp
+		${CMAKE_SOURCE_DIR}/tests/bm_serializer.cpp
 		${CMAKE_SOURCE_DIR}/tests/bm_storage.cpp
 		${CMAKE_SOURCE_DIR}/tests/bm_strings.cpp
 		${CMAKE_SOURCE_DIR}/tests/bm_tokenizer.cpp

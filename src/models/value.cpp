@@ -10,6 +10,7 @@
 
 #include "zuu_json/models/value.hpp"
 #include "models/storage.hpp"
+#include "serializer/serializer.hpp"
 #include <algorithm>
 
 namespace zuu::models {
@@ -157,6 +158,13 @@ bool Value::contains(std::string_view key) const noexcept {
         );
         return it != obj.end();
     }
+}
+
+std::string Value::dump(int indent) const noexcept {
+    if (value_.get_type() == Type::Null && storage_ == nullptr) {
+        return "null";
+    }
+    return serializer::Serializer::dump(storage_, value_, indent);
 }
 
 // Strict at()

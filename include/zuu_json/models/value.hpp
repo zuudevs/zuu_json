@@ -65,6 +65,9 @@ class Value {
     [[nodiscard]] unsigned long long size() const noexcept;
     [[nodiscard]] bool contains(std::string_view key) const noexcept;
 
+	// ── Serializer / Emitter ──
+    [[nodiscard]] std::string dump(int indent = -1) const noexcept;
+
     // Strict traversal
     [[nodiscard]] Result<Value> at(unsigned long long index) const noexcept;
     [[nodiscard]] Result<Value> at(std::string_view key) const noexcept;

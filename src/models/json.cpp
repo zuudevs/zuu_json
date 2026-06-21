@@ -96,4 +96,8 @@ Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
     return std::unexpected{Error::InvalidValue};
 }
 
+std::string Json::dump(int indent) const noexcept {
+    return root().dump(indent);
+}
+
 } // namespace zuu::models

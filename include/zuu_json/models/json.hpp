@@ -47,6 +47,7 @@ class Json {
 	void sort() noexcept;
     [[nodiscard]] Value root() const noexcept;
     [[nodiscard]] Result<Value> operator[](std::string_view key) const noexcept;
+	[[nodiscard]] std::string dump(int indent = -1) const noexcept;
 
   private:
     explicit Json(std::unique_ptr<Storage> storage) noexcept;
