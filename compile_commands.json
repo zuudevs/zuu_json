@@ -49,12 +49,6 @@
 },
 {
   "directory": "D:/Project/zuu_json/build",
-  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -o CMakeFiles\\cpp_json_lib.dir\\src\\tokenizer\\tokenizer.cpp.obj -c D:\\Project\\zuu_json\\src\\tokenizer\\tokenizer.cpp",
-  "file": "D:/Project/zuu_json/src/tokenizer/tokenizer.cpp",
-  "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/tokenizer/tokenizer.cpp.obj"
-},
-{
-  "directory": "D:/Project/zuu_json/build",
   "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -o CMakeFiles\\zuu_json.dir\\src\\main.cpp.obj -c D:\\Project\\zuu_json\\src\\main.cpp",
   "file": "D:/Project/zuu_json/src/main.cpp",
   "output": "D:/Project/zuu_json/build/CMakeFiles/zuu_json.dir/src/main.cpp.obj"

@@ -2,8 +2,8 @@
  * @file bm_tokenizer.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Deep profiling for Tokenizer (Lexical Analysis)
- * @version 1.0.0
- * @date 2026-06-21
+ * @version 1.1.0
+ * @date 2026-06-26
  * 
  * @copyright Copyright (c) 2026
  */
@@ -17,7 +17,7 @@ using namespace zuu;
 
 // Macro untuk mengotomatisasi pembuatan benchmark Tokenizer
 #define ZUU_BENCHMARK_TOKENIZER(Name, Filename)                                                    \
-    static void BM_Tokenizer_##Name(benchmark::State& state) {                                     \
+    static void BM_SWAR_Tokenizer_##Name(benchmark::State& state) {                                \
         static std::string data = tests::utils::load_sample(Filename).value_or("");                \
         if (data.empty()) {                                                                        \
             state.SkipWithError("Gagal memuat file sampel atau file kosong.");                     \
@@ -25,13 +25,29 @@ using namespace zuu;
         }                                                                                          \
         std::span<const char> raw(data);                                                           \
         for (auto _ : state) {                                                                     \
-            auto tokens = tokenizer::Tokenizer::Tokenize(raw);                                     \
+            auto tokens = tokenizer::Tokenizer<tokenizer::SwarPolicy>::Tokenize(raw);              \
             benchmark::DoNotOptimize(tokens);                                                      \
             benchmark::ClobberMemory();												               \
         }                                                                                          \
         state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * data.size());           \
     }                                                                                              \
-    BENCHMARK(BM_Tokenizer_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);
+    BENCHMARK(BM_SWAR_Tokenizer_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);               \
+                                                                                                   \
+    static void BM_AVX2_Tokenizer_##Name(benchmark::State& state) {                                \
+        static std::string data = tests::utils::load_sample(Filename).value_or("");                \
+        if (data.empty()) {                                                                        \
+            state.SkipWithError("Gagal memuat file sampel atau file kosong.");                     \
+            return;                                                                                \
+        }                                                                                          \
+        std::span<const char> raw(data);                                                           \
+        for (auto _ : state) {                                                                     \
+            auto tokens = tokenizer::Tokenizer<tokenizer::Avx2Policy>::Tokenize(raw);              \
+            benchmark::DoNotOptimize(tokens);                                                      \
+            benchmark::ClobberMemory();												               \
+        }                                                                                          \
+        state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * data.size());           \
+    }                                                                                              \
+    BENCHMARK(BM_AVX2_Tokenizer_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);
 
 // Registrasi
 ZUU_BENCHMARK_TOKENIZER(Small, "github_events.json")

@@ -1,51 +1,46 @@
 /**
  * @file tokenizer.hpp
  * @author zuudevs (zuudevs@gmail.com)
- * @brief Brief description
- * @version 1.0.0
- * @date 2026-06-06
+ * @brief Policy-Based Tokenizer Orchestrator
+ * @version 1.1.0
+ * @date 2026-06-26
  *
  * @copyright Copyright (c) 2026
  */
 
 #pragma once
 
-#include "models/token.hpp"
-#include "zuu_json/core/error.hpp"
-#include <expected>
+#include "tokenizer/policies.hpp"
 #include <span>
-#include <vector>
 
 namespace zuu::tokenizer {
 
+/**
+ * @brief Tokenizer Engine berbasis Policy.
+ * Desain ini mengizinkan pengguna memilih implementasi komputasi (Backend),
+ * metode alokasi, dan penanganan lainnya secara ekslisit pada compile-time.
+ * 
+ * @tparam Policy Struct yang mendefinisikan alias tipe (misal: Backend, Allocator).
+ */
+template <typename Policy>
 class Tokenizer {
   public:
-    using Token = models::Token;
-    using Lookup = traits::LookupTrait<Token>;
-    using Error = core::JsonError;
-    using Result = std::vector<Token>;
-    using Hint = traits::HintTrait<Token>;
-    using Resource = std::pair<Result, Hint>;
-    using Expected = std::expected<Resource, Error>;
+    using Backend = typename Policy::Backend;
+    using Expected = typename Backend::Expected;
     using Raw = std::span<const char>;
 
-    explicit Tokenizer(Raw json_content) noexcept;
-    [[nodiscard]] Expected result() && noexcept;
-
-    [[nodiscard]] static Expected Tokenize(Raw json_content) noexcept;
-
-  private:
-    Result res_;
-    Hint hint_{};
-    const char* current_;
-    const char* end_;
-    Error status_{Error::None};
-
-    [[nodiscard]] bool is_error() const noexcept;
-    void readString() noexcept;
-    void readNumeric() noexcept;
-    void readAlphabet() noexcept;
-    void tokenize() noexcept;
+    /**
+     * @brief Menjalankan proses tokenisasi statis berdasarkan Policy yang diberikan.
+     * Tidak ada global state, instance tokenizer independen.
+     * 
+	 * @param json_content Raw JSON view.
+     * @return Expected Berisi daftar token dan hint, atau Error.
+     */
+    [[nodiscard]] static Expected Tokenize(Raw json_content) noexcept {
+        Backend engine(json_content);
+        engine.execute();
+        return std::move(engine).result();
+    }
 };
 
 } // namespace zuu::tokenizer
