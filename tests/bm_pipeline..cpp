@@ -9,13 +9,15 @@
  */
 
 #include <benchmark/benchmark.h>
+#include "zuu_json/core/engine.hpp"
 #include "zuu_json/json.hpp"
 #include "utils/fs_util.hpp"
+#include "zuu_json/models/policies.hpp"
 
 using namespace zuu;
 
 #define ZUU_BENCHMARK_PIPELINE(Name, Filename)                                                     \
-    static void BM_Pipeline_##Name(benchmark::State& state) {                                      \
+    static void BM_SWAR_Pipeline_##Name(benchmark::State& state) {                                 \
         static std::string data = tests::utils::load_sample(Filename).value_or("");                \
         if (data.empty()) {                                                                        \
             state.SkipWithError("Gagal memuat file sampel.");                                      \
@@ -28,7 +30,23 @@ using namespace zuu;
         }                                                                                          \
         state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * data.size());           \
     }                                                                                              \
-    BENCHMARK(BM_Pipeline_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);
+    BENCHMARK(BM_SWAR_Pipeline_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);                \
+    static void BM_AVX2_Pipeline_##Name(benchmark::State& state) {                                 \
+        static std::string data = tests::utils::load_sample(Filename).value_or("");                \
+		models::Policy avx2_policy;                                                                \
+		avx2_policy.tokenizer_engine = core::TokenizerEngine::Avx2;                                \
+        if (data.empty()) {                                                                        \
+            state.SkipWithError("Gagal memuat file sampel.");                                      \
+            return;                                                                                \
+        }                                                                                          \
+        for (auto _ : state) {                                                                     \
+            auto doc = Json::parse(data, avx2_policy);                                             \
+            benchmark::DoNotOptimize(doc);                                                         \
+            benchmark::ClobberMemory();                                                            \
+        }                                                                                          \
+        state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * data.size());           \
+    }                                                                                              \
+    BENCHMARK(BM_AVX2_Pipeline_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);
 
 // Registrasi
 ZUU_BENCHMARK_PIPELINE(Small, "github_events.json")

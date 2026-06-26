@@ -75,7 +75,7 @@ add_library(${LIBRARY_OUTPUT_NAME}
 	${CMAKE_SOURCE_DIR}/src/models/value.cpp
 	${CMAKE_SOURCE_DIR}/src/parser/parser.cpp
 	${CMAKE_SOURCE_DIR}/src/serializer/serializer.cpp
-	${CMAKE_SOURCE_DIR}/src/tokenizer/tokenizer.cpp
+	# ${CMAKE_SOURCE_DIR}/src/tokenizer/tokenizer.cpp
 )
 
 target_include_directories(

@@ -12,6 +12,7 @@
 
 #include <expected>
 #include <memory>
+#include "policies.hpp"
 #include "zuu_json/models/value.hpp"
 
 namespace zuu::models {
@@ -43,7 +44,7 @@ class Json {
     Json(const Json&) = delete;
 	Json& operator=(const Json&) = delete;
 
-    [[nodiscard]] static Result<Json> parse(std::string_view content) noexcept;
+    [[nodiscard]] static Result<Json> parse(std::string_view content, Policy policy = default_policy) noexcept;
 	void sort() noexcept;
     [[nodiscard]] Value root() const noexcept;
     [[nodiscard]] Result<Value> operator[](std::string_view key) const noexcept;

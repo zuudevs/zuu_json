@@ -3,16 +3,17 @@
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
  * @version 1.0.0
- * @date 2026-06-06
+ * @date 2026-06-26
  *
  * @copyright Copyright (c) 2026
  */
 
 #include <algorithm>
 #include "parser/parser.hpp"
+#include "tokenizer/policies.hpp"
 #include "tokenizer/tokenizer.hpp"
-#include "utils/strings.hpp"
 #include "utils/compiler.hpp"
+#include "zuu_json/core/engine.hpp"
 #include "zuu_json/models/json.hpp"
 
 namespace zuu::models {
@@ -24,12 +25,19 @@ Json::~Json() noexcept = default;
 Json::Json(std::unique_ptr<Storage> storage) noexcept
     : storage_(std::move(storage)) {}
 
-Json::Result<Json> Json::parse(std::string_view content) noexcept {
+Json::Result<Json> Json::parse(std::string_view content, Policy policy) noexcept {
     const auto raw = std::span<const char>(
 		content.data(), 
 		content.size()
 	);
-    auto tokens = tokenizer::Tokenizer::Tokenize(raw);
+	tokenizer::Tokenizer<tokenizer::SwarPolicy>::Expected tokens;
+	switch (policy.tokenizer_engine) {
+		case core::TokenizerEngine::Avx2:
+			tokens = tokenizer::Tokenizer<tokenizer::Avx2Policy>::Tokenize(raw);
+			break;
+		default:
+			tokens = tokenizer::Tokenizer<tokenizer::SwarPolicy>::Tokenize(raw);
+	}
     if (!tokens) { 
 		return std::unexpected{tokens.error()}; 
 	}

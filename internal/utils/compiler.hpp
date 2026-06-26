@@ -16,8 +16,13 @@
     
     // Memaksa fungsi sejajar di memori (mencegah I-Cache shift akibat LTO/IPO)
     #define ZUU_ALIGN(x) __attribute__((aligned(x)))
+
+	#define ZUU_ALWAYS_INLINE inline __attribute__((always_inline))
+#elif defined(_MSC_VER)
+    #define ZUU_ALWAYS_INLINE __forceinline
 #else
     // Fallback aman untuk kompilator lain (misal: MSVC)
     #define ZUU_HOT
     #define ZUU_ALIGN(x)
+	#define ZUU_ALWAYS_INLINE inline
 #endif

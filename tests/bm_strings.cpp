@@ -1,16 +1,15 @@
 /**
- * @file bm_strings.cpp
+ * @file bm_AVX2_strings.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Micro-benchmark for string processing (escaping and unescaping)
- * @version 1.0.0
- * @date 2026-06-21
+ * @version 1.1.0
+ * @date 2026-06-26
  * 
  * @copyright Copyright (c) 2026
  */
 
 #include <benchmark/benchmark.h>
 #include <string>
-#include <vector>
 #include <span>
 #include "parser/parser.hpp"
 #include "tokenizer/tokenizer.hpp"
@@ -40,38 +39,38 @@ static std::string generate_string_array(size_t count, bool escaped) {
 static const std::string plain_json = generate_string_array(20000, false);
 static const std::string escaped_json = generate_string_array(20000, true);
 
-// --- Tokenizer String Processing ---
+// --- SWAR Tokenizer String Processing ---
 // Menguji seberapa efisien Tokenizer::readString menggunakan mask SWAR
 // untuk melompati string polos vs mendeteksi backslash (\).
 
-static void BM_String_Tokenizer_Plain(benchmark::State& state) {
+static void BM_SWAR_String_Tokenizer_Plain(benchmark::State& state) {
     std::span<const char> raw(plain_json);
     for (auto _ : state) {
-        auto tokens = tokenizer::Tokenizer::Tokenize(raw);
+        auto tokens = tokenizer::Tokenizer<tokenizer::SwarPolicy>::Tokenize(raw);
         benchmark::DoNotOptimize(tokens);
         benchmark::ClobberMemory();
     }
     state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * plain_json.size());
 }
-BENCHMARK(BM_String_Tokenizer_Plain)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+BENCHMARK(BM_SWAR_String_Tokenizer_Plain)->Unit(benchmark::kNanosecond)->MinTime(1.0);
 
-static void BM_String_Tokenizer_Escaped(benchmark::State& state) {
+static void BM_SWAR_String_Tokenizer_Escaped(benchmark::State& state) {
     std::span<const char> raw(escaped_json);
     for (auto _ : state) {
-        auto tokens = tokenizer::Tokenizer::Tokenize(raw);
+        auto tokens = tokenizer::Tokenizer<tokenizer::SwarPolicy>::Tokenize(raw);
         benchmark::DoNotOptimize(tokens);
         benchmark::ClobberMemory();
     }
     state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * escaped_json.size());
 }
-BENCHMARK(BM_String_Tokenizer_Escaped)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+BENCHMARK(BM_SWAR_String_Tokenizer_Escaped)->Unit(benchmark::kNanosecond)->MinTime(1.0);
 
 // --- Parser String Processing ---
 // Menguji overhead Parser::unescapeString dan penggunaan alokator Arena.
 // Tokenisasi dilakukan di luar loop agar hanya waktu pembentukan DOM/String yang diukur.
 
-static void BM_String_Parser_Plain(benchmark::State& state) {
-    auto tokens_opt = tokenizer::Tokenizer::Tokenize(std::span<const char>(plain_json));
+static void BM_SWAR_String_Parser_Plain(benchmark::State& state) {
+    auto tokens_opt = tokenizer::Tokenizer<tokenizer::SwarPolicy>::Tokenize(std::span<const char>(plain_json));
     const auto& tokens = tokens_opt->first;
     const auto& hint = tokens_opt->second;
 
@@ -83,10 +82,10 @@ static void BM_String_Parser_Plain(benchmark::State& state) {
     }
     state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * plain_json.size());
 }
-BENCHMARK(BM_String_Parser_Plain)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+BENCHMARK(BM_SWAR_String_Parser_Plain)->Unit(benchmark::kNanosecond)->MinTime(1.0);
 
-static void BM_String_Parser_Escaped(benchmark::State& state) {
-    auto tokens_opt = tokenizer::Tokenizer::Tokenize(std::span<const char>(escaped_json));
+static void BM_SWAR_String_Parser_Escaped(benchmark::State& state) {
+    auto tokens_opt = tokenizer::Tokenizer<tokenizer::SwarPolicy>::Tokenize(std::span<const char>(escaped_json));
     const auto& tokens = tokens_opt->first;
     const auto& hint = tokens_opt->second;
 
@@ -98,4 +97,64 @@ static void BM_String_Parser_Escaped(benchmark::State& state) {
     }
     state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * escaped_json.size());
 }
-BENCHMARK(BM_String_Parser_Escaped)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+BENCHMARK(BM_SWAR_String_Parser_Escaped)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+
+// --- AVX2 Tokenizer String Processing ---
+// Menguji seberapa efisien Tokenizer::readString menggunakan mask SWAR
+// untuk melompati string polos vs mendeteksi backslash (\).
+
+static void BM_AVX2_String_Tokenizer_Plain(benchmark::State& state) {
+    std::span<const char> raw(plain_json);
+    for (auto _ : state) {
+        auto tokens = tokenizer::Tokenizer<tokenizer::Avx2Policy>::Tokenize(raw);
+        benchmark::DoNotOptimize(tokens);
+        benchmark::ClobberMemory();
+    }
+    state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * plain_json.size());
+}
+BENCHMARK(BM_AVX2_String_Tokenizer_Plain)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+
+static void BM_AVX2_String_Tokenizer_Escaped(benchmark::State& state) {
+    std::span<const char> raw(escaped_json);
+    for (auto _ : state) {
+        auto tokens = tokenizer::Tokenizer<tokenizer::Avx2Policy>::Tokenize(raw);
+        benchmark::DoNotOptimize(tokens);
+        benchmark::ClobberMemory();
+    }
+    state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * escaped_json.size());
+}
+BENCHMARK(BM_AVX2_String_Tokenizer_Escaped)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+
+// --- Parser String Processing ---
+// Menguji overhead Parser::unescapeString dan penggunaan alokator Arena.
+// Tokenisasi dilakukan di luar loop agar hanya waktu pembentukan DOM/String yang diukur.
+
+static void BM_AVX2_String_Parser_Plain(benchmark::State& state) {
+    auto tokens_opt = tokenizer::Tokenizer<tokenizer::Avx2Policy>::Tokenize(std::span<const char>(plain_json));
+    const auto& tokens = tokens_opt->first;
+    const auto& hint = tokens_opt->second;
+
+    for (auto _ : state) {
+        parser::Parser parser(tokens, hint);
+        auto parsed = std::move(parser).result();
+        benchmark::DoNotOptimize(parsed);
+        benchmark::ClobberMemory();
+    }
+    state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * plain_json.size());
+}
+BENCHMARK(BM_AVX2_String_Parser_Plain)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+
+static void BM_AVX2_String_Parser_Escaped(benchmark::State& state) {
+    auto tokens_opt = tokenizer::Tokenizer<tokenizer::Avx2Policy>::Tokenize(std::span<const char>(escaped_json));
+    const auto& tokens = tokens_opt->first;
+    const auto& hint = tokens_opt->second;
+
+    for (auto _ : state) {
+        parser::Parser parser(tokens, hint);
+        auto parsed = std::move(parser).result();
+        benchmark::DoNotOptimize(parsed);
+        benchmark::ClobberMemory();
+    }
+    state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * escaped_json.size());
+}
+BENCHMARK(BM_AVX2_String_Parser_Escaped)->Unit(benchmark::kNanosecond)->MinTime(1.0);
