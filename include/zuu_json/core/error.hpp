@@ -33,6 +33,7 @@ enum class JsonError : unsigned char {
     InvalidUnicode,
     InvalidSurrogate,
 	DepthLimitExceeded,
+	FileTooLarge,
     Unknown
 };
 

@@ -2,8 +2,8 @@
  * @file tokenizer.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 1.0.0
- * @date 2026-06-06
+ * @version 1.1.0
+ * @date 2026-06-26
  *
  * @copyright Copyright (c) 2026
  */
@@ -18,10 +18,12 @@
 namespace zuu::tokenizer {
 
 Tokenizer::Tokenizer(std::span<const char> json_content) noexcept
-    : current_(json_content.data())
+    : base_(json_content.data())
+    , current_(json_content.data())
     , end_(json_content.data() + json_content.size()) {
 
-    res_.reserve((json_content.size() >> 1) + constants::word);
+    // Reduce over-allocation threshold since tape is smaller
+    res_.reserve((json_content.size() >> 2) + constants::word);
     tokenize();
 }
 
@@ -38,6 +40,10 @@ Tokenizer::Expected Tokenizer::Tokenize(Raw json_content) noexcept {
 
 bool Tokenizer::is_error() const noexcept {
     return status_ != Error::None;
+}
+
+uint32_t Tokenizer::offset(const char* ptr) const noexcept {
+    return static_cast<uint32_t>(ptr - base_);
 }
 
 void Tokenizer::readString() noexcept {
@@ -69,7 +75,8 @@ void Tokenizer::readString() noexcept {
 			} else if (ptr[byte_idx] == '\"') {
 				res_.emplace_back(
 					Token::Type::String, 
-					std::string_view(begin, (ptr + byte_idx) - begin), 
+					offset(begin), 
+                    static_cast<uint32_t>((ptr + byte_idx) - begin),
 					has_escape
 				);
 
@@ -97,7 +104,8 @@ void Tokenizer::readString() noexcept {
         if (c == '\"') {
             res_.emplace_back(
                 Token::Type::String, 
-				std::string_view(begin, ptr - begin), 
+				offset(begin), 
+                static_cast<uint32_t>(ptr - begin),
 				has_escape
 			);
 
@@ -195,7 +203,11 @@ void Tokenizer::readNumeric() noexcept {
     }
 
     if (!is_error()) [[likely]] {
-        res_.emplace_back(type, std::string_view(begin, current_ - begin));
+        res_.emplace_back(
+			type, 
+			offset(begin), 
+			static_cast<uint32_t>(current_ - begin)
+		);
     }
 }
 
@@ -210,7 +222,8 @@ void Tokenizer::readAlphabet() noexcept {
             case constants::null_word:
                 res_.emplace_back(
 					Token::Type::Null, 
-					std::string_view(current_, constants::nibble)
+					offset(current_), 
+					constants::nibble
 				);
                 current_ += constants::nibble;
                 return;
@@ -218,7 +231,8 @@ void Tokenizer::readAlphabet() noexcept {
             case constants::true_word:
                 res_.emplace_back(
 					Token::Type::Boolean, 
-					std::string_view(current_, constants::nibble)
+					offset(current_), 
+					constants::nibble
 				);
                 current_ += constants::nibble;
                 return;
@@ -226,9 +240,10 @@ void Tokenizer::readAlphabet() noexcept {
             case constants::fals_word:
 				if (rem >= 5 && current_[4] == 'e') {
                     res_.emplace_back(
-                        Token::Type::Boolean, 
-                        std::string_view(current_, 5)
-                    );
+						Token::Type::Boolean, 
+						offset(current_), 
+						5
+					);
                     current_ += 5;
                     return;
                 }

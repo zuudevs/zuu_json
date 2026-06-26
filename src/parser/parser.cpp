@@ -2,8 +2,8 @@
  * @file parser.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 1.0.0
- * @date 2026-06-10
+ * @version 1.1.0
+ * @date 2026-06-26
  *
  * @copyright Copyright (c) 2026
  */
@@ -18,8 +18,9 @@
 
 namespace zuu::parser {
 
-Parser::Parser(Raw tokens, Hint hint) noexcept
-    : current_(tokens.data())
+Parser::Parser(Raw tokens, Hint hint, const char* base_json) noexcept
+    : base_json_(base_json)
+    , current_(tokens.data())
     , end_(tokens.data() + tokens.size())
     , res_(hint) {
     parse();
@@ -36,8 +37,8 @@ bool Parser::has_error() const noexcept {
     return status_ != Error::None;
 }
 
-Parser::Expected Parser::Parse(Raw tokens, Hint hint) noexcept {
-    return Parser(tokens, hint).result();
+Parser::Expected Parser::Parse(Raw tokens, Hint hint, const char* base_json) noexcept {
+    return Parser(tokens, hint, base_json).result();
 }
 
 uint32_t Parser::decodeUnicodeHex(const char* ptr) noexcept {
@@ -171,7 +172,7 @@ Parser::JsonValue Parser::buildNull() noexcept {
 }
 
 Parser::JsonValue Parser::buildBoolean() noexcept {
-    const auto value = current_->begin_[0] == 't';
+    const auto value = current_->begin(base_json_)[0] == 't';
     current_++;
     return Parser::JsonValue::Boolean(value);
 }
@@ -179,8 +180,8 @@ Parser::JsonValue Parser::buildBoolean() noexcept {
 Parser::JsonValue Parser::buildInteger() noexcept {
     if(
         auto res = utils::parse<long long>(
-            current_->begin_, 
-            current_->begin_ + current_->size_
+            current_->begin(base_json_), 
+            current_->begin(base_json_) + current_->length()
         );
         res
     ) {
@@ -195,8 +196,8 @@ Parser::JsonValue Parser::buildInteger() noexcept {
 Parser::JsonValue Parser::buildDouble() noexcept {
     if(
         auto res = utils::parse<double>(
-            current_->begin_, 
-            current_->begin_ + current_->size_
+            current_->begin(base_json_), 
+            current_->begin(base_json_) + current_->length()
         );
         res
     ) {
@@ -209,9 +210,9 @@ Parser::JsonValue Parser::buildDouble() noexcept {
 }
 
 Parser::JsonValue Parser::buildString() noexcept {
-    std::string_view val = current_->value();
+    std::string_view val = current_->value(base_json_);
 
-    if (current_->has_escape_) {
+    if (current_->has_escape()) {
         val = unescapeString(val);
         if (has_error()) {
             return JsonValue::Null();
@@ -232,7 +233,7 @@ Parser::JsonValue Parser::buildArray() noexcept {
 
     ++current_;
 
-    if (current_->type_ == TokenType::RightSquareBracket) {
+    if (current_->type() == TokenType::RightSquareBracket) {
         ++current_;
         return JsonValue::Array(res_.sealArray(res_.getArrayOffset()));
     }
@@ -241,7 +242,7 @@ Parser::JsonValue Parser::buildArray() noexcept {
 
     while (true) {
         Parser::JsonValue value;
-        switch (current_->type_) {
+        switch (current_->type()) {
             case TokenType::String:            value = buildString(); break;
             case TokenType::Integer:           value = buildInteger(); break;
             case TokenType::Boolean:           value = buildBoolean(); break;
@@ -260,16 +261,16 @@ Parser::JsonValue Parser::buildArray() noexcept {
 
         res_.pushArrayElement(value);
 
-        if (current_->type_ == TokenType::Comma) {
+        if (current_->type() == TokenType::Comma) {
             ++current_;
-            if (current_->type_ == TokenType::RightSquareBracket) {
+            if (current_->type() == TokenType::RightSquareBracket) {
                 status_ = core::JsonError::TrailingComma;
                 return models::JsonValue::Null();
             }
             continue;
         }
 
-        if (current_->type_ == TokenType::RightSquareBracket) {
+        if (current_->type() == TokenType::RightSquareBracket) {
             ++current_;
             return models::JsonValue::Array(res_.sealArray(start_offset));
         }
@@ -288,7 +289,7 @@ Parser::JsonValue Parser::buildObject() noexcept {
 
     ++current_;
 
-    if (current_->type_ == TokenType::RightCurlyBracket) {
+    if (current_->type() == TokenType::RightCurlyBracket) {
         ++current_;
         return JsonValue::Object(res_.sealObject(res_.getObjectOffset()));
     }
@@ -296,13 +297,13 @@ Parser::JsonValue Parser::buildObject() noexcept {
     const uint64_t start_offset = res_.getObjectOffset();
 
     while (true) {
-        if (current_->type_ != TokenType::String) [[unlikely]] {
+        if (current_->type() != TokenType::String) [[unlikely]] {
             status_ = core::JsonError::UnquotedKey;
             return JsonValue::Null();
         }
 
-        std::string_view key_val = current_->value();
-        if (current_->has_escape_) {
+        std::string_view key_val = current_->value(base_json_);
+        if (current_->has_escape()) {
             key_val = unescapeString(key_val);
             if (has_error()) [[unlikely]] {
                 return JsonValue::Null();
@@ -323,14 +324,14 @@ Parser::JsonValue Parser::buildObject() noexcept {
 		
         ++current_;
 
-        if (current_->type_ != TokenType::Colon) [[unlikely]] {
+        if (current_->type() != TokenType::Colon) [[unlikely]] {
             status_ = core::JsonError::InvalidType;
             return JsonValue::Null();
         }
         ++current_;
 
         Parser::JsonValue value;
-        switch (current_->type_) {
+        switch (current_->type()) {
             case TokenType::String: value = buildString(); break;
             case TokenType::Integer: value = buildInteger(); break;
             case TokenType::Boolean: value = buildBoolean(); break;
@@ -350,16 +351,16 @@ Parser::JsonValue Parser::buildObject() noexcept {
         member.value_ = value;
         res_.pushObjectMember(member);
 
-        if (current_->type_ == TokenType::Comma) [[likely]] {
+        if (current_->type() == TokenType::Comma) [[likely]] {
             ++current_;
-            if (current_->type_ == TokenType::RightCurlyBracket) [[unlikely]] {
+            if (current_->type() == TokenType::RightCurlyBracket) [[unlikely]] {
                 status_ = core::JsonError::TrailingComma;
                 return JsonValue::Null();
             }
             continue;
         }
 
-        if (current_->type_ == TokenType::RightCurlyBracket) [[likely]] {
+        if (current_->type() == TokenType::RightCurlyBracket) [[likely]] {
             ++current_;
             return JsonValue::Object(res_.sealObject(start_offset));
         }
@@ -370,7 +371,7 @@ Parser::JsonValue Parser::buildObject() noexcept {
 }
 
 Parser::JsonValue Parser::buildValue() noexcept {
-    switch (current_->type_) {
+    switch (current_->type()) {
         case TokenType::Null: return buildNull();
         case TokenType::Boolean: return buildBoolean();
         case TokenType::Integer: return buildInteger();
@@ -391,7 +392,7 @@ Parser::JsonValue Parser::buildValue() noexcept {
 }
 
 void Parser::parse() noexcept {
-    if (current_ == end_ || current_->type_ == TokenType::EndOfFile) {
+    if (current_ == end_ || current_->type() == TokenType::EndOfFile) {
         status_ = core::JsonError::EmptyValue;
         return;
     }
@@ -402,7 +403,7 @@ void Parser::parse() noexcept {
     }
 
     res_.setRoot(root);
-    if (current_ == end_ || current_->type_ != TokenType::EndOfFile) {
+    if (current_ == end_ || current_->type() != TokenType::EndOfFile) {
         status_ = core::JsonError::InvalidValue;
     }
 }

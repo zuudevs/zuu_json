@@ -31,7 +31,7 @@ using namespace zuu;
         const auto& hint = tokens_opt->second;                                                     \
         const size_t tokens_count = tokens.size();                                                 \
         for (auto _ : state) {                                                                     \
-            parser::Parser parser(tokens, hint);                                                   \
+            parser::Parser parser(tokens, hint, data.c_str());                                     \
             auto parsed = std::move(parser).result();                                              \
             benchmark::DoNotOptimize(parsed);                                                      \
             benchmark::ClobberMemory();                                                            \

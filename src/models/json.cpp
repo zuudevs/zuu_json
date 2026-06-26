@@ -2,13 +2,15 @@
  * @file json.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 1.0.0
- * @date 2026-06-06
+ * @version 1.1.0
+ * @date 2026-06-26
  *
  * @copyright Copyright (c) 2026
  */
 
 #include <algorithm>
+#include <cstdint>
+#include <expected>
 #include "parser/parser.hpp"
 #include "tokenizer/tokenizer.hpp"
 #include "utils/strings.hpp"
@@ -25,16 +27,26 @@ Json::Json(std::unique_ptr<Storage> storage) noexcept
     : storage_(std::move(storage)) {}
 
 Json::Result<Json> Json::parse(std::string_view content) noexcept {
+	if (content.size() > ~uint32_t{}) [[unlikely]] {
+		return std::unexpected{Error::FileTooLarge};
+	}
+
     const auto raw = std::span<const char>(
 		content.data(), 
 		content.size()
 	);
+    
     auto tokens = tokenizer::Tokenizer::Tokenize(raw);
     if (!tokens) { 
 		return std::unexpected{tokens.error()}; 
 	}
 
-    parser::Parser parser(tokens.value().first, tokens.value().second);
+    parser::Parser parser(
+		tokens.value().first, 
+		tokens.value().second, 
+		content.data()
+	);
+    
     auto parsed = std::move(parser).result();
     if (!parsed) { 
 		return std::unexpected{parsed.error()}; 

@@ -1,9 +1,9 @@
 /**
  * @file parser.hpp
  * @author zuudevs (zuudevs@gmail.com)
- * @brief Brief description
- * @version 1.0.0
- * @date 2026-06-10
+ * @brief Tape-driven JSON Parser
+ * @version 1.1.0
+ * @date 2026-06-26
  *
  * @copyright Copyright (c) 2026
  */
@@ -28,15 +28,16 @@ class Parser {
     using Raw = std::span<const Token>;
     using Expected = std::expected<Storage, Error>;
 
-    explicit Parser(Raw tokens, Hint hint) noexcept;
+    explicit Parser(Raw tokens, Hint hint, const char* base_json) noexcept;
 
     [[nodiscard]] Expected result() && noexcept;
     [[nodiscard]] bool has_error() const noexcept;
 
-    [[nodiscard]] static Expected Parse(Raw tokens, Hint hint) noexcept;
+    [[nodiscard]] static Expected Parse(Raw tokens, Hint hint, const char* base_json) noexcept;
 
   private:
     Storage res_;
+    const char* base_json_;
     const Token* current_;
     const Token* end_;
 	uint32_t current_depth_{0};

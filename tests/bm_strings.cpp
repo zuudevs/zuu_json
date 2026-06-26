@@ -76,7 +76,7 @@ static void BM_String_Parser_Plain(benchmark::State& state) {
     const auto& hint = tokens_opt->second;
 
     for (auto _ : state) {
-        parser::Parser parser(tokens, hint);
+        parser::Parser parser(tokens, hint, plain_json.c_str());
         auto parsed = std::move(parser).result();
         benchmark::DoNotOptimize(parsed);
         benchmark::ClobberMemory();
@@ -91,7 +91,7 @@ static void BM_String_Parser_Escaped(benchmark::State& state) {
     const auto& hint = tokens_opt->second;
 
     for (auto _ : state) {
-        parser::Parser parser(tokens, hint);
+        parser::Parser parser(tokens, hint, plain_json.c_str());
         auto parsed = std::move(parser).result();
         benchmark::DoNotOptimize(parsed);
         benchmark::ClobberMemory();

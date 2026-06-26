@@ -1,9 +1,9 @@
 /**
  * @file token.hpp
  * @author zuudevs (zuudevs@gmail.com)
- * @brief Brief description
- * @version 1.0.0
- * @date 2026-06-06
+ * @brief Tape-based Token definition packed into 64-bit word.
+ * @version 1.1.0
+ * @date 2026-06-26
  *
  * @copyright Copyright (c) 2026
  */
@@ -13,12 +13,17 @@
 #include "traits/lookup_trait.hpp"
 #include "traits/hint_trait.hpp"
 #include <string_view>
+#include <cstdint>
 
 namespace zuu {
 
 namespace models {
 
-struct Token {
+/**
+ * @brief 64-bit Packed Token (Tape Element)
+ * Layout: [Type: 8b] [Escape: 1b] [Length: 23b] [Offset: 32b]
+ */
+struct alignas(8) Token {
     enum class Type : unsigned char {
         LeftCurlyBracket,
         RightCurlyBracket,
@@ -35,21 +40,45 @@ struct Token {
         Unknown,
     };
 
-    Token(Type type, std::string_view value = "", bool has_escape = false) noexcept
-        : begin_(value.data())
-        , size_(value.size())
-        , type_(type)
-        , has_escape_(has_escape) {}
+    uint64_t data_{0};
 
-    [[nodiscard]] inline constexpr std::string_view value() const noexcept {
-        return {begin_, size_};
+    constexpr Token() noexcept = default;
+
+    constexpr Token(Type type, uint32_t offset = 0, uint32_t length = 0, bool has_escape = false) noexcept
+	 : data_(
+		(static_cast<uint64_t>(type) << 56) |
+		(static_cast<uint64_t>(has_escape) << 55) |
+		((static_cast<uint64_t>(length) & 0x7FFFFF) << 32) |
+		(static_cast<uint64_t>(offset) & 0xFFFFFFFF)
+	 ) {}
+
+    [[nodiscard]] inline constexpr Type type() const noexcept { 
+        return static_cast<Type>(data_ >> 56); 
+    }
+    
+    [[nodiscard]] inline constexpr bool has_escape() const noexcept { 
+        return (data_ >> 55) & 1; 
+    }
+    
+    [[nodiscard]] inline constexpr uint32_t length() const noexcept { 
+        return (data_ >> 32) & 0x7FFFFF; 
+    }
+    
+    [[nodiscard]] inline constexpr uint32_t offset() const noexcept { 
+        return data_ & 0xFFFFFFFF; 
     }
 
-    const char* begin_;
-    unsigned size_;
-    Type type_;
-    bool has_escape_{false};
+    // Tape resolution requires the base pointer of the JSON string
+    [[nodiscard]] inline constexpr std::string_view value(const char* base) const noexcept {
+        return {base + offset(), length()};
+    }
+
+    [[nodiscard]] inline constexpr const char* begin(const char* base) const noexcept {
+        return base + offset();
+    }
 };
+
+static_assert(sizeof(Token) == 8, "Token must be exactly 8 bytes for tape optimization");
 
 } // namespace models
 
@@ -109,7 +138,6 @@ struct LookupTrait<models::Token> {
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
 	};
-
     // clang-format on
 
     enum class Type : unsigned char {
@@ -133,5 +161,4 @@ struct LookupTrait<models::Token> {
 };
 
 } // namespace traits
-
 } // namespace zuu
