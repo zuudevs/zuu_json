@@ -1,8 +1,8 @@
 /**
- * @file swar_backend.hpp
+ * @file swar_engine.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief SWAR specific implementation for Tokenizer Backend
- * @version 1.0.0
+ * @version 1.1.0
  * @date 2026-06-26
  *
  * @copyright Copyright (c) 2026
@@ -18,9 +18,6 @@
 
 namespace zuu::tokenizer {
 
-/**
- * @brief Implementasi backend Tokenizer menggunakan SWAR (SIMD Within A Register).
- */
 class SwarEngine : public TokenizerBase<SwarEngine> {
   public:
     using TokenizerBase<SwarEngine>::TokenizerBase;
@@ -72,7 +69,7 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
                 if (static_cast<uint8_t>(c) < 0x20) {
                     status_ = Error::UnescapedCharacter; 
                     return;
-                } else if (ptr[byte_idx] == '\"') {
+                } else if (c == '\"') {
                     res_.emplace_back(
                         Token::Type::String, 
                         std::string_view(begin, (ptr + byte_idx) - begin), 
@@ -87,47 +84,14 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
                     return;
                 } else {
                     ptr += byte_idx;
-                    break;
+                    break; // Pendelegasian ke scalar fallback
                 }
             }
             ptr += sizeof(uint64_t);
         }
 
-        // Fallback loop jika < 8 bytes tersisa
-        while (ptr < end) {
-            char c = *ptr;
-            if (static_cast<unsigned char>(c) < 0x20) {
-                status_ = Error::UnescapedCharacter;
-                return;
-            }
-
-            if (c == '\"') {
-                res_.emplace_back(
-                    Token::Type::String, 
-                    std::string_view(begin, ptr - begin), 
-                    has_escape
-                );
-
-                if (has_escape) {
-                    hint_.string_escape_bytes_ += (ptr - begin);
-                }
-
-                current_ = ptr + 1;
-                return;
-            }
-            if (c == '\\') [[unlikely]] {
-                has_escape = true;
-                ptr += 2;
-                if (ptr > end) {
-                    status_ = core::JsonError::InvalidValue;
-                    return;
-                }
-                continue;
-            }
-            ++ptr;
-        }
-
-        status_ = core::JsonError::InvalidValue;
+        // Delegate ke Base Class untuk meminimalkan redundansi kode
+        this->finish_string_scalar(ptr, begin, has_escape);
     }
 };
 
