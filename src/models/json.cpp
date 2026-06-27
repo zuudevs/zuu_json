@@ -9,12 +9,24 @@
  */
 
 #include <algorithm>
+#include <expected>
 #include "parser/parser.hpp"
 #include "tokenizer/policies.hpp"
 #include "tokenizer/tokenizer.hpp"
 #include "utils/compiler.hpp"
 #include "zuu_json/core/engine.hpp"
 #include "zuu_json/models/json.hpp"
+
+namespace {
+    [[nodiscard]] inline auto switch_tokenizer(std::span<const char> raw, const zuu::models::Policy& policy) noexcept {
+        switch (policy.tokenizer_engine) {
+            case zuu::core::TokenizerEngine::Avx2:
+                return zuu::tokenizer::Tokenizer<zuu::tokenizer::Avx2Policy>::Tokenize(raw);
+            default:
+                return zuu::tokenizer::Tokenizer<zuu::tokenizer::SwarPolicy>::Tokenize(raw);
+        }
+    }
+} // namespace
 
 namespace zuu::models {
 
@@ -30,14 +42,7 @@ Json::Result<Json> Json::parse(std::string_view content, Policy policy) noexcept
 		content.data(), 
 		content.size()
 	);
-	tokenizer::Tokenizer<tokenizer::SwarPolicy>::Expected tokens;
-	switch (policy.tokenizer_engine) {
-		case core::TokenizerEngine::Avx2:
-			tokens = tokenizer::Tokenizer<tokenizer::Avx2Policy>::Tokenize(raw);
-			break;
-		default:
-			tokens = tokenizer::Tokenizer<tokenizer::SwarPolicy>::Tokenize(raw);
-	}
+	tokenizer::Tokenizer<tokenizer::SwarPolicy>::Expected tokens = switch_tokenizer(raw, policy);
     if (!tokens) { 
 		return std::unexpected{tokens.error()}; 
 	}

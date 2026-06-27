@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "constants/general.hpp"
 #include "tokenizer/tokenizer_base.hpp"
 #include "utils/compiler.hpp"
 #include "utils/swar.hpp"
@@ -84,13 +85,12 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
                     return;
                 } else {
                     ptr += byte_idx;
-                    break; // Pendelegasian ke scalar fallback
+                    break;
                 }
             }
             ptr += sizeof(uint64_t);
         }
 
-        // Delegate ke Base Class untuk meminimalkan redundansi kode
         this->finish_string_scalar(ptr, begin, has_escape);
     }
 };
