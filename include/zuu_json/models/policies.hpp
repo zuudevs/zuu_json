@@ -15,9 +15,12 @@
 namespace zuu::models {
 
 struct Policy {
-	zuu::core::TokenizerEngine tokenizer_engine = core::TokenizerEngine::Swar;
+	using TokenizerEngine = zuu::core::TokenizerEngine;
+	TokenizerEngine tokenizer_engine = TokenizerEngine::Swar;
 
 	constexpr Policy() noexcept = default;
+	constexpr Policy(TokenizerEngine tokenizer_engine) noexcept
+	 : tokenizer_engine(tokenizer_engine) {}
 };
 
 static inline constexpr auto default_policy = Policy{};

@@ -31,13 +31,13 @@ struct FastValidator {};
  * untuk memproses data secara paralel.
  */
 struct SwarPolicy {
-    using Backend   = SwarEngine;        // Inject Backend
+    using Engine   = SwarEngine;        // Inject Engine
     using Allocator = DefaultAllocator;  // Inject Allocator (future)
     using Validator = FastValidator;     // Inject Validator (future)
 };
 
 struct Avx2Policy {
-    using Backend   = Avx2Engine;
+    using Engine   = Avx2Engine;
     using Allocator = DefaultAllocator;
     using Validator = FastValidator;
 };

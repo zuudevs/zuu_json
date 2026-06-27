@@ -25,8 +25,8 @@ namespace zuu::tokenizer {
 template <typename Policy>
 class Tokenizer {
   public:
-    using Backend = typename Policy::Backend;
-    using Expected = typename Backend::Expected;
+    using Engine = typename Policy::Engine;
+    using Expected = typename Engine::Expected;
     using Raw = std::span<const char>;
 
     /**
@@ -37,7 +37,7 @@ class Tokenizer {
      * @return Expected Berisi daftar token dan hint, atau Error.
      */
     [[nodiscard]] static Expected Tokenize(Raw json_content) noexcept {
-        Backend engine(json_content);
+        Engine engine(json_content);
         engine.execute();
         return std::move(engine).result();
     }

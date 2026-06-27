@@ -14,7 +14,6 @@
 #include "zuu_json/core/error.hpp"
 #include "constants/general.hpp"
 #include "utils/compiler.hpp"
-#include <bit>
 #include <expected>
 #include <span>
 #include <vector>
@@ -74,10 +73,6 @@ class TokenizerBase {
     void read_numeric() noexcept {
         const char* begin = current_;
         auto type = Token::Type::Integer;
-
-        // Abstraksi yang bersih: skip_digits cukup menggunakan scalar loop,
-        // karena lompatan digit umumnya sangat pendek (1-5 karakter) sehingga 
-        // setup SIMD/SWAR malah menimbulkan overhead.
         auto skip_digits = [this]() noexcept {
             while (current_ < end_ && static_cast<unsigned char>(*current_ - '0') < constants::digit) {
                 current_++;
@@ -176,7 +171,6 @@ class TokenizerBase {
         status_ = Error::InvalidValue;
     }
 
-    // Scalar fallback ketika SIMD/SWAR menemukan unescaped character atau mencapai batas blok
     ZUU_HOT void finish_string_scalar(const char* ptr, const char* begin, bool has_escape) noexcept {
         while (ptr < end_) {
             char c = *ptr;

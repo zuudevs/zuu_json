@@ -43,22 +43,21 @@ template <typename T>
     return result;
 }
 
-constexpr auto swar8_doublequote = repeat_byte<uint64_t>('\"');
-constexpr auto swar8_escape      = repeat_byte<uint64_t>('\\');
-constexpr auto swar8_underscore  = repeat_byte<uint64_t>('_');
-
-constexpr auto swar8_ht          = repeat_byte<uint64_t>('\t');
-constexpr auto swar8_lf          = repeat_byte<uint64_t>('\n');
-constexpr auto swar8_vt          = repeat_byte<uint64_t>('\v');
-constexpr auto swar8_ff          = repeat_byte<uint64_t>('\f');
-constexpr auto swar8_cr          = repeat_byte<uint64_t>('\r');
-constexpr auto swar8_sp          = repeat_byte<uint64_t>(' ');
-
 constexpr auto swar8_zero        = repeat_byte<uint64_t>('0');
 constexpr auto swar8_one         = repeat_byte<uint64_t>(0x01);
 constexpr auto swar8_msb         = repeat_byte<uint64_t>(0x80);
-
 constexpr auto swar8_digit_bias  = repeat_byte<uint64_t>(0x76);
+
+alignas(8) static inline constexpr auto swar8_doublequote = constants::repeat_byte<uint64_t>('\"');
+alignas(8) static inline constexpr auto swar8_escape      = constants::repeat_byte<uint64_t>('\\');
+alignas(8) static inline constexpr auto swar8_underscore  = constants::repeat_byte<uint64_t>('_');
+
+alignas(8) static inline constexpr auto swar8_ht          = constants::repeat_byte<uint64_t>('\t');
+alignas(8) static inline constexpr auto swar8_lf          = constants::repeat_byte<uint64_t>('\n');
+alignas(8) static inline constexpr auto swar8_vt          = constants::repeat_byte<uint64_t>('\v');
+alignas(8) static inline constexpr auto swar8_ff          = constants::repeat_byte<uint64_t>('\f');
+alignas(8) static inline constexpr auto swar8_cr          = constants::repeat_byte<uint64_t>('\r');
+alignas(8) static inline constexpr auto swar8_sp          = constants::repeat_byte<uint64_t>(' ');
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 	constexpr uint32_t null_word = 0x6c6c756e;
