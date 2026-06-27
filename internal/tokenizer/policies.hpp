@@ -42,4 +42,6 @@ struct Avx2Policy {
     using Validator = FastValidator;
 };
 
+using DefaultPolicy = SwarPolicy;
+
 } // namespace zuu::tokenizer

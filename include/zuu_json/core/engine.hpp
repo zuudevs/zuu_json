@@ -13,7 +13,14 @@
 namespace zuu::core {
 
 enum class TokenizerEngine : unsigned char {
-	Swar,
+	Default,
+	Swar = Default,
+	Avx2,
+};
+
+enum class ParserEngine : unsigned char {
+	Default,
+	Swar = Default,
 	Avx2,
 };
 

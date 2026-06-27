@@ -37,12 +37,6 @@
 },
 {
   "directory": "D:/Project/zuu_json/build",
-  "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -mavx2 -o CMakeFiles\\cpp_json_lib.dir\\src\\parser\\parser.cpp.obj -c D:\\Project\\zuu_json\\src\\parser\\parser.cpp",
-  "file": "D:/Project/zuu_json/src/parser/parser.cpp",
-  "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/parser/parser.cpp.obj"
-},
-{
-  "directory": "D:/Project/zuu_json/build",
   "command": "D:\\program\\LLVM\\bin\\clang++.exe -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -mavx2 -o CMakeFiles\\cpp_json_lib.dir\\src\\serializer\\serializer.cpp.obj -c D:\\Project\\zuu_json\\src\\serializer\\serializer.cpp",
   "file": "D:/Project/zuu_json/src/serializer/serializer.cpp",
   "output": "D:/Project/zuu_json/build/CMakeFiles/cpp_json_lib.dir/src/serializer/serializer.cpp.obj"

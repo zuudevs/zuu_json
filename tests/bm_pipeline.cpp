@@ -36,8 +36,7 @@ using namespace zuu;
     BENCHMARK(BM_SWAR_Pipeline_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);                \
     static void BM_AVX2_Pipeline_##Name(benchmark::State& state) {                                 \
         static std::string data = tests::utils::load_sample(Filename).value_or("");                \
-		models::Policy avx2_policy;                                                                \
-		avx2_policy.tokenizer_engine = core::TokenizerEngine::Avx2;                                \
+		auto avx2_policy = models::Policy{core::TokenizerEngine::Avx2, core::ParserEngine::Avx2};  \
         if (data.empty()) {                                                                        \
             state.SkipWithError("Gagal memuat file sampel.");                                      \
             return;                                                                                \

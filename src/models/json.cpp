@@ -2,8 +2,8 @@
  * @file json.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 1.0.0
- * @date 2026-06-26
+ * @version 1.1.0
+ * @date 2026-06-27
  *
  * @copyright Copyright (c) 2026
  */
@@ -26,6 +26,19 @@ namespace {
                 return zuu::tokenizer::Tokenizer<zuu::tokenizer::SwarPolicy>::Tokenize(raw);
         }
     }
+
+    [[nodiscard]] inline auto switch_parser(
+        std::span<const zuu::models::Token> tokens, 
+        const zuu::traits::HintTrait<zuu::models::Token>& hint, 
+        const zuu::models::Policy& policy) noexcept {
+        
+        switch (policy.parser_engine) {
+            case zuu::core::ParserEngine::Avx2:
+                return zuu::parser::Parser<zuu::parser::Avx2Policy>::Parse(tokens, hint);
+            default:
+                return zuu::parser::Parser<zuu::parser::DefaultPolicy>::Parse(tokens, hint);
+        }
+    }
 } // namespace
 
 namespace zuu::models {
@@ -39,19 +52,19 @@ Json::Json(std::unique_ptr<Storage> storage) noexcept
 
 Json::Result<Json> Json::parse(std::string_view content, Policy policy) noexcept {
     const auto raw = std::span<const char>(
-		content.data(), 
-		content.size()
-	);
-	tokenizer::Tokenizer<tokenizer::SwarPolicy>::Expected tokens = switch_tokenizer(raw, policy);
+        content.data(), 
+        content.size()
+    );
+    
+    auto tokens = switch_tokenizer(raw, policy);
     if (!tokens) { 
-		return std::unexpected{tokens.error()}; 
-	}
+        return std::unexpected{tokens.error()}; 
+    }
 
-    parser::Parser parser(tokens.value().first, tokens.value().second);
-    auto parsed = std::move(parser).result();
+    auto parsed = switch_parser(tokens.value().first, tokens.value().second, policy);
     if (!parsed) { 
-		return std::unexpected{parsed.error()}; 
-	}
+        return std::unexpected{parsed.error()}; 
+    }
 
     return Json(std::make_unique<Storage>(std::move(parsed.value())));
 }
@@ -82,40 +95,40 @@ ZUU_HOT ZUU_ALIGN(64) Json::Result<Value> Json::operator[](std::string_view key)
     if (is_sorted) {
         auto it = std::ranges::lower_bound(
             obj, 
-			key, 
+            key, 
             [](std::string_view a, std::string_view b) {
                 if (a.size() != b.size()) {
-					return a.size() < b.size();
-				}
+                    return a.size() < b.size();
+                }
                 return a < b;
             },
             [this](const JsonMember& member) { 
-				return storage_->resolveKey(member); 
-			}
+                return storage_->resolveKey(member); 
+            }
         );
         if (
-			it != obj.end() && 
-			storage_->resolveKey(*it) == key
-		) {
+            it != obj.end() && 
+            storage_->resolveKey(*it) == key
+        ) {
             return Value::fromInternal(
-				storage_.get(), 
-				it->value_
-			);
+                storage_.get(), 
+                it->value_
+            );
         }
     } else {
         auto it = std::ranges::find_if(
-			obj, 
-			[this, key](const JsonMember& member) {
-				auto m_key = storage_->resolveKey(member);
-				return m_key.size() == key.size() && m_key == key;
-			}
-		);
+            obj, 
+            [this, key](const JsonMember& member) {
+                auto m_key = storage_->resolveKey(member);
+                return m_key.size() == key.size() && m_key == key;
+            }
+        );
         if (it != obj.end()) { 
-			return Value::fromInternal(
-				storage_.get(), 
-				it->value_
-			); 
-		}
+            return Value::fromInternal(
+                storage_.get(), 
+                it->value_
+            ); 
+        }
     }
 
     return std::unexpected{Error::InvalidValue};
