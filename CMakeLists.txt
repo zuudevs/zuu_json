@@ -149,7 +149,7 @@ if(ENABLE_BENCHMARK)
 		${CMAKE_SOURCE_DIR}/tests/bm_error_path.cpp
 		${CMAKE_SOURCE_DIR}/tests/bm_number.cpp
 		${CMAKE_SOURCE_DIR}/tests/bm_parser.cpp
-		${CMAKE_SOURCE_DIR}/tests/bm_pipeline..cpp
+		${CMAKE_SOURCE_DIR}/tests/bm_pipeline.cpp
 		${CMAKE_SOURCE_DIR}/tests/bm_serializer.cpp
 		${CMAKE_SOURCE_DIR}/tests/bm_storage.cpp
 		${CMAKE_SOURCE_DIR}/tests/bm_strings.cpp
@@ -227,6 +227,7 @@ function(enable_release_optimizations TARGET_NAME)
                 $<$<CONFIG:Release>:-DNDEBUG>
                 $<$<CONFIG:Release>:-ffunction-sections>
                 $<$<CONFIG:Release>:-fdata-sections>
+                $<$<CONFIG:Release>:-mavx2>
         )
 
         if(WIN32)
@@ -252,6 +253,7 @@ function(enable_release_optimizations TARGET_NAME)
                 $<$<CONFIG:Release>:/O2>
                 $<$<CONFIG:Release>:/GL>
                 $<$<CONFIG:Release>:/DNDEBUG>
+                $<$<CONFIG:Release>:/arch:AVX2>
         )
 
         target_link_options(

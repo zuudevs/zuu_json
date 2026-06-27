@@ -2,10 +2,9 @@
  * @file bm_pipeline.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief End-to-end parsing pipeline profiling
- * @version 1.0.0
- * @date 2026-06-21
- * 
- * @copyright Copyright (c) 2026
+ * @version 1.1.0
+ * @date 2026-06-26
+ * * @copyright Copyright (c) 2026
  */
 
 #include <benchmark/benchmark.h>
@@ -25,6 +24,10 @@ using namespace zuu;
         }                                                                                          \
         for (auto _ : state) {                                                                     \
             auto doc = Json::parse(data);                                                          \
+            if (!doc) {                                                                            \
+                state.SkipWithError("Parse failed inside benchmark loop!");                        \
+                break;                                                                             \
+            }                                                                                      \
             benchmark::DoNotOptimize(doc);                                                         \
             benchmark::ClobberMemory();                                                            \
         }                                                                                          \
@@ -41,6 +44,10 @@ using namespace zuu;
         }                                                                                          \
         for (auto _ : state) {                                                                     \
             auto doc = Json::parse(data, avx2_policy);                                             \
+            if (!doc) {                                                                            \
+                state.SkipWithError("Parse failed inside benchmark loop!");                        \
+                break;                                                                             \
+            }                                                                                      \
             benchmark::DoNotOptimize(doc);                                                         \
             benchmark::ClobberMemory();                                                            \
         }                                                                                          \

@@ -4,8 +4,7 @@
  * @brief Deep profiling for Tokenizer (Lexical Analysis)
  * @version 1.1.0
  * @date 2026-06-26
- * 
- * @copyright Copyright (c) 2026
+ * * @copyright Copyright (c) 2026
  */
 
 #include <benchmark/benchmark.h>
@@ -26,6 +25,10 @@ using namespace zuu;
         std::span<const char> raw(data);                                                           \
         for (auto _ : state) {                                                                     \
             auto tokens = tokenizer::Tokenizer<tokenizer::SwarPolicy>::Tokenize(raw);              \
+            if (!tokens) {                                                                         \
+                state.SkipWithError("Parse failed inside benchmark loop!");                        \
+                break;                                                                             \
+            }                                                                                      \
             benchmark::DoNotOptimize(tokens);                                                      \
             benchmark::ClobberMemory();												               \
         }                                                                                          \
@@ -42,6 +45,10 @@ using namespace zuu;
         std::span<const char> raw(data);                                                           \
         for (auto _ : state) {                                                                     \
             auto tokens = tokenizer::Tokenizer<tokenizer::Avx2Policy>::Tokenize(raw);              \
+            if (!tokens) {                                                                         \
+                state.SkipWithError("Parse failed inside benchmark loop!");                        \
+                break;                                                                             \
+            }                                                                                      \
             benchmark::DoNotOptimize(tokens);                                                      \
             benchmark::ClobberMemory();												               \
         }                                                                                          \

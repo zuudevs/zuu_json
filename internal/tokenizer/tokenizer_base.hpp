@@ -2,7 +2,7 @@
  * @file tokenizer_base.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief CRTP Base for Tokenizer Backends
- * @version 1.0.0
+ * @version 1.1.1
  * @date 2026-06-26
  *
  * @copyright Copyright (c) 2026
@@ -75,24 +75,13 @@ class TokenizerBase {
         const char* begin = current_;
         auto type = Token::Type::Integer;
 
+        // Abstraksi yang bersih: skip_digits cukup menggunakan scalar loop,
+        // karena lompatan digit umumnya sangat pendek (1-5 karakter) sehingga 
+        // setup SIMD/SWAR malah menimbulkan overhead.
         auto skip_digits = [this]() noexcept {
-            while (current_ + sizeof(uint64_t) <= end_) {
-				uint64_t block{};
-				std::memcpy(&block, current_, sizeof(uint64_t));
-				
-				uint64_t val = block - constants::swar8_zero;
-				uint64_t non_digits = ((val + constants::swar8_digit_bias) | val) & constants::swar8_msb;
-				if (non_digits == constants::zero) {
-					current_ += sizeof(uint64_t);
-				} else {
-					current_ += std::countr_zero(non_digits) >> 3;
-					break;
-				}
-			}
-			
-			while (current_ < end_ && static_cast<unsigned char>(*current_ - '0') < constants::digit) {
-				current_++;
-			}
+            while (current_ < end_ && static_cast<unsigned char>(*current_ - '0') < constants::digit) {
+                current_++;
+            }
         };
 
         if (*current_ == '-') {
@@ -187,12 +176,49 @@ class TokenizerBase {
         status_ = Error::InvalidValue;
     }
 
+    // Scalar fallback ketika SIMD/SWAR menemukan unescaped character atau mencapai batas blok
+    ZUU_HOT void finish_string_scalar(const char* ptr, const char* begin, bool has_escape) noexcept {
+        while (ptr < end_) {
+            char c = *ptr;
+            if (static_cast<unsigned char>(c) < 0x20) {
+                status_ = Error::UnescapedCharacter;
+                return;
+            }
+
+            if (c == '\"') {
+                res_.emplace_back(
+                    Token::Type::String, 
+                    std::string_view(begin, ptr - begin), 
+                    has_escape
+                );
+
+                if (has_escape) {
+                    hint_.string_escape_bytes_ += (ptr - begin);
+                }
+
+                current_ = ptr + 1;
+                return;
+            }
+            if (c == '\\') [[unlikely]] {
+                has_escape = true;
+                ptr += 2;
+                if (ptr > end_) {
+                    status_ = core::JsonError::InvalidValue;
+                    return;
+                }
+                continue;
+            }
+            ++ptr;
+        }
+
+        status_ = core::JsonError::InvalidValue;
+    }
+
     void tokenize_loop() noexcept {
         while (current_ < end_) {
             auto actionType = Lookup{}[*current_];
             switch (actionType) {
                 case Lookup::Type::WhiteSpace: {
-                    // Panggil fungsi skip_whitespace yang diimplementasikan oleh Backend
                     derived().skip_whitespace();
                     continue;
                 }
@@ -230,7 +256,6 @@ class TokenizerBase {
                     continue;
                 }
                 case Lookup::Type::DoubleQuote: [[likely]] {
-                    // Panggil fungsi read_string yang diimplementasikan oleh Backend
                     derived().read_string();
                     if (is_error()) return;
                     hint_.string_count_++;

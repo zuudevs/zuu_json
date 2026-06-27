@@ -17,7 +17,7 @@
 using namespace zuu;
 
 #define ZUU_BENCHMARK_PARSER(Name, Filename)                                                                              \
-    static void BM_SWAR_Parser_##Name(benchmark::State& state) {                                                          \
+    static void BM_Parser_##Name(benchmark::State& state) {                                                          \
         static std::string data = tests::utils::load_sample(Filename).value_or("");                                       \
         if (data.empty()) {                                                                                               \
             state.SkipWithError("Gagal memuat file sampel.");                                                             \
@@ -42,7 +42,7 @@ using namespace zuu;
 			benchmark::Counter::kIsIterationInvariantRate                                                                 \
 		);                                                                                                                \
     }                                                                                                                     \
-    BENCHMARK(BM_SWAR_Parser_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);
+    BENCHMARK(BM_Parser_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);
 
 // Registrasi
 ZUU_BENCHMARK_PARSER(Small, "github_events.json")
