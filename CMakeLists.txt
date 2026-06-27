@@ -73,7 +73,6 @@ add_library(${LIBRARY_OUTPUT_NAME}
 	${CMAKE_SOURCE_DIR}/src/models/object_view.cpp
 	${CMAKE_SOURCE_DIR}/src/models/storage.cpp
 	${CMAKE_SOURCE_DIR}/src/models/value.cpp
-	${CMAKE_SOURCE_DIR}/src/parser/parser.cpp
 	${CMAKE_SOURCE_DIR}/src/serializer/serializer.cpp
 )
 

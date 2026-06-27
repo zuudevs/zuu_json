@@ -1,11 +1,10 @@
 /**
- * @file bm_AVX2_strings.cpp
+ * @file bm_strings.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Micro-benchmark for string processing (escaping and unescaping)
  * @version 1.1.0
- * @date 2026-06-26
- * 
- * @copyright Copyright (c) 2026
+ * @date 2026-06-27
+ * * @copyright Copyright (c) 2026
  */
 
 #include <benchmark/benchmark.h>
@@ -75,8 +74,7 @@ static void BM_SWAR_String_Parser_Plain(benchmark::State& state) {
     const auto& hint = tokens_opt->second;
 
     for (auto _ : state) {
-        parser::Parser parser(tokens, hint);
-        auto parsed = std::move(parser).result();
+        auto parsed = parser::Parser<parser::DefaultPolicy>::Parse(tokens, hint);
         benchmark::DoNotOptimize(parsed);
         benchmark::ClobberMemory();
     }
@@ -90,8 +88,7 @@ static void BM_SWAR_String_Parser_Escaped(benchmark::State& state) {
     const auto& hint = tokens_opt->second;
 
     for (auto _ : state) {
-        parser::Parser parser(tokens, hint);
-        auto parsed = std::move(parser).result();
+        auto parsed = parser::Parser<parser::DefaultPolicy>::Parse(tokens, hint);
         benchmark::DoNotOptimize(parsed);
         benchmark::ClobberMemory();
     }
@@ -100,8 +97,6 @@ static void BM_SWAR_String_Parser_Escaped(benchmark::State& state) {
 BENCHMARK(BM_SWAR_String_Parser_Escaped)->Unit(benchmark::kNanosecond)->MinTime(1.0);
 
 // --- AVX2 Tokenizer String Processing ---
-// Menguji seberapa efisien Tokenizer::readString menggunakan mask SWAR
-// untuk melompati string polos vs mendeteksi backslash (\).
 
 static void BM_AVX2_String_Tokenizer_Plain(benchmark::State& state) {
     std::span<const char> raw(plain_json);
@@ -125,9 +120,7 @@ static void BM_AVX2_String_Tokenizer_Escaped(benchmark::State& state) {
 }
 BENCHMARK(BM_AVX2_String_Tokenizer_Escaped)->Unit(benchmark::kNanosecond)->MinTime(1.0);
 
-// --- Parser String Processing ---
-// Menguji overhead Parser::unescapeString dan penggunaan alokator Arena.
-// Tokenisasi dilakukan di luar loop agar hanya waktu pembentukan DOM/String yang diukur.
+// --- Parser String Processing (AVX2-tokenized input) ---
 
 static void BM_AVX2_String_Parser_Plain(benchmark::State& state) {
     auto tokens_opt = tokenizer::Tokenizer<tokenizer::Avx2Policy>::Tokenize(std::span<const char>(plain_json));
@@ -135,8 +128,7 @@ static void BM_AVX2_String_Parser_Plain(benchmark::State& state) {
     const auto& hint = tokens_opt->second;
 
     for (auto _ : state) {
-        parser::Parser parser(tokens, hint);
-        auto parsed = std::move(parser).result();
+        auto parsed = parser::Parser<parser::Avx2Policy>::Parse(tokens, hint);
         benchmark::DoNotOptimize(parsed);
         benchmark::ClobberMemory();
     }
@@ -150,8 +142,7 @@ static void BM_AVX2_String_Parser_Escaped(benchmark::State& state) {
     const auto& hint = tokens_opt->second;
 
     for (auto _ : state) {
-        parser::Parser parser(tokens, hint);
-        auto parsed = std::move(parser).result();
+        auto parsed = parser::Parser<parser::Avx2Policy>::Parse(tokens, hint);
         benchmark::DoNotOptimize(parsed);
         benchmark::ClobberMemory();
     }

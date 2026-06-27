@@ -2,8 +2,8 @@
  * @file policies.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 0.1.0
- * @date 2026-06-26
+ * @version 0.2.0
+ * @date 2026-06-27
  * 
  * @copyright Copyright (c) 2026
  */
@@ -15,12 +15,19 @@
 namespace zuu::models {
 
 struct Policy {
-	using TokenizerEngine = zuu::core::TokenizerEngine;
-	TokenizerEngine tokenizer_engine = TokenizerEngine::Swar;
+    using TokenizerEngine = zuu::core::TokenizerEngine;
+    using ParserEngine = zuu::core::ParserEngine;
 
-	constexpr Policy() noexcept = default;
-	constexpr Policy(TokenizerEngine tokenizer_engine) noexcept
-	 : tokenizer_engine(tokenizer_engine) {}
+    TokenizerEngine tokenizer_engine = TokenizerEngine::Swar;
+    ParserEngine parser_engine = ParserEngine::Default;
+
+    constexpr Policy() noexcept = default;
+    
+    constexpr Policy(
+        TokenizerEngine t_engine, 
+        ParserEngine p_engine = ParserEngine::Default
+    ) noexcept
+        : tokenizer_engine(t_engine), parser_engine(p_engine) {}
 };
 
 static inline constexpr auto default_policy = Policy{};
