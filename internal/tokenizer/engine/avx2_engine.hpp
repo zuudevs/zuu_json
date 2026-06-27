@@ -25,10 +25,10 @@ namespace zuu::tokenizer {
 class Avx2Engine : public TokenizerBase<Avx2Engine> {
   public:
     using TokenizerBase<Avx2Engine>::TokenizerBase;
+#ifdef __AVX2__
     using block_t = __m256i;
     static inline constexpr uint8_t kBlockSize = sizeof(block_t);
 
-#ifdef __AVX2__
 	alignas(32) static inline const __m256i simd32_underscore = _mm256_set1_epi8('_');
 	alignas(32) static inline const __m256i simd32_msb        = _mm256_set1_epi8(0x80);
 	alignas(32) static inline const __m256i simd32_space      = _mm256_set1_epi8(' ');
@@ -48,7 +48,7 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
 	alignas(32) static inline const __m256i simd32_doublequote      = _mm256_set1_epi8('\"');
 	alignas(32) static inline const __m256i simd32_escape     = _mm256_set1_epi8('\\');
 	alignas(32) static inline const __m256i simd32_31         = _mm256_set1_epi8(0x1F);
-#endif
+#endif // __AVX2__
 
     ZUU_HOT ZUU_ALWAYS_INLINE void skip_whitespace() noexcept {
 #ifdef __AVX2__
@@ -67,7 +67,7 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
                 return;
             }
         }
-#endif
+#endif // __AVX2__
         while (current_ < end_ && Lookup{}[*current_] == Lookup::Type::WhiteSpace) {
             ++current_;
         }
@@ -112,7 +112,7 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
             }
             ptr += kBlockSize;
         }
-#endif
+#endif // __AVX2__
 
         this->finish_string_scalar(ptr, begin, has_escape);
     }
