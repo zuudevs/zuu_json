@@ -13,6 +13,7 @@
 #include "constants/general.hpp"
 #include <bit>
 #include <cstdint>
+#include <cstring>
 #include <expected>
 #include "traits/parser_trait.hpp"
 #include "utils/strings.hpp"
