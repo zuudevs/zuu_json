@@ -19,6 +19,7 @@
 #include <expected>
 #include <span>
 #include <cstring>
+#include "utils/compiler.hpp"
 
 namespace zuu::parser {
 
@@ -84,6 +85,82 @@ class ParserBase {
         return (d0 << 12) | (d1 << constants::byte) | (d2 << constants::nibble) | d3;
     }
 
+    ZUU_HOT void finish_string_scalar(char*& out, const char*& ptr, const char* end) noexcept {
+        while (ptr < end) {
+            while (ptr < end && *ptr != '\\') {
+                *out++ = *ptr++;
+            }
+
+            if (ptr >= end) {
+                break;
+            }
+
+            ++ptr; 
+            if (ptr >= end) {
+                break;
+            }
+
+            switch (*ptr) {
+                case '\"':  *out++ = '"';  break;
+                case '\\': *out++ = '\\'; break;
+                case '/':  *out++ = '/';  break;
+                case 'b':  *out++ = '\b'; break;
+                case 'f':  *out++ = '\f'; break;
+                case 'n':  *out++ = '\n'; break;
+                case 'r':  *out++ = '\r'; break;
+                case 't':  *out++ = '\t'; break;
+                case 'u': {
+                    if (ptr + 5 > end) {
+                        status_ = core::JsonError::InvalidValue;
+                        return;
+                    }
+                    
+                    uint32_t cp = decodeUnicodeHex(ptr + 1);
+                    ptr += constants::nibble;
+                    if (cp >= 0xD800 && cp <= 0xDBFF) {
+                        if (ptr + 6 <= end && ptr[1] == '\\' && ptr[2] == 'u') {
+                            uint32_t cp2 = decodeUnicodeHex(ptr + 3);
+                            if (cp2 >= 0xDC00 && cp2 <= 0xDFFF) {
+                                cp = 0x10000 + (((cp - 0xD800) << constants::digit) | (cp2 - 0xDC00));
+                                ptr += 6;
+                            } else {
+                                status_ = core::JsonError::InvalidValue;
+                                return;
+                            }
+                        } else {
+                            status_ = core::JsonError::InvalidValue;
+                            return;
+                        }
+                    }
+
+                    if (cp <= 0x7F) {
+                        *out++ = static_cast<char>(cp);
+                    } else if (cp <= 0x7FF) {
+                        *out++ = static_cast<char>(0xC0 | ((cp >> 6) & 0x1F));
+                        *out++ = static_cast<char>(0x80 | (cp & 0x3F));
+                    } else if (cp <= 0xFFFF) {
+                        *out++ = static_cast<char>(0xE0 | ((cp >> 12) & 0x0F));
+                        *out++ = static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+                        *out++ = static_cast<char>(0x80 | (cp & 0x3F));
+                    } else if (cp <= 0x10FFFF) {
+                        *out++ = static_cast<char>(0xF0 | ((cp >> 18) & 0x07));
+                        *out++ = static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
+                        *out++ = static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+                        *out++ = static_cast<char>(0x80 | (cp & 0x3F));
+                    } else {
+                        status_ = core::JsonError::InvalidValue;
+                        return;
+                    }
+                    break;
+                }
+                default:
+                    status_ = core::JsonError::InvalidValue;
+                    return;
+            }
+            ++ptr;
+        }
+    }
+
     [[nodiscard]] JsonValue buildNull() noexcept {
         current_++;
         return JsonValue::Null();
@@ -119,7 +196,6 @@ class ParserBase {
         std::string_view val = current_->value();
 
         if (current_->has_escape_) {
-            // Unescape string diserahkan ke Engine spesifik
             val = derived().unescapeString(val);
             if (has_error()) {
                 return JsonValue::Null();
@@ -150,7 +226,6 @@ class ParserBase {
         while (true) {
             JsonValue value;
             switch (current_->type_) {
-                // Semua delegasi dipanggil via `derived()`
                 case TokenType::String:            value = derived().buildString(); break;
                 case TokenType::Integer:           value = derived().buildInteger(); break;
                 case TokenType::Boolean:           value = derived().buildBoolean(); break;
