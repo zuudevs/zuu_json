@@ -12,6 +12,7 @@
 #include "constants/general.hpp"
 #include <algorithm>
 #include <utility>
+#include <cstring>
 
 namespace zuu::models {
 
@@ -113,9 +114,9 @@ uint64_t Storage::sealArray(const JsonValue* elements, uint32_t count) noexcept 
         return arrays_.size() - 1;
     }
     
-    // Alokasikan memori berurutan (contiguous) dari Chunked Arena
-    JsonValue* ptr = static_cast<JsonValue*>(allocate(count * sizeof(JsonValue), alignof(JsonValue)));
-    std::copy_n(elements, count, ptr);
+    auto* ptr = static_cast<JsonValue*>(allocate(count * sizeof(JsonValue), alignof(JsonValue)));
+    
+    std::memcpy(ptr, elements, count * sizeof(JsonValue));
     
     arrays_.push_back({ptr, count});
     return arrays_.size() - 1;
@@ -128,9 +129,9 @@ uint64_t Storage::sealObject(const JsonMember* members, uint32_t count) noexcept
         return objects_.size() - 1;
     }
     
-    // Alokasikan memori berurutan (contiguous) dari Chunked Arena
-    JsonMember* ptr = static_cast<JsonMember*>(allocate(count * sizeof(JsonMember), alignof(JsonMember)));
-    std::copy_n(members, count, ptr);
+    auto ptr = static_cast<JsonMember*>(allocate(count * sizeof(JsonMember), alignof(JsonMember)));
+    
+    std::memcpy(ptr, members, count * sizeof(JsonMember));
     
     objects_.push_back({ptr, count, false});
     return objects_.size() - 1;
@@ -143,8 +144,7 @@ bool Storage::isObjectSorted(uint64_t index) const noexcept {
 void Storage::sortAllObjects() noexcept {
     for (auto& meta : objects_) {
         if (!meta.is_sorted && meta.size > 1) {
-            // Memory arena adalah milik kita, jadi const_cast aman digunakan di sini
-            JsonMember* ptr = const_cast<JsonMember*>(meta.ptr);
+            auto ptr = const_cast<JsonMember*>(meta.ptr);
             std::ranges::sort(
                 ptr, ptr + meta.size,
                 [](std::string_view a, std::string_view b) {
