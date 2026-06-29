@@ -11,7 +11,7 @@
 #pragma once
 
 #include <bit>
-#include "constants/general.hpp"
+#include "constants/swar.hpp"
 
 namespace zuu::utils {
 

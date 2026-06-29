@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "constants/general.hpp"
+#include "constants/swar.hpp"
 #include "tokenizer/tokenizer_base.hpp"
 #include "utils/compiler.hpp"
 #include "utils/swar.hpp"
@@ -22,7 +22,8 @@ namespace zuu::tokenizer {
 class SwarEngine : public TokenizerBase<SwarEngine> {
   public:
     using TokenizerBase<SwarEngine>::TokenizerBase;
-	static inline constexpr uint8_t kBlockSize = sizeof(uint64_t);
+	using block_t = uint64_t;
+	static inline constexpr uint8_t kBlockSize = sizeof(block_t);
 
     [[nodiscard]] Hint pre_scan() noexcept {
         Hint hint{};
@@ -30,24 +31,16 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
         const char* ptr = this->begin_ptr_;
         const char* end = this->end_;
 
-        const uint64_t v_obj = constants::repeat_byte<uint64_t>('{');
-        const uint64_t v_arr = constants::repeat_byte<uint64_t>('[');
-        const uint64_t v_obj_e = constants::repeat_byte<uint64_t>('}');
-        const uint64_t v_arr_e = constants::repeat_byte<uint64_t>(']');
-        const uint64_t v_com = constants::repeat_byte<uint64_t>(',');
-        const uint64_t v_quo = constants::swar8_doublequote;
-        const uint64_t v_esc = constants::swar8_escape;
-
-        while (ptr + 8 <= end) {
+        while (ptr + kBlockSize <= end) {
             uint64_t chunk{};
             std::memcpy(&chunk, ptr, 8);
 
-            uint64_t m_obj = utils::find_zero_byte_mask(chunk ^ v_obj);
-            uint64_t m_arr = utils::find_zero_byte_mask(chunk ^ v_arr);
-            uint64_t m_obj_e = utils::find_zero_byte_mask(chunk ^ v_obj_e);
-            uint64_t m_arr_e = utils::find_zero_byte_mask(chunk ^ v_arr_e);
-            uint64_t m_com = utils::find_zero_byte_mask(chunk ^ v_com);
-            uint64_t m_quo = utils::find_zero_byte_mask(chunk ^ v_quo);
+            uint64_t m_obj = utils::find_zero_byte_mask(chunk ^ constants::swar8_lcb);
+            uint64_t m_arr = utils::find_zero_byte_mask(chunk ^ constants::swar8_lsb);
+            uint64_t m_obj_e = utils::find_zero_byte_mask(chunk ^ constants::swar8_rcb);
+            uint64_t m_arr_e = utils::find_zero_byte_mask(chunk ^ constants::swar8_rsb);
+            uint64_t m_com = utils::find_zero_byte_mask(chunk ^ constants::swar8_com);
+            uint64_t m_quo = utils::find_zero_byte_mask(chunk ^ constants::swar8_dqt);
 
             uint64_t mask = m_obj | m_arr | m_obj_e | m_arr_e | m_com | m_quo;
 
@@ -56,7 +49,7 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
                 uint32_t byte_pos = bit_pos >> 3;
                 char c = ptr[byte_pos];
 
-                if (c == '"') {
+                if (c == '\"') {
                     hint.string_count_++;
                     const char* start = ptr + byte_pos;
                     const char* s_ptr = start + 1;
@@ -65,9 +58,9 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
                     // SWAR Fast String Skip
                     while (s_ptr + 8 <= end) {
                         uint64_t s_chunk{};
-                        std::memcpy(&s_chunk, s_ptr, 8);
-                        uint64_t sq = utils::find_zero_byte_mask(s_chunk ^ v_quo);
-                        uint64_t se = utils::find_zero_byte_mask(s_chunk ^ v_esc);
+                        std::memcpy(&s_chunk, s_ptr, kBlockSize);
+                        uint64_t sq = utils::find_zero_byte_mask(s_chunk ^ constants::swar8_dqt);
+                        uint64_t se = utils::find_zero_byte_mask(s_chunk ^ constants::swar8_esc);
                         
                         if (se == 0) {
                             if (sq != 0) {
@@ -83,7 +76,7 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
 
                     // Scalar fallback
                     while (s_ptr < end) {
-                        if (*s_ptr == '"') break;
+                        if (*s_ptr == '\"') break;
                         if (*s_ptr == '\\') {
                             has_escape = true;
                             s_ptr += 2;
@@ -111,7 +104,7 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
                 
                 mask &= (mask - 1); // Clear bit MSB yang diproses
             }
-            ptr += 8;
+            ptr += kBlockSize;
         next_chunk:;
         }
 
@@ -161,7 +154,7 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
         while (current_ + kBlockSize <= end_) {
             uint64_t block{};
             std::memcpy(&block, current_, kBlockSize);
-            uint64_t non_ws = ((block + constants::swar8_underscore) | block) & constants::swar8_msb;
+            uint64_t non_ws = ((block + constants::swar8_usc) | block) & constants::swar8_msb;
             
             if (non_ws == constants::zero) {
                 current_ += kBlockSize;
@@ -188,8 +181,8 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
             std::memcpy(&block, ptr, kBlockSize);
 
             uint64_t match_mask = 
-                utils::find_zero_byte_mask(block ^ constants::swar8_doublequote) | 
-                utils::find_zero_byte_mask(block ^ constants::swar8_escape);
+                utils::find_zero_byte_mask(block ^ constants::swar8_dqt) | 
+                utils::find_zero_byte_mask(block ^ constants::swar8_esc);
 
             uint64_t ctrl_mask = 
                 (block - constants::swar8_sp) & 

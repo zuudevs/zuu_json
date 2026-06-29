@@ -10,14 +10,13 @@
 
 #pragma once
 
-#include "constants/general.hpp"
 #ifdef __AVX2__
-#include <immintrin.h>
+#include "constants/simd.hpp"
+#include <bit>
 #endif
 
 #include "tokenizer/tokenizer_base.hpp"
 #include "utils/compiler.hpp"
-#include <bit>
 #include <cstdint>
 
 namespace zuu::tokenizer {
@@ -28,26 +27,6 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
 #ifdef __AVX2__
     using block_t = __m256i;
     static inline constexpr uint8_t kBlockSize = sizeof(block_t);
-
-	alignas(32) static inline const __m256i simd32_underscore = _mm256_set1_epi8('_');
-	alignas(32) static inline const __m256i simd32_msb        = _mm256_set1_epi8(0x80);
-	alignas(32) static inline const __m256i simd32_space      = _mm256_set1_epi8(' ');
-	alignas(32) static inline const __m256i simd32_nl         = _mm256_set1_epi8('\n');
-	alignas(32) static inline const __m256i simd32_cr         = _mm256_set1_epi8('\r');
-	alignas(32) static inline const __m256i simd32_ht         = _mm256_set1_epi8('\t');
-
-	// PSHUFB Lookup Table untuk Whitespace
-	alignas(32) static inline const __m256i simd32_lut_whitespace = _mm256_setr_epi8(
-		0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-		0x00, 0x09, 0x0A, 0x00, 0x00, 0x0D, 0x00, 0x00,
-		0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-		0x00, 0x09, 0x0A, 0x00, 0x00, 0x0D, 0x00, 0x00
-	);
-
-	// Konstanta String & Control Character Escape
-	alignas(32) static inline const __m256i simd32_doublequote      = _mm256_set1_epi8('\"');
-	alignas(32) static inline const __m256i simd32_escape     = _mm256_set1_epi8('\\');
-	alignas(32) static inline const __m256i simd32_31         = _mm256_set1_epi8(0x1F);
 #endif // __AVX2__
 
     [[nodiscard]] Hint pre_scan() noexcept {
@@ -57,23 +36,15 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
         const char* end = this->end_;
 
 #ifdef __AVX2__
-        const __m256i v_obj = _mm256_set1_epi8('{');
-        const __m256i v_arr = _mm256_set1_epi8('[');
-        const __m256i v_obj_e = _mm256_set1_epi8('}');
-        const __m256i v_arr_e = _mm256_set1_epi8(']');
-        const __m256i v_com = _mm256_set1_epi8(',');
-        const __m256i v_quo = _mm256_set1_epi8('"');
-        const __m256i v_esc = _mm256_set1_epi8('\\');
-
-        while (ptr + 32 <= end) {
+        while (ptr + kBlockSize <= end) {
             __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(ptr));
             
-            __m256i m_obj = _mm256_cmpeq_epi8(chunk, v_obj);
-            __m256i m_arr = _mm256_cmpeq_epi8(chunk, v_arr);
-            __m256i m_obj_e = _mm256_cmpeq_epi8(chunk, v_obj_e);
-            __m256i m_arr_e = _mm256_cmpeq_epi8(chunk, v_arr_e);
-            __m256i m_com = _mm256_cmpeq_epi8(chunk, v_com);
-            __m256i m_quo = _mm256_cmpeq_epi8(chunk, v_quo);
+            __m256i m_obj = _mm256_cmpeq_epi8(chunk, constants::simd32_lcb);
+            __m256i m_arr = _mm256_cmpeq_epi8(chunk, constants::simd32_lsb);
+            __m256i m_obj_e = _mm256_cmpeq_epi8(chunk, constants::simd32_rcb);
+            __m256i m_arr_e = _mm256_cmpeq_epi8(chunk, constants::simd32_rsb);
+            __m256i m_com = _mm256_cmpeq_epi8(chunk, constants::simd32_com);
+            __m256i m_quo = _mm256_cmpeq_epi8(chunk, constants::simd32_dqt);
 
             // Kombinasikan semua mask
             __m256i match1 = _mm256_or_si256(_mm256_or_si256(m_obj, m_arr), 
@@ -94,17 +65,17 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
                     bool has_escape = false;
 
                     // AVX2 Fast String Skip
-                    while (s_ptr + 32 <= end) {
+                    while (s_ptr + kBlockSize <= end) {
                         __m256i s_chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(s_ptr));
-                        uint32_t m_q = _mm256_movemask_epi8(_mm256_cmpeq_epi8(s_chunk, v_quo));
-                        uint32_t m_e = _mm256_movemask_epi8(_mm256_cmpeq_epi8(s_chunk, v_esc));
+                        uint32_t m_q = _mm256_movemask_epi8(_mm256_cmpeq_epi8(s_chunk, constants::simd32_dqt));
+                        uint32_t m_e = _mm256_movemask_epi8(_mm256_cmpeq_epi8(s_chunk, constants::simd32_esc));
 
                         if (m_e == 0) {
                             if (m_q != 0) {
                                 s_ptr += std::countr_zero(m_q);
                                 goto string_ended;
                             }
-                            s_ptr += 32;
+                            s_ptr += kBlockSize;
                         } else {
                             has_escape = true;
                             break;
@@ -141,7 +112,7 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
                 
                 mask &= (mask - 1); // Clear set bit terendah
             }
-            ptr += 32;
+            ptr += kBlockSize;
         next_chunk:;
         }
 #endif
@@ -193,7 +164,7 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
         while (current_ + kBlockSize <= end_) {
             __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(current_));
             
-            __m256i mapped = _mm256_shuffle_epi8(simd32_lut_whitespace, chunk);
+            __m256i mapped = _mm256_shuffle_epi8(constants::simd32_lut_whitespace, chunk);
             __m256i match  = _mm256_cmpeq_epi8(mapped, chunk);
             uint32_t mask = _mm256_movemask_epi8(match);
 
@@ -220,10 +191,10 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
         while (ptr + kBlockSize <= this->end_) {
             __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(ptr));
             
-            __m256i eq_quote = _mm256_cmpeq_epi8(chunk, simd32_doublequote);
-            __m256i eq_esc   = _mm256_cmpeq_epi8(chunk, simd32_escape);
-            __m256i max_ctrl = _mm256_max_epu8(chunk, simd32_31);
-            __m256i is_ctrl  = _mm256_cmpeq_epi8(max_ctrl, simd32_31);
+            __m256i eq_quote = _mm256_cmpeq_epi8(chunk, constants::simd32_dqt);
+            __m256i eq_esc   = _mm256_cmpeq_epi8(chunk, constants::simd32_esc);
+            __m256i max_ctrl = _mm256_max_epu8(chunk, constants::simd32_31);
+            __m256i is_ctrl  = _mm256_cmpeq_epi8(max_ctrl, constants::simd32_31);
             __m256i match = _mm256_or_si256(_mm256_or_si256(eq_quote, eq_esc), is_ctrl);
             uint32_t mask = _mm256_movemask_epi8(match);
 

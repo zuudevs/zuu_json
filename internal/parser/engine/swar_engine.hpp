@@ -12,6 +12,7 @@
 
 #include "parser/parser_base.hpp"
 #include "utils/swar.hpp"
+#include <cstdint>
 #include <cstring>
 
 namespace zuu::parser {
@@ -20,6 +21,8 @@ template <typename TokenizerEngine>
 class SwarEngine : public ParserBase<SwarEngine<TokenizerEngine>, TokenizerEngine> {
   public:
     using ParserBase<SwarEngine<TokenizerEngine>, TokenizerEngine>::ParserBase;
+	using block_t = uint64_t;
+    static inline constexpr uint8_t kSimdBlockSize = sizeof(block_t);
 
     [[nodiscard]] std::string_view unescapeString(std::string_view src) noexcept {
         char* dest = this->res_.allocateStringBuffer(src.size());
@@ -28,11 +31,11 @@ class SwarEngine : public ParserBase<SwarEngine<TokenizerEngine>, TokenizerEngin
         const char* end = ptr + src.size();
 
         while (ptr < end) {
-            while (ptr + sizeof(uint64_t) <= end) {
+            while (ptr + kSimdBlockSize <= end) {
                 uint64_t block{};
-                std::memcpy(&block, ptr, sizeof(uint64_t));
+                std::memcpy(&block, ptr, kSimdBlockSize);
 
-                uint64_t mask = utils::find_zero_byte_mask(block ^ constants::swar8_escape);
+                uint64_t mask = utils::find_zero_byte_mask(block ^ constants::swar8_esc);
                 if (mask != 0) {
                     uint32_t offset = std::countr_zero(mask) >> 3;
                     std::memcpy(out, ptr, offset);
@@ -41,9 +44,9 @@ class SwarEngine : public ParserBase<SwarEngine<TokenizerEngine>, TokenizerEngin
                     break;
                 }
 
-                std::memcpy(out, ptr, sizeof(uint64_t));
-                out += sizeof(uint64_t);
-                ptr += sizeof(uint64_t);
+                std::memcpy(out, ptr, kSimdBlockSize);
+                out += kSimdBlockSize;
+                ptr += kSimdBlockSize;
             }
 
             if (ptr >= end) {

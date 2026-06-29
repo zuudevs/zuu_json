@@ -10,14 +10,14 @@
 
 #pragma once
 
-#include "parser/parser_base.hpp"
-#include <cstdint>
+#ifdef __AVX2__
+#include "constants/simd.hpp"
 #include <cstring>
 #include <bit>
-
-#ifdef __AVX2__
-#include <immintrin.h>
 #endif
+
+#include "parser/parser_base.hpp"
+#include <cstdint>
 
 namespace zuu::parser {
 
@@ -29,7 +29,6 @@ class Avx2Engine : public ParserBase<Avx2Engine<TokenizerEngine>, TokenizerEngin
 #ifdef __AVX2__
     using block_t = __m256i;
     static inline constexpr uint8_t kSimdBlockSize = sizeof(block_t);
-    static inline const block_t simd32_escape = _mm256_set1_epi8('\\');
 #endif // __AVX2__
 
     [[nodiscard]] std::string_view unescapeString(std::string_view src) noexcept {
@@ -42,7 +41,7 @@ class Avx2Engine : public ParserBase<Avx2Engine<TokenizerEngine>, TokenizerEngin
 #ifdef __AVX2__
             while (ptr + kSimdBlockSize <= end) {
                 __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(ptr));
-                uint32_t mask = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunk, simd32_escape));
+                uint32_t mask = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunk, constants::simd32_esc));
 
                 if (mask != 0) {
                     auto offset = static_cast<uint32_t>(std::countr_zero(mask));

@@ -10,7 +10,7 @@
 
 #pragma once 
 
-#include "constants/general.hpp"
+#include "constants/swar.hpp"
 #include <bit>
 #include <cstdint>
 #include <cstring>
