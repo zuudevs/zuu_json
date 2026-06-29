@@ -2,7 +2,7 @@
  * @file json.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 1.2.0
+ * @version 1.5.0
  * @date 2026-06-29
  *
  * @copyright Copyright (c) 2026
@@ -23,13 +23,8 @@ namespace {
         using TokenizerEngine = typename TokenizerPolicy::Engine;
 
         TokenizerEngine tokenizer(raw);
-        auto hint = tokenizer.pre_scan();
-
-        if (tokenizer.is_error()) {
-            return std::unexpected{tokenizer.get_error()};
-        }
         
-        return zuu::parser::Parser<ParserPolicy>::template Parse<TokenizerEngine>(tokenizer, hint);
+        return zuu::parser::Parser<ParserPolicy>::template Parse<TokenizerEngine>(tokenizer);
     }
 } // namespace
 
@@ -98,23 +93,15 @@ ZUU_HOT ZUU_ALIGN(64) Json::Result<Value> Json::operator[](std::string_view key)
             obj, 
             key, 
             [](std::string_view a, std::string_view b) {
-                if (a.size() != b.size()) {
-                    return a.size() < b.size();
-                }
+                if (a.size() != b.size()) return a.size() < b.size();
                 return a < b;
             },
             [this](const JsonMember& member) { 
                 return storage_->resolveKey(member); 
             }
         );
-        if (
-            it != obj.end() && 
-            storage_->resolveKey(*it) == key
-        ) {
-            return Value::fromInternal(
-                storage_.get(), 
-                it->value_
-            );
+        if (it != obj.end() && storage_->resolveKey(*it) == key) {
+            return Value::fromInternal(storage_.get(), it->value_);
         }
     } else {
         auto it = std::ranges::find_if(
@@ -125,10 +112,7 @@ ZUU_HOT ZUU_ALIGN(64) Json::Result<Value> Json::operator[](std::string_view key)
             }
         );
         if (it != obj.end()) { 
-            return Value::fromInternal(
-                storage_.get(), 
-                it->value_
-            ); 
+            return Value::fromInternal(storage_.get(), it->value_); 
         }
     }
 

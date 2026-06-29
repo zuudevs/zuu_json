@@ -11,7 +11,6 @@
 #pragma once
 
 #include "traits/lookup_trait.hpp"
-#include "traits/hint_trait.hpp"
 #include <string_view>
 
 namespace zuu {
@@ -54,22 +53,6 @@ struct Token {
 } // namespace models
 
 namespace traits {
-
-template <>
-struct HintTrait<models::Token> {
-    unsigned long long string_count_{};
-    unsigned long long array_count_{};
-    unsigned long long object_count_{};
-    unsigned long long comma_count_{};
-    unsigned long long string_escape_bytes_{};
-
-    constexpr HintTrait() noexcept = default;
-    constexpr HintTrait(const HintTrait&) noexcept = default;
-    constexpr HintTrait(HintTrait&&) noexcept = default;
-    constexpr ~HintTrait() noexcept = default;
-    constexpr HintTrait& operator=(const HintTrait&) noexcept = default;
-    constexpr HintTrait& operator=(HintTrait&&) noexcept = default;
-};
 
 template <>
 struct LookupTrait<models::Token> {
