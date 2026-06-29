@@ -212,12 +212,12 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
     }
 
     ZUU_HOT ZUU_ALWAYS_INLINE Token read_string() noexcept {
-        const char* begin = ++current_;
+        const char* begin = ++this->current_;
         const char* ptr = begin;
         bool has_escape = false;
 
 #ifdef __AVX2__
-        while (ptr + kBlockSize <= end_) {
+        while (ptr + kBlockSize <= this->end_) {
             __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(ptr));
             
             __m256i eq_quote = _mm256_cmpeq_epi8(chunk, simd32_doublequote);
@@ -229,17 +229,22 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
 
             if (mask != constants::zero) {
                 uint32_t byte_idx = std::countr_zero(mask);
-                auto c = ptr[byte_idx];
+                char c = ptr[byte_idx];
 
-                if (c == '\"') [[likely]] {
-                    current_ = ptr + byte_idx + 1;
-                    return Token(Token::Type::String, std::string_view(begin, (ptr + byte_idx) - begin), false);
+                if (c == '"') [[likely]] {
+                    this->current_ = ptr + byte_idx + 1;
+                    return Token(
+                        Token::Type::String, 
+                        std::string_view(begin, (ptr + byte_idx) - begin), 
+                        has_escape
+                    );
                 } else if (static_cast<uint8_t>(c) < 0x20) [[unlikely]] {
-                    status_ = Error::UnescapedCharacter;
+                    this->status_ = Error::UnescapedCharacter;
                     return Token(Token::Type::Unknown);
-                } else { 
-                    ptr += byte_idx;
-                    break; 
+                } else { // c == '\\'
+                    has_escape = true;
+                    ptr += byte_idx + 2;
+                    continue; // RESUME AVX2 SIMD!
                 }
             }
             ptr += kBlockSize;
