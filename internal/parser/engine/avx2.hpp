@@ -19,12 +19,12 @@
 #include "parser/parser_base.hpp"
 #include <cstdint>
 
-namespace zuu::parser {
+namespace zuu::parser::engine {
 
-template <typename TokenizerEngine>
-class Avx2Engine : public ParserBase<Avx2Engine<TokenizerEngine>, TokenizerEngine> {
+template <typename LexerEngine>
+class Avx2 : public ParserBase<Avx2<LexerEngine>, LexerEngine> {
   public:
-    using ParserBase<Avx2Engine<TokenizerEngine>, TokenizerEngine>::ParserBase;
+    using ParserBase<Avx2<LexerEngine>, LexerEngine>::ParserBase;
 
 #ifdef __AVX2__
     using block_t = __m256i;
@@ -32,8 +32,8 @@ class Avx2Engine : public ParserBase<Avx2Engine<TokenizerEngine>, TokenizerEngin
 #endif // __AVX2__
 
     [[nodiscard]] std::string_view unescapeString(std::string_view src) noexcept {
-        char* dest = this->res_.allocateStringBuffer(src.size());
-        char* out = dest;
+        char* dest      = this->res_.allocateStringBuffer(src.size());
+        char* out       = dest;
         const char* ptr = src.data();
         const char* end = ptr + src.size();
 
@@ -43,7 +43,7 @@ class Avx2Engine : public ParserBase<Avx2Engine<TokenizerEngine>, TokenizerEngin
                 __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(ptr));
                 uint32_t mask = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunk, constants::simd32_esc));
 
-                if (mask != 0) {
+                if (mask != constants::zero) {
                     auto offset = static_cast<uint32_t>(std::countr_zero(mask));
                     std::memcpy(out, ptr, offset);
                     out += offset;
@@ -61,18 +61,20 @@ class Avx2Engine : public ParserBase<Avx2Engine<TokenizerEngine>, TokenizerEngin
 
             if (*ptr == '\\') {
                 ++ptr;
-                if (ptr >= end) break;
+                if (ptr >= end) {
+					break;
+				}
                 
                 switch (*ptr) {
-                    case '"':  *out++ = '"';  break;
-                    case '\\': *out++ = '\\'; break;
-                    case '/':  *out++ = '/';  break;
-                    case 'b':  *out++ = '\b'; break;
-                    case 'f':  *out++ = '\f'; break;
-                    case 'n':  *out++ = '\n'; break;
-                    case 'r':  *out++ = '\r'; break;
-                    case 't':  *out++ = '\t'; break;
-                    case 'u': {
+                    case '\"' :  *out++ = '\"';  break;
+                    case '\\' : *out++ = '\\'; break;
+                    case '/'  :  *out++ = '/';  break;
+                    case 'b'  :  *out++ = '\b'; break;
+                    case 'f'  :  *out++ = '\f'; break;
+                    case 'n'  :  *out++ = '\n'; break;
+                    case 'r'  :  *out++ = '\r'; break;
+                    case 't'  :  *out++ = '\t'; break;
+                    case 'u'  : {
                         if (ptr + 5 > end) {
                             this->status_ = core::JsonError::InvalidValue;
                             return {};
@@ -128,4 +130,4 @@ class Avx2Engine : public ParserBase<Avx2Engine<TokenizerEngine>, TokenizerEngin
     }
 };
 
-} // namespace zuu::parser
+} // namespace zuu::parser::engine

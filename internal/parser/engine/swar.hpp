@@ -15,18 +15,18 @@
 #include <cstdint>
 #include <cstring>
 
-namespace zuu::parser {
+namespace zuu::parser::engine {
 
-template <typename TokenizerEngine>
-class SwarEngine : public ParserBase<SwarEngine<TokenizerEngine>, TokenizerEngine> {
+template <typename LexerEngine>
+class Swar : public ParserBase<Swar<LexerEngine>, LexerEngine> {
   public:
-    using ParserBase<SwarEngine<TokenizerEngine>, TokenizerEngine>::ParserBase;
+    using ParserBase<Swar<LexerEngine>, LexerEngine>::ParserBase;
 	using block_t = uint64_t;
     static inline constexpr uint8_t kSimdBlockSize = sizeof(block_t);
 
     [[nodiscard]] std::string_view unescapeString(std::string_view src) noexcept {
-        char* dest = this->res_.allocateStringBuffer(src.size());
-        char* out = dest;
+        char* dest      = this->res_.allocateStringBuffer(src.size());
+        char* out       = dest;
         const char* ptr = src.data();
         const char* end = ptr + src.size();
 
@@ -36,7 +36,7 @@ class SwarEngine : public ParserBase<SwarEngine<TokenizerEngine>, TokenizerEngin
                 std::memcpy(&block, ptr, kSimdBlockSize);
 
                 uint64_t mask = utils::find_zero_byte_mask(block ^ constants::swar8_esc);
-                if (mask != 0) {
+                if (mask != constants::zero) {
                     uint32_t offset = std::countr_zero(mask) >> 3;
                     std::memcpy(out, ptr, offset);
                     out += offset;
@@ -60,15 +60,15 @@ class SwarEngine : public ParserBase<SwarEngine<TokenizerEngine>, TokenizerEngin
                 }
                 
                 switch (*ptr) {
-                    case '"':  *out++ = '"';  break;
-                    case '\\': *out++ = '\\'; break;
-                    case '/':  *out++ = '/';  break;
-                    case 'b':  *out++ = '\b'; break;
-                    case 'f':  *out++ = '\f'; break;
-                    case 'n':  *out++ = '\n'; break;
-                    case 'r':  *out++ = '\r'; break;
-                    case 't':  *out++ = '\t'; break;
-                    case 'u': {
+                    case '\"' :  *out++ = '\"';  break;
+                    case '\\' : *out++ = '\\'; break;
+                    case '/'  :  *out++ = '/';  break;
+                    case 'b'  :  *out++ = '\b'; break;
+                    case 'f'  :  *out++ = '\f'; break;
+                    case 'n'  :  *out++ = '\n'; break;
+                    case 'r'  :  *out++ = '\r'; break;
+                    case 't'  :  *out++ = '\t'; break;
+                    case 'u'  : {
                         if (ptr + 5 > end) {
                             this->status_ = core::JsonError::InvalidValue;
                             return {};
@@ -125,4 +125,4 @@ class SwarEngine : public ParserBase<SwarEngine<TokenizerEngine>, TokenizerEngin
     }
 };
 
-} // namespace zuu::parser
+} // namespace zuu::parser::engine

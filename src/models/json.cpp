@@ -11,8 +11,7 @@
 #include <algorithm>
 #include <expected>
 #include "parser/parser.hpp"
-#include "tokenizer/policies.hpp"
-#include "tokenizer/tokenizer.hpp"
+#include "lexer/lexer.hpp"
 #include "utils/compiler.hpp"
 #include "zuu_json/core/engine.hpp"
 #include "zuu_json/models/json.hpp"
@@ -22,25 +21,23 @@ namespace {
     [[nodiscard]] inline zuu::models::Json::Result<zuu::models::Storage> 
     run_fused_parser(std::span<const char> raw) noexcept {
         using TokenizerEngine = typename TokenizerPolicy::Engine;
-        
+
         TokenizerEngine tokenizer(raw);
-        
-        // Pass 1: Super fast pre-scan for generating memory arena hint
         auto hint = tokenizer.pre_scan();
+
         if (tokenizer.is_error()) {
             return std::unexpected{tokenizer.get_error()};
         }
         
-        // Pass 2: Fused parse loop
         return zuu::parser::Parser<ParserPolicy>::template Parse<TokenizerEngine>(tokenizer, hint);
     }
 } // namespace
 
 namespace zuu::models {
 
-Json::Json(Json&&) noexcept = default;
+Json::Json(Json&&) noexcept            = default;
 Json& Json::operator=(Json&&) noexcept = default;
-Json::~Json() noexcept = default;
+Json::~Json() noexcept                 = default;
 
 Json::Json(std::unique_ptr<Storage> storage) noexcept
     : storage_(std::move(storage)) {}
@@ -52,15 +49,15 @@ Json::Result<Json> Json::parse(std::string_view content, Policy policy) noexcept
 
     if (policy.tokenizer_engine == core::TokenizerEngine::Avx2) {
         if (policy.parser_engine == core::ParserEngine::Avx2) {
-            parsed_storage = run_fused_parser<tokenizer::Avx2Policy, parser::Avx2Policy>(raw);
+            parsed_storage = run_fused_parser<lexer::Avx2Policy, parser::Avx2Policy>(raw);
         } else {
-            parsed_storage = run_fused_parser<tokenizer::Avx2Policy, parser::DefaultPolicy>(raw);
+            parsed_storage = run_fused_parser<lexer::Avx2Policy, parser::DefaultPolicy>(raw);
         }
     } else {
         if (policy.parser_engine == core::ParserEngine::Avx2) {
-            parsed_storage = run_fused_parser<tokenizer::SwarPolicy, parser::Avx2Policy>(raw);
+            parsed_storage = run_fused_parser<lexer::SwarPolicy, parser::Avx2Policy>(raw);
         } else {
-            parsed_storage = run_fused_parser<tokenizer::SwarPolicy, parser::DefaultPolicy>(raw);
+            parsed_storage = run_fused_parser<lexer::SwarPolicy, parser::DefaultPolicy>(raw);
         }
     }
 
@@ -72,7 +69,9 @@ Json::Result<Json> Json::parse(std::string_view content, Policy policy) noexcept
 }
 
 void Json::sort() noexcept {
-    if (storage_) { storage_->sortAllObjects(); }
+    if (storage_) { 
+		storage_->sortAllObjects(); 
+	}
 }
 
 Value Json::root() const noexcept {

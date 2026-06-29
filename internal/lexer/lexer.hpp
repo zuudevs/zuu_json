@@ -10,37 +10,41 @@
 
 #pragma once
 
-#include "tokenizer/policies.hpp"
+#include "lexer/policies.hpp"
 #include <expected>
 #include <vector>
 #include <span>
 
-namespace zuu::tokenizer {
+namespace zuu::lexer {
 
 /**
- * @brief Tokenizer Engine berbasis Policy.
+ * @brief Lexer Engine berbasis Policy.
  * Hanya digunakan secara eksplisit untuk test/benchmark yang membutuhkan
  * materialisasi `std::vector<Token>`.
  */
-template <typename Policy>
-class Tokenizer {
+template <typename Policy = DefaultPolicy>
+class Lexer {
   public:
-    using Engine = typename Policy::Engine;
+    using Engine   = typename Policy::Engine;
     using Expected = std::expected<std::pair<std::vector<models::Token>, traits::HintTrait<models::Token>>, core::JsonError>;
-    using Raw = std::span<const char>;
+    using Raw      = std::span<const char>;
 
     [[nodiscard]] static Expected Tokenize(Raw json_content) noexcept {
         Engine engine(json_content);
         
         auto hint = engine.pre_scan();
-        if (engine.is_error()) return std::unexpected{engine.get_error()};
+        if (engine.is_error()) {
+			return std::unexpected{engine.get_error()};
+		}
 
         std::vector<models::Token> res;
         res.reserve((json_content.size() >> 1) + constants::word);
         
         while(true) {
             auto tok = engine.next_token();
-            if (tok.type_ == models::Token::Type::EndOfFile || engine.is_error()) break;
+            if (tok.type_ == models::Token::Type::EndOfFile || engine.is_error()) {
+				break;
+			}
             res.push_back(tok);
         }
 
@@ -52,4 +56,4 @@ class Tokenizer {
     }
 };
 
-} // namespace zuu::tokenizer
+} // namespace zuu::lexer

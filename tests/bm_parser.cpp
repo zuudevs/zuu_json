@@ -11,8 +11,8 @@
 #include <span>
 #include "parser/parser.hpp"
 #include "parser/policies.hpp"
-#include "tokenizer/policies.hpp"
-#include "tokenizer/tokenizer.hpp"
+#include "lexer/policies.hpp"
+#include "lexer/lexer.hpp"
 #include "utils/fs_util.hpp"
 
 using namespace zuu;
@@ -25,7 +25,7 @@ using namespace zuu;
             return;                                                                                                       \
         }                                                                                                                 \
         auto raw = std::span<const char>(data);																			  \
-        tokenizer::SwarPolicy::Engine tokenizer(raw);                                                                     \
+        lexer::SwarPolicy::Engine tokenizer(raw);                                                                     \
         auto hint = tokenizer.pre_scan();                                                                                 \
         if (tokenizer.is_error()) {                                                                                       \
             state.SkipWithError("Setup gagal: Tokenisasi pre-scan error.");                                               \
@@ -47,7 +47,7 @@ using namespace zuu;
             return;                                                                                                       \
         }                                                                                                                 \
         auto raw = std::span<const char>(data);																			  \
-        tokenizer::Avx2Policy::Engine tokenizer(raw);                                                                     \
+        lexer::Avx2Policy::Engine tokenizer(raw);                                                                     \
         auto hint = tokenizer.pre_scan();                                                                                 \
         if (tokenizer.is_error()) {                                                                                       \
             state.SkipWithError("Setup gagal: Tokenisasi pre-scan error.");                                               \

@@ -1,7 +1,7 @@
 /**
  * @file bm_tokenizer.cpp
  * @author zuudevs (zuudevs@gmail.com)
- * @brief Deep profiling for Tokenizer (Lexical Analysis)
+ * @brief Deep profiling for Lexer (Lexical Analysis)
  * @version 1.1.0
  * @date 2026-06-26
  * * @copyright Copyright (c) 2026
@@ -9,12 +9,12 @@
 
 #include <benchmark/benchmark.h>
 #include <span>
-#include "tokenizer/tokenizer.hpp"
+#include "lexer/lexer.hpp"
 #include "utils/fs_util.hpp"
 
 using namespace zuu;
 
-// Macro untuk mengotomatisasi pembuatan benchmark Tokenizer
+// Macro untuk mengotomatisasi pembuatan benchmark Lexer
 #define ZUU_BENCHMARK_TOKENIZER(Name, Filename)                                                    \
     static void BM_SWAR_Tokenizer_##Name(benchmark::State& state) {                                \
         static std::string data = tests::utils::load_sample(Filename).value_or("");                \
@@ -24,7 +24,7 @@ using namespace zuu;
         }                                                                                          \
         std::span<const char> raw(data);                                                           \
         for (auto _ : state) {                                                                     \
-            auto tokens = tokenizer::Tokenizer<tokenizer::SwarPolicy>::Tokenize(raw);              \
+            auto tokens = lexer::Lexer<lexer::SwarPolicy>::Tokenize(raw);              \
             if (!tokens) {                                                                         \
                 state.SkipWithError("Parse failed inside benchmark loop!");                        \
                 break;                                                                             \
@@ -44,7 +44,7 @@ using namespace zuu;
         }                                                                                          \
         std::span<const char> raw(data);                                                           \
         for (auto _ : state) {                                                                     \
-            auto tokens = tokenizer::Tokenizer<tokenizer::Avx2Policy>::Tokenize(raw);              \
+            auto tokens = lexer::Lexer<lexer::Avx2Policy>::Tokenize(raw);              \
             if (!tokens) {                                                                         \
                 state.SkipWithError("Parse failed inside benchmark loop!");                        \
                 break;                                                                             \

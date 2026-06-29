@@ -11,19 +11,19 @@
 #pragma once
 
 #ifdef __AVX2__
-#include "constants/simd.hpp"
 #include <bit>
-#endif
+#include "constants/simd.hpp"
+#endif // __AVX2__
 
-#include "tokenizer/tokenizer_base.hpp"
+#include "lexer/lexer_base.hpp"
 #include "utils/compiler.hpp"
 #include <cstdint>
 
-namespace zuu::tokenizer {
+namespace zuu::lexer::engine {
 
-class Avx2Engine : public TokenizerBase<Avx2Engine> {
+class Avx2 : public LexerBase<Avx2> {
   public:
-    using TokenizerBase<Avx2Engine>::TokenizerBase;
+    using LexerBase<Avx2>::LexerBase;
 #ifdef __AVX2__
     using block_t = __m256i;
     static inline constexpr uint8_t kBlockSize = sizeof(block_t);
@@ -31,47 +31,45 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
 
     [[nodiscard]] Hint pre_scan() noexcept {
         Hint hint{};
-        int32_t depth = 0;
+        int32_t depth = constants::zero;
         const char* ptr = this->begin_ptr_;
         const char* end = this->end_;
 
 #ifdef __AVX2__
         while (ptr + kBlockSize <= end) {
-            __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(ptr));
-            
-            __m256i m_obj = _mm256_cmpeq_epi8(chunk, constants::simd32_lcb);
-            __m256i m_arr = _mm256_cmpeq_epi8(chunk, constants::simd32_lsb);
+            __m256i chunk   = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(ptr));
+            __m256i m_obj   = _mm256_cmpeq_epi8(chunk, constants::simd32_lcb);
+            __m256i m_arr   = _mm256_cmpeq_epi8(chunk, constants::simd32_lsb);
             __m256i m_obj_e = _mm256_cmpeq_epi8(chunk, constants::simd32_rcb);
             __m256i m_arr_e = _mm256_cmpeq_epi8(chunk, constants::simd32_rsb);
-            __m256i m_com = _mm256_cmpeq_epi8(chunk, constants::simd32_com);
-            __m256i m_quo = _mm256_cmpeq_epi8(chunk, constants::simd32_dqt);
+            __m256i m_com   = _mm256_cmpeq_epi8(chunk, constants::simd32_com);
+            __m256i m_quo   = _mm256_cmpeq_epi8(chunk, constants::simd32_dqt);
 
-            // Kombinasikan semua mask
-            __m256i match1 = _mm256_or_si256(_mm256_or_si256(m_obj, m_arr), 
-                                             _mm256_or_si256(m_obj_e, m_arr_e));
-            __m256i match2 = _mm256_or_si256(m_com, m_quo);
-            __m256i match = _mm256_or_si256(match1, match2);
-            
-            uint32_t mask = _mm256_movemask_epi8(match);
+            __m256i match1  = _mm256_or_si256(
+				_mm256_or_si256(m_obj, m_arr), 
+				_mm256_or_si256(m_obj_e, m_arr_e)
+			);
+            __m256i match2  = _mm256_or_si256(m_com, m_quo);
+            __m256i match   = _mm256_or_si256(match1, match2);
+            uint32_t mask   = _mm256_movemask_epi8(match);
 
-            while (mask != 0) {
+            while (mask != constants::zero) {
                 uint32_t bit_pos = std::countr_zero(mask);
                 char c = ptr[bit_pos];
 
-                if (c == '"') {
+                if (c == '\"') {
                     hint.string_count_++;
                     const char* start = ptr + bit_pos;
                     const char* s_ptr = start + 1;
                     bool has_escape = false;
 
-                    // AVX2 Fast String Skip
                     while (s_ptr + kBlockSize <= end) {
                         __m256i s_chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(s_ptr));
-                        uint32_t m_q = _mm256_movemask_epi8(_mm256_cmpeq_epi8(s_chunk, constants::simd32_dqt));
-                        uint32_t m_e = _mm256_movemask_epi8(_mm256_cmpeq_epi8(s_chunk, constants::simd32_esc));
+                        uint32_t m_q    = _mm256_movemask_epi8(_mm256_cmpeq_epi8(s_chunk, constants::simd32_dqt));
+                        uint32_t m_e    = _mm256_movemask_epi8(_mm256_cmpeq_epi8(s_chunk, constants::simd32_esc));
 
-                        if (m_e == 0) {
-                            if (m_q != 0) {
+                        if (m_e == constants::zero) {
+                            if (m_q != constants::zero) {
                                 s_ptr += std::countr_zero(m_q);
                                 goto string_ended;
                             }
@@ -82,9 +80,10 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
                         }
                     }
 
-                    // Scalar fallback
                     while (s_ptr < end) {
-                        if (*s_ptr == '"') break;
+                        if (*s_ptr == '\"') {
+							break;
+						}
                         if (*s_ptr == '\\') {
                             has_escape = true;
                             s_ptr += 2;
@@ -97,48 +96,67 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
                         hint.string_escape_bytes_ += (s_ptr - start);
                     }
                     ptr = s_ptr + 1;
-                    goto next_chunk; // Restart jendela 32-byte dari posisi ini
+                    goto next_chunk;
                 } else if (c == '{') {
                     hint.object_count_++;
-                    if (++depth > this->kMaxDepth) { this->status_ = Error::DepthLimitExceeded; return hint; }
+                    if (++depth > this->kMaxDepth) { 
+						this->status_ = Error::DepthLimitExceeded; 
+						return hint; 
+					}
                 } else if (c == '[') {
                     hint.array_count_++;
-                    if (++depth > this->kMaxDepth) { this->status_ = Error::DepthLimitExceeded; return hint; }
+                    if (++depth > this->kMaxDepth) { 
+						this->status_ = Error::DepthLimitExceeded; 
+						return hint; 
+					}
                 } else if (c == '}' || c == ']') {
                     depth--;
                 } else if (c == ',') {
                     hint.comma_count_++;
                 }
                 
-                mask &= (mask - 1); // Clear set bit terendah
+                mask &= (mask - 1);
             }
             ptr += kBlockSize;
         next_chunk:;
         }
-#endif
-
-        // Tail / Fallback untuk sisa byte
+#endif // __AVX2__
         while (ptr < end) {
             switch (*ptr) {
-                case '{': 
+                case '{': {
                     hint.object_count_++; 
-                    if (++depth > this->kMaxDepth) { this->status_ = Error::DepthLimitExceeded; return hint; }
+                    if (++depth > this->kMaxDepth) { 
+						this->status_ = Error::DepthLimitExceeded; 
+						return hint; 
+					}
                     break;
-                case '[': 
+				}
+                case '[': {
                     hint.array_count_++; 
-                    if (++depth > this->kMaxDepth) { this->status_ = Error::DepthLimitExceeded; return hint; }
+                    if (++depth > this->kMaxDepth) { 
+						this->status_ = Error::DepthLimitExceeded; 
+						return hint; 
+					}
                     break;
-                case '}': case ']':
+				}
+                case '}': 
+				case ']': {
                     depth--;
                     break;
-                case ',': hint.comma_count_++; break;
-                case '"': {
+				}
+                case ',': {
+					hint.comma_count_++; 
+					break;
+				}
+                case '\"': {
                     hint.string_count_++;
                     const char* start = ptr;
                     bool has_escape = false;
                     ++ptr;
                     while (ptr < end) {
-                        if (*ptr == '"') break;
+                        if (*ptr == '\"') {
+							break;
+						}
                         if (*ptr == '\\') {
                             has_escape = true;
                             ptr += 2;
@@ -162,11 +180,10 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
     ZUU_HOT ZUU_ALWAYS_INLINE void skip_whitespace() noexcept {
 #ifdef __AVX2__
         while (current_ + kBlockSize <= end_) {
-            __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(current_));
-            
+            __m256i chunk  = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(current_));
             __m256i mapped = _mm256_shuffle_epi8(constants::simd32_lut_whitespace, chunk);
             __m256i match  = _mm256_cmpeq_epi8(mapped, chunk);
-            uint32_t mask = _mm256_movemask_epi8(match);
+            uint32_t mask  = _mm256_movemask_epi8(match);
 
             if (mask == ~uint32_t{}) {
                 current_ += kBlockSize;
@@ -202,20 +219,20 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
                 uint32_t byte_idx = std::countr_zero(mask);
                 char c = ptr[byte_idx];
 
-                if (c == '"') [[likely]] {
+                if (c == '\"') [[likely]] {
                     this->current_ = ptr + byte_idx + 1;
-                    return Token(
+                    return {
                         Token::Type::String, 
                         std::string_view(begin, (ptr + byte_idx) - begin), 
                         has_escape
-                    );
+					};
                 } else if (static_cast<uint8_t>(c) < 0x20) [[unlikely]] {
                     this->status_ = Error::UnescapedCharacter;
-                    return Token(Token::Type::Unknown);
-                } else { // c == '\\'
+                    return Token::Type::Unknown;
+                } else {
                     has_escape = true;
                     ptr += byte_idx + 2;
-                    continue; // RESUME AVX2 SIMD!
+                    continue;
                 }
             }
             ptr += kBlockSize;
@@ -226,4 +243,4 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
     }
 };
 
-} // namespace zuu::tokenizer
+} // namespace zuu::lexer::engine

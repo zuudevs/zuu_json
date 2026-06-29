@@ -133,9 +133,9 @@
 },
 {
   "directory": "D:/Project/zuu_json/build",
-  "command": "D:\\program\\LLVM\\bin\\clang++.exe -DBENCHMARK_STATIC_DEFINE -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -ID:/Project/zuu_json/tests -ID:/Project/zuu_json/build/_deps/benchmark-src/include -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -mavx2 -o CMakeFiles\\zuu_json_benchmark.dir\\tests\\bm_tokenizer.cpp.obj -c D:\\Project\\zuu_json\\tests\\bm_tokenizer.cpp",
-  "file": "D:/Project/zuu_json/tests/bm_tokenizer.cpp",
-  "output": "D:/Project/zuu_json/build/CMakeFiles/zuu_json_benchmark.dir/tests/bm_tokenizer.cpp.obj"
+  "command": "D:\\program\\LLVM\\bin\\clang++.exe -DBENCHMARK_STATIC_DEFINE -ID:/Project/zuu_json/include -ID:/Project/zuu_json/internal -ID:/Project/zuu_json/tests -ID:/Project/zuu_json/build/_deps/benchmark-src/include -O3 -DNDEBUG -std=c++23 -D_DLL -D_MT -Xclang --dependent-lib=msvcrt -flto=thin -O3 -march=native -mtune=native -DNDEBUG -ffunction-sections -fdata-sections -mavx2 -o CMakeFiles\\zuu_json_benchmark.dir\\tests\\bm_lexer.cpp.obj -c D:\\Project\\zuu_json\\tests\\bm_lexer.cpp",
+  "file": "D:/Project/zuu_json/tests/bm_lexer.cpp",
+  "output": "D:/Project/zuu_json/build/CMakeFiles/zuu_json_benchmark.dir/tests/bm_lexer.cpp.obj"
 },
 {
   "directory": "D:/Project/zuu_json/build",

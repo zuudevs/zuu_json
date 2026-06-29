@@ -18,7 +18,7 @@ namespace zuu::parser {
  * @brief Fused Parser Engine berbasis Policy.
  * Mengambil token langsung dari TokenizerEngine yang di-inject.
  */
-template <typename Policy>
+template <typename Policy = DefaultPolicy>
 class Parser {
   public:
     template <typename TokenizerEngine>

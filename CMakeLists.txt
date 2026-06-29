@@ -151,7 +151,7 @@ if(ENABLE_BENCHMARK)
 		${CMAKE_SOURCE_DIR}/tests/bm_serializer.cpp
 		${CMAKE_SOURCE_DIR}/tests/bm_storage.cpp
 		${CMAKE_SOURCE_DIR}/tests/bm_strings.cpp
-		${CMAKE_SOURCE_DIR}/tests/bm_tokenizer.cpp
+		${CMAKE_SOURCE_DIR}/tests/bm_lexer.cpp
         ${CMAKE_SOURCE_DIR}/tests/bm_main.cpp
     )
 

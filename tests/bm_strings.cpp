@@ -11,7 +11,7 @@
 #include <string>
 #include <span>
 #include "parser/parser.hpp"
-#include "tokenizer/tokenizer.hpp"
+#include "lexer/lexer.hpp"
 
 using namespace zuu;
 
@@ -45,10 +45,10 @@ static const std::string escaped_json = generate_string_array(20000, true);
 static void BM_SWAR_String_Tokenizer_Plain(benchmark::State& state) {
     std::span<const char> raw(plain_json);
     for (auto _ : state) {
-        tokenizer::SwarPolicy::Engine tokenizer(raw);
+        lexer::SwarPolicy::Engine lexer(raw);
         while (true) {
-            auto tok = tokenizer.next_token();
-            if (tok.type_ == models::Token::Type::EndOfFile || tokenizer.is_error()) break;
+            auto tok = lexer.next_token();
+            if (tok.type_ == models::Token::Type::EndOfFile || lexer.is_error()) break;
             benchmark::DoNotOptimize(tok);
         }
         benchmark::ClobberMemory();
@@ -60,10 +60,10 @@ BENCHMARK(BM_SWAR_String_Tokenizer_Plain)->Unit(benchmark::kNanosecond)->MinTime
 static void BM_SWAR_String_Tokenizer_Escaped(benchmark::State& state) {
     std::span<const char> raw(escaped_json);
     for (auto _ : state) {
-        tokenizer::SwarPolicy::Engine tokenizer(raw);
+        lexer::SwarPolicy::Engine lexer(raw);
         while (true) {
-            auto tok = tokenizer.next_token();
-            if (tok.type_ == models::Token::Type::EndOfFile || tokenizer.is_error()) break;
+            auto tok = lexer.next_token();
+            if (tok.type_ == models::Token::Type::EndOfFile || lexer.is_error()) break;
             benchmark::DoNotOptimize(tok);
         }
         benchmark::ClobberMemory();
@@ -77,12 +77,12 @@ BENCHMARK(BM_SWAR_String_Tokenizer_Escaped)->Unit(benchmark::kNanosecond)->MinTi
 
 static void BM_SWAR_String_Parser_Plain(benchmark::State& state) {
     std::span<const char> raw(plain_json);
-    tokenizer::SwarPolicy::Engine tokenizer(raw);
-    auto hint = tokenizer.pre_scan();
+    lexer::SwarPolicy::Engine lexer(raw);
+    auto hint = lexer.pre_scan();
 
     for (auto _ : state) {
-        tokenizer.reset();
-        auto parsed = parser::Parser<parser::DefaultPolicy>::Parse(tokenizer, hint);
+        lexer.reset();
+        auto parsed = parser::Parser<parser::DefaultPolicy>::Parse(lexer, hint);
         benchmark::DoNotOptimize(parsed);
         benchmark::ClobberMemory();
     }
@@ -92,12 +92,12 @@ BENCHMARK(BM_SWAR_String_Parser_Plain)->Unit(benchmark::kNanosecond)->MinTime(1.
 
 static void BM_SWAR_String_Parser_Escaped(benchmark::State& state) {
     std::span<const char> raw(escaped_json);
-    tokenizer::SwarPolicy::Engine tokenizer(raw);
-    auto hint = tokenizer.pre_scan();
+    lexer::SwarPolicy::Engine lexer(raw);
+    auto hint = lexer.pre_scan();
 
     for (auto _ : state) {
-        tokenizer.reset();
-        auto parsed = parser::Parser<parser::DefaultPolicy>::Parse(tokenizer, hint);
+        lexer.reset();
+        auto parsed = parser::Parser<parser::DefaultPolicy>::Parse(lexer, hint);
         benchmark::DoNotOptimize(parsed);
         benchmark::ClobberMemory();
     }
@@ -110,10 +110,10 @@ BENCHMARK(BM_SWAR_String_Parser_Escaped)->Unit(benchmark::kNanosecond)->MinTime(
 static void BM_AVX2_String_Tokenizer_Plain(benchmark::State& state) {
     std::span<const char> raw(plain_json);
     for (auto _ : state) {
-        tokenizer::Avx2Policy::Engine tokenizer(raw);
+        lexer::Avx2Policy::Engine lexer(raw);
         while (true) {
-            auto tok = tokenizer.next_token();
-            if (tok.type_ == models::Token::Type::EndOfFile || tokenizer.is_error()) break;
+            auto tok = lexer.next_token();
+            if (tok.type_ == models::Token::Type::EndOfFile || lexer.is_error()) break;
             benchmark::DoNotOptimize(tok);
         }
         benchmark::ClobberMemory();
@@ -125,10 +125,10 @@ BENCHMARK(BM_AVX2_String_Tokenizer_Plain)->Unit(benchmark::kNanosecond)->MinTime
 static void BM_AVX2_String_Tokenizer_Escaped(benchmark::State& state) {
     std::span<const char> raw(escaped_json);
     for (auto _ : state) {
-        tokenizer::Avx2Policy::Engine tokenizer(raw);
+        lexer::Avx2Policy::Engine lexer(raw);
         while (true) {
-            auto tok = tokenizer.next_token();
-            if (tok.type_ == models::Token::Type::EndOfFile || tokenizer.is_error()) break;
+            auto tok = lexer.next_token();
+            if (tok.type_ == models::Token::Type::EndOfFile || lexer.is_error()) break;
             benchmark::DoNotOptimize(tok);
         }
         benchmark::ClobberMemory();
@@ -141,12 +141,12 @@ BENCHMARK(BM_AVX2_String_Tokenizer_Escaped)->Unit(benchmark::kNanosecond)->MinTi
 
 static void BM_AVX2_String_Parser_Plain(benchmark::State& state) {
     std::span<const char> raw(plain_json);
-    tokenizer::Avx2Policy::Engine tokenizer(raw);
-    auto hint = tokenizer.pre_scan();
+    lexer::Avx2Policy::Engine lexer(raw);
+    auto hint = lexer.pre_scan();
 
     for (auto _ : state) {
-        tokenizer.reset();
-        auto parsed = parser::Parser<parser::Avx2Policy>::Parse(tokenizer, hint);
+        lexer.reset();
+        auto parsed = parser::Parser<parser::Avx2Policy>::Parse(lexer, hint);
         benchmark::DoNotOptimize(parsed);
         benchmark::ClobberMemory();
     }
@@ -156,12 +156,12 @@ BENCHMARK(BM_AVX2_String_Parser_Plain)->Unit(benchmark::kNanosecond)->MinTime(1.
 
 static void BM_AVX2_String_Parser_Escaped(benchmark::State& state) {
     std::span<const char> raw(escaped_json);
-    tokenizer::Avx2Policy::Engine tokenizer(raw);
-    auto hint = tokenizer.pre_scan();
+    lexer::Avx2Policy::Engine lexer(raw);
+    auto hint = lexer.pre_scan();
 
     for (auto _ : state) {
-        tokenizer.reset();
-        auto parsed = parser::Parser<parser::Avx2Policy>::Parse(tokenizer, hint);
+        lexer.reset();
+        auto parsed = parser::Parser<parser::Avx2Policy>::Parse(lexer, hint);
         benchmark::DoNotOptimize(parsed);
         benchmark::ClobberMemory();
     }
