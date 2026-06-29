@@ -15,6 +15,7 @@
 #include "models/token.hpp"
 #include "utils/parser.hpp"
 #include "utils/strings.hpp"
+#include "models/fast_stack.hpp"
 #include "zuu_json/core/error.hpp"
 #include <expected>
 #include <cstring>
@@ -41,8 +42,6 @@ class ParserBase {
     explicit ParserBase(LexerEngine& tokenizer) noexcept
         : lexer_(tokenizer) {
         advance();
-        array_stack_.reserve(512);
-        object_stack_.reserve(512);
     }
 
     [[nodiscard]] Expected result() && noexcept {
@@ -65,8 +64,8 @@ class ParserBase {
     Token current_token_{Token::Type::Unknown};
     Storage res_;
     Error status_{core::JsonError::None};
-    std::vector<JsonValue> array_stack_;
-    std::vector<JsonMember> object_stack_;
+    models::FastStack<JsonValue> array_stack_;
+    models::FastStack<JsonMember> object_stack_;
     
     uint32_t depth_{0};
     static constexpr uint32_t kMaxDepth = 512;
@@ -102,7 +101,7 @@ class ParserBase {
             if (ptr >= end) {
 				break;
 			}
-			
+
             ++ptr; 
             if (ptr >= end) {
 				break;
