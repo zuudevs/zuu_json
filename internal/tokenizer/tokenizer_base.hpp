@@ -16,6 +16,7 @@
 #include "utils/compiler.hpp"
 #include <span>
 #include <cstring>
+#include <bit>
 
 namespace zuu::tokenizer {
 
@@ -151,6 +152,21 @@ class TokenizerBase {
         const char* begin = current_;
         auto type = Token::Type::Integer;
         auto skip_digits = [this]() noexcept {
+            while (current_ + sizeof(uint64_t) <= end_) {
+                uint64_t block{};
+                std::memcpy(&block, current_, sizeof(uint64_t));
+                
+                uint64_t val = block - constants::swar8_zero;
+                uint64_t non_digits = ((val + constants::swar8_digit_bias) | val) & constants::swar8_msb;
+                
+                if (non_digits == 0) {
+                    current_ += sizeof(uint64_t);
+                } else {
+                    current_ += (std::countr_zero(non_digits) >> 3);
+                    return;
+                }
+            }
+            // Tail / Fallback untuk sisa karakter (kurang dari 8 byte)
             while (current_ < end_ && static_cast<unsigned char>(*current_ - '0') < constants::digit) {
                 current_++;
             }
