@@ -83,8 +83,8 @@ void Serializer::serializeString(std::string_view str) noexcept {
             uint64_t block{};
             std::memcpy(&block, ptr, sizeof(uint64_t));
 
-            uint64_t quote_mask  = utils::find_zero_byte_mask(block ^ constants::swar8_doublequote);
-            uint64_t escape_mask = utils::find_zero_byte_mask(block ^ constants::swar8_escape);
+            uint64_t quote_mask  = utils::find_zero_byte_mask(block ^ constants::swar8_dqt);
+            uint64_t escape_mask = utils::find_zero_byte_mask(block ^ constants::swar8_esc);
             // Magic Bitwise: Mengidentifikasi byte yang nilainya < 0x20 (Control Characters)
             // (block - 0x20...) akan memicu 'borrow' dan membalikkan MSB jika byte < 0x20.
             uint64_t ctrl_mask   = (block - constants::swar8_sp) & ~block & constants::swar8_msb;
