@@ -61,10 +61,7 @@ class ParserBase {
     TokenizerEngine& tokenizer_;
     Token current_token_{Token::Type::Unknown};
     Storage res_;
-    uint32_t current_depth_{0};
     Error status_{core::JsonError::None};
-
-    static constexpr uint32_t kMaxDepth = 512;
 
     [[nodiscard]] inline Derived& derived() noexcept {
         return *static_cast<Derived*>(this);
@@ -210,16 +207,10 @@ class ParserBase {
     }
 
     [[nodiscard]] JsonValue buildArray() noexcept {
-        if (++current_depth_ > kMaxDepth) [[unlikely]] {
-            status_ = core::JsonError::DepthLimitExceeded;
-            return JsonValue::Null();
-        }
-
         advance();
 
         if (current_token_.type_ == TokenType::RightSquareBracket) {
             advance();
-            --current_depth_;
             return JsonValue::Array(res_.sealArray(res_.getArrayOffset()));
         }
 
@@ -258,7 +249,6 @@ class ParserBase {
 
             if (current_token_.type_ == TokenType::RightSquareBracket) {
                 advance();
-                --current_depth_;
                 return JsonValue::Array(res_.sealArray(start_offset));
             }
 
@@ -268,16 +258,10 @@ class ParserBase {
     }
 
     [[nodiscard]] JsonValue buildObject() noexcept {
-        if (++current_depth_ > kMaxDepth) [[unlikely]] {
-            status_ = core::JsonError::DepthLimitExceeded;
-            return JsonValue::Null();
-        }
-
         advance();
 
         if (current_token_.type_ == TokenType::RightCurlyBracket) {
             advance();
-            --current_depth_;
             return JsonValue::Object(res_.sealObject(res_.getObjectOffset()));
         }
 
@@ -350,7 +334,6 @@ class ParserBase {
 
             if (current_token_.type_ == TokenType::RightCurlyBracket) [[likely]] {
                 advance();
-                --current_depth_;
                 return JsonValue::Object(res_.sealObject(start_offset));
             }
 

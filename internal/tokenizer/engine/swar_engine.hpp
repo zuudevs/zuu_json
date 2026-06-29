@@ -26,11 +26,14 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
 
     [[nodiscard]] Hint pre_scan() noexcept {
         Hint hint{};
+        int32_t depth = 0;
         const char* ptr = this->begin_ptr_;
         const char* end = this->end_;
 
         const uint64_t v_obj = constants::repeat_byte<uint64_t>('{');
         const uint64_t v_arr = constants::repeat_byte<uint64_t>('[');
+        const uint64_t v_obj_e = constants::repeat_byte<uint64_t>('}');
+        const uint64_t v_arr_e = constants::repeat_byte<uint64_t>(']');
         const uint64_t v_com = constants::repeat_byte<uint64_t>(',');
         const uint64_t v_quo = constants::swar8_doublequote;
         const uint64_t v_esc = constants::swar8_escape;
@@ -41,10 +44,12 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
 
             uint64_t m_obj = utils::find_zero_byte_mask(chunk ^ v_obj);
             uint64_t m_arr = utils::find_zero_byte_mask(chunk ^ v_arr);
+            uint64_t m_obj_e = utils::find_zero_byte_mask(chunk ^ v_obj_e);
+            uint64_t m_arr_e = utils::find_zero_byte_mask(chunk ^ v_arr_e);
             uint64_t m_com = utils::find_zero_byte_mask(chunk ^ v_com);
             uint64_t m_quo = utils::find_zero_byte_mask(chunk ^ v_quo);
 
-            uint64_t mask = m_obj | m_arr | m_com | m_quo;
+            uint64_t mask = m_obj | m_arr | m_obj_e | m_arr_e | m_com | m_quo;
 
             while (mask != 0) {
                 uint32_t bit_pos = std::countr_zero(mask);
@@ -94,8 +99,12 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
                     goto next_chunk; // Restart jendela dari posisi ini
                 } else if (c == '{') {
                     hint.object_count_++;
+                    if (++depth > this->kMaxDepth) { this->status_ = Error::DepthLimitExceeded; return hint; }
                 } else if (c == '[') {
                     hint.array_count_++;
+                    if (++depth > this->kMaxDepth) { this->status_ = Error::DepthLimitExceeded; return hint; }
+                } else if (c == '}' || c == ']') {
+                    depth--;
                 } else if (c == ',') {
                     hint.comma_count_++;
                 }
@@ -109,8 +118,17 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
         // Tail / Fallback untuk sisa byte di ujung file
         while (ptr < end) {
             switch (*ptr) {
-                case '{': hint.object_count_++; break;
-                case '[': hint.array_count_++; break;
+                case '{': 
+                    hint.object_count_++; 
+                    if (++depth > this->kMaxDepth) { this->status_ = Error::DepthLimitExceeded; return hint; }
+                    break;
+                case '[': 
+                    hint.array_count_++; 
+                    if (++depth > this->kMaxDepth) { this->status_ = Error::DepthLimitExceeded; return hint; }
+                    break;
+                case '}': case ']': 
+                    depth--; 
+                    break;
                 case ',': hint.comma_count_++; break;
                 case '"': {
                     hint.string_count_++;

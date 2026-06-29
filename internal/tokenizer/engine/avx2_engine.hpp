@@ -52,12 +52,15 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
 
     [[nodiscard]] Hint pre_scan() noexcept {
         Hint hint{};
+        int32_t depth = 0;
         const char* ptr = this->begin_ptr_;
         const char* end = this->end_;
 
 #ifdef __AVX2__
         const __m256i v_obj = _mm256_set1_epi8('{');
         const __m256i v_arr = _mm256_set1_epi8('[');
+        const __m256i v_obj_e = _mm256_set1_epi8('}');
+        const __m256i v_arr_e = _mm256_set1_epi8(']');
         const __m256i v_com = _mm256_set1_epi8(',');
         const __m256i v_quo = _mm256_set1_epi8('"');
         const __m256i v_esc = _mm256_set1_epi8('\\');
@@ -67,12 +70,17 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
             
             __m256i m_obj = _mm256_cmpeq_epi8(chunk, v_obj);
             __m256i m_arr = _mm256_cmpeq_epi8(chunk, v_arr);
+            __m256i m_obj_e = _mm256_cmpeq_epi8(chunk, v_obj_e);
+            __m256i m_arr_e = _mm256_cmpeq_epi8(chunk, v_arr_e);
             __m256i m_com = _mm256_cmpeq_epi8(chunk, v_com);
             __m256i m_quo = _mm256_cmpeq_epi8(chunk, v_quo);
 
             // Kombinasikan semua mask
-            __m256i match = _mm256_or_si256(_mm256_or_si256(m_obj, m_arr), 
-                                            _mm256_or_si256(m_com, m_quo));
+            __m256i match1 = _mm256_or_si256(_mm256_or_si256(m_obj, m_arr), 
+                                             _mm256_or_si256(m_obj_e, m_arr_e));
+            __m256i match2 = _mm256_or_si256(m_com, m_quo);
+            __m256i match = _mm256_or_si256(match1, match2);
+            
             uint32_t mask = _mm256_movemask_epi8(match);
 
             while (mask != 0) {
@@ -121,8 +129,12 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
                     goto next_chunk; // Restart jendela 32-byte dari posisi ini
                 } else if (c == '{') {
                     hint.object_count_++;
+                    if (++depth > this->kMaxDepth) { this->status_ = Error::DepthLimitExceeded; return hint; }
                 } else if (c == '[') {
                     hint.array_count_++;
+                    if (++depth > this->kMaxDepth) { this->status_ = Error::DepthLimitExceeded; return hint; }
+                } else if (c == '}' || c == ']') {
+                    depth--;
                 } else if (c == ',') {
                     hint.comma_count_++;
                 }
@@ -137,8 +149,17 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
         // Tail / Fallback untuk sisa byte
         while (ptr < end) {
             switch (*ptr) {
-                case '{': hint.object_count_++; break;
-                case '[': hint.array_count_++; break;
+                case '{': 
+                    hint.object_count_++; 
+                    if (++depth > this->kMaxDepth) { this->status_ = Error::DepthLimitExceeded; return hint; }
+                    break;
+                case '[': 
+                    hint.array_count_++; 
+                    if (++depth > this->kMaxDepth) { this->status_ = Error::DepthLimitExceeded; return hint; }
+                    break;
+                case '}': case ']':
+                    depth--;
+                    break;
                 case ',': hint.comma_count_++; break;
                 case '"': {
                     hint.string_count_++;
