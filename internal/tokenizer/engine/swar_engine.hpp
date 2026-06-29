@@ -178,9 +178,9 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
     }
 
     ZUU_HOT ZUU_ALWAYS_INLINE Token read_string() noexcept {
-        const char* begin = ++current_;
+        const char* begin = ++this->current_;
         const char* ptr = begin;
-        const char* end = end_;
+        const char* end = this->end_;
         bool has_escape = false;
 
         while (ptr + kBlockSize <= end) {
@@ -197,18 +197,23 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
 
             uint64_t combined_mask = match_mask | ctrl_mask;
             if (combined_mask != 0) {
-                auto byte_idx = static_cast<uint32_t>(std::countr_zero(combined_mask) >> 3);
-                auto c = ptr[byte_idx];
+                uint32_t byte_idx = static_cast<uint32_t>(std::countr_zero(combined_mask) >> 3);
+                char c = ptr[byte_idx];
 
-                if (static_cast<uint8_t>(c) < 0x20) {
-                    status_ = Error::UnescapedCharacter; 
+                if (c == '"') [[likely]] {
+                    this->current_ = ptr + byte_idx + 1;
+                    return Token(
+                        Token::Type::String, 
+                        std::string_view(begin, (ptr + byte_idx) - begin), 
+                        has_escape
+                    );
+                } else if (static_cast<uint8_t>(c) < 0x20) [[unlikely]] {
+                    this->status_ = Error::UnescapedCharacter; 
                     return Token(Token::Type::Unknown);
-                } else if (c == '\"') {
-                    current_ = ptr + byte_idx + 1;
-                    return Token(Token::Type::String, std::string_view(begin, (ptr + byte_idx) - begin), has_escape);
-                } else {
-                    ptr += byte_idx;
-                    break;
+                } else { // c == '\\'
+                    has_escape = true;
+                    ptr += byte_idx + 2;
+                    continue; // RESUME SIMD!
                 }
             }
             ptr += sizeof(uint64_t);

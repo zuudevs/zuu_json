@@ -80,7 +80,8 @@ class ParserBase {
         uint32_t d2 = traits::LookupTrait<char>::hex.datas_[static_cast<uint8_t>(ptr[2])];
         uint32_t d3 = traits::LookupTrait<char>::hex.datas_[static_cast<uint8_t>(ptr[3])];
 
-        if ((d0 | d1 | d2 | d3) > constants::hex_alpha_max_val) [[unlikely]] {
+        uint32_t combined = d0 | d1 | d2 | d3;
+        if (combined > constants::hex_alpha_max_val) [[unlikely]] {
             status_ = core::JsonError::InvalidValue;
             return constants::zero;
         }
