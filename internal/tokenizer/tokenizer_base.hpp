@@ -32,6 +32,8 @@ class TokenizerBase {
     using Hint = traits::HintTrait<Token>;
     using Raw = std::span<const char>;
 
+    static constexpr int32_t kMaxDepth = 512;
+
     explicit TokenizerBase(Raw json_content) noexcept
         : begin_ptr_(json_content.data())
         , current_(json_content.data())
@@ -39,11 +41,21 @@ class TokenizerBase {
 
     [[nodiscard]] Hint pre_scan() noexcept {
         Hint hint{};
+        int32_t depth = 0;
         const char* ptr = begin_ptr_;
         while (ptr < end_) {
             switch (*ptr) {
-                case '{': hint.object_count_++; break;
-                case '[': hint.array_count_++; break;
+                case '{': 
+                    hint.object_count_++; 
+                    if (++depth > kMaxDepth) { status_ = Error::DepthLimitExceeded; return hint; }
+                    break;
+                case '[': 
+                    hint.array_count_++; 
+                    if (++depth > kMaxDepth) { status_ = Error::DepthLimitExceeded; return hint; }
+                    break;
+                case '}': case ']':
+                    depth--; 
+                    break;
                 case ',': hint.comma_count_++; break;
                 case '"': {
                     hint.string_count_++;
