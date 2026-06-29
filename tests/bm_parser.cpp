@@ -2,9 +2,10 @@
  * @file bm_parser.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Deep profiling for Parser and Arena Allocation
- * @version 1.1.0
+ * @version 1.5.0
  * @date 2026-06-29
- * * @copyright Copyright (c) 2026
+ * 
+ * @copyright Copyright (c) 2026
  */
 
 #include <benchmark/benchmark.h>
@@ -26,14 +27,9 @@ using namespace zuu;
         }                                                                                                                 \
         auto raw = std::span<const char>(data);																			  \
         lexer::SwarPolicy::Engine tokenizer(raw);                                                                     \
-        auto hint = tokenizer.pre_scan();                                                                                 \
-        if (tokenizer.is_error()) {                                                                                       \
-            state.SkipWithError("Setup gagal: Tokenisasi pre-scan error.");                                               \
-            return;                                                                                                       \
-        }                                                                                                                 \
         for (auto _ : state) {                                                                                            \
             tokenizer.reset();                                                                                            \
-            auto parsed = parser::Parser<parser::DefaultPolicy>::Parse(tokenizer, hint);                                  \
+            auto parsed = parser::Parser<parser::DefaultPolicy>::Parse(tokenizer);                                  \
             benchmark::DoNotOptimize(parsed);                                                                             \
             benchmark::ClobberMemory();                                                                                   \
         }                                                                                                                 \
@@ -48,14 +44,9 @@ using namespace zuu;
         }                                                                                                                 \
         auto raw = std::span<const char>(data);																			  \
         lexer::Avx2Policy::Engine tokenizer(raw);                                                                     \
-        auto hint = tokenizer.pre_scan();                                                                                 \
-        if (tokenizer.is_error()) {                                                                                       \
-            state.SkipWithError("Setup gagal: Tokenisasi pre-scan error.");                                               \
-            return;                                                                                                       \
-        }                                                                                                                 \
         for (auto _ : state) {                                                                                            \
             tokenizer.reset();                                                                                            \
-            auto parsed = parser::Parser<parser::Avx2Policy>::Parse(tokenizer, hint);                                     \
+            auto parsed = parser::Parser<parser::Avx2Policy>::Parse(tokenizer);                                     \
             benchmark::DoNotOptimize(parsed);                                                                             \
             benchmark::ClobberMemory();                                                                                   \
         }                                                                                                                 \

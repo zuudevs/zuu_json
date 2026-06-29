@@ -1,8 +1,8 @@
 /**
  * @file tokenizer.hpp
  * @author zuudevs (zuudevs@gmail.com)
- * @brief Policy-Based Tokenizer Orchestrator (Backward Compatibility)
- * @version 1.2.0
+ * @brief Policy-Based Tokenizer Orchestrator
+ * @version 1.5.0
  * @date 2026-06-29
  *
  * @copyright Copyright (c) 2026
@@ -26,19 +26,14 @@ template <typename Policy = DefaultPolicy>
 class Lexer {
   public:
     using Engine   = typename Policy::Engine;
-    using Expected = std::expected<std::pair<std::vector<models::Token>, traits::HintTrait<models::Token>>, core::JsonError>;
+    using Expected = std::expected<std::vector<models::Token>, core::JsonError>;
     using Raw      = std::span<const char>;
 
     [[nodiscard]] static Expected Tokenize(Raw json_content) noexcept {
         Engine engine(json_content);
         
-        auto hint = engine.pre_scan();
-        if (engine.is_error()) {
-			return std::unexpected{engine.get_error()};
-		}
-
         std::vector<models::Token> res;
-        res.reserve((json_content.size() >> 1) + constants::word);
+        res.reserve(json_content.size() >> 1);
         
         while(true) {
             auto tok = engine.next_token();
@@ -52,7 +47,7 @@ class Lexer {
             return std::unexpected{engine.get_error()};
         }
         
-        return std::pair{std::move(res), hint};
+        return res;
     }
 };
 

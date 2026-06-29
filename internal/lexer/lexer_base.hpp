@@ -2,7 +2,7 @@
  * @file tokenizer_base.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief CRTP Base for Fused Streaming Tokenizer Backends
- * @version 1.2.0
+ * @version 1.5.0
  * @date 2026-06-29
  *
  * @copyright Copyright (c) 2026
@@ -30,77 +30,12 @@ class LexerBase {
     using Token  = models::Token;
     using Lookup = traits::LookupTrait<Token>;
     using Error  = core::JsonError;
-    using Hint   = traits::HintTrait<Token>;
     using Raw    = std::span<const char>;
-
-    static constexpr int32_t kMaxDepth = 512;
 
     explicit LexerBase(Raw json_content) noexcept
         : begin_ptr_(json_content.data())
         , current_(json_content.data())
         , end_(json_content.data() + json_content.size()) {}
-
-    [[nodiscard]] Hint pre_scan() noexcept {
-        Hint hint{};
-
-        int32_t depth   = constants::zero;
-        const char* ptr = begin_ptr_;
-
-        while (ptr < end_) {
-            switch (*ptr) {
-                case '{': {
-                    hint.object_count_++; 
-                    if (++depth > kMaxDepth) { 
-						status_ = Error::DepthLimitExceeded; 
-						return hint; 
-					}
-                    break;
-				}
-                case '[': {
-                    hint.array_count_++; 
-                    if (++depth > kMaxDepth) { 
-						status_ = Error::DepthLimitExceeded; 
-						return hint; 
-					}
-                    break;
-				}
-                case '}': 
-				case ']': {
-                    depth--; 
-                    break;
-				}
-                case ',': {
-					hint.comma_count_++; 
-					break;
-				}
-                case '\"': {
-                    hint.string_count_++;
-                    const char* start = ptr;
-                    bool has_escape = false;
-                    ++ptr;
-                    while (ptr < end_) {
-                        if (*ptr == '\"') {
-							break;
-						}
-                        if (*ptr == '\\') {
-                            has_escape = true;
-                            ptr += 2;
-                            continue;
-                        }
-                        ptr++;
-                    }
-                    if (has_escape) {
-                        hint.string_escape_bytes_ += (ptr - start);
-                    }
-                    break;
-                }
-                default: break;
-            }
-            ptr++;
-        }
-        reset();
-        return hint;
-    }
 
     void reset() noexcept {
         current_ = begin_ptr_;

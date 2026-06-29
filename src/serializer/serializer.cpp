@@ -19,16 +19,11 @@ namespace zuu::serializer {
 Serializer::Serializer(const models::Storage* storage, int indent) noexcept
     : indent_(indent), storage_(storage) {
     
-    // HEURISTIC PRE-ALLOCATION
-    // Alih-alih 4KB statis, kita menebak kapasitas akhir berdasarkan isi DOM.
-    // Rata-rata 1 elemen/member memakan sekitar ~24 bytes (termasuk koma, kutip, spasi).
     std::size_t estimated_size = 4096; 
     if (storage) {
-        estimated_size += (storage->getArrayOffset() + storage->getObjectOffset()) * 24;
+        estimated_size += (storage->getArrayElementsCount() + storage->getObjectElementsCount()) * 24;
     }
     
-    // Melakukan reserve tepat di awal membunuh puluhan realokasi std::string 
-    // saat proses serialize berjalan.
     out_.reserve(estimated_size);
 }
 
@@ -63,7 +58,6 @@ void Serializer::serializeValue(const models::JsonValue& value) noexcept {
 void Serializer::serializeString(std::string_view str) noexcept {
     out_ += '"';
     
-    // Lookup Table untuk mendeteksi Control Characters (0x00-0x1F), '"', dan '\' secara O(1)
     static constexpr auto needs_escape = []() {
         std::array<bool, 256> arr{};
         for (int i = 0; i < 0x20; ++i) arr[i] = true;
@@ -77,16 +71,12 @@ void Serializer::serializeString(std::string_view str) noexcept {
     const char* start = ptr;
 
     while (ptr < end) {
-        // SWAR (SIMD-Within-A-Register) FAST-PATH
-        // Memindai 8-byte sekaligus mencari \", \\, atau control character (< 0x20)
         while (ptr + sizeof(uint64_t) <= end) {
             uint64_t block{};
             std::memcpy(&block, ptr, sizeof(uint64_t));
 
             uint64_t quote_mask  = utils::find_zero_byte_mask(block ^ constants::swar8_dqt);
             uint64_t escape_mask = utils::find_zero_byte_mask(block ^ constants::swar8_esc);
-            // Magic Bitwise: Mengidentifikasi byte yang nilainya < 0x20 (Control Characters)
-            // (block - 0x20...) akan memicu 'borrow' dan membalikkan MSB jika byte < 0x20.
             uint64_t ctrl_mask   = (block - constants::swar8_sp) & ~block & constants::swar8_msb;
 
             uint64_t mask = quote_mask | escape_mask | ctrl_mask;
@@ -97,7 +87,6 @@ void Serializer::serializeString(std::string_view str) noexcept {
             ptr += sizeof(uint64_t);
         }
 
-        // Fallback untuk sisa string di akhir blok ( < 8 bytes)
         while (ptr < end && !needs_escape[static_cast<unsigned char>(*ptr)]) {
             ++ptr;
         }
