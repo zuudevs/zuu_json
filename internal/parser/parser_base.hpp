@@ -11,7 +11,6 @@
 #pragma once
 
 #include "constants/general.hpp"
-#include "models/depth_guard.hpp"
 #include "models/storage.hpp"
 #include "utils/parser.hpp"
 #include "utils/strings.hpp"
@@ -211,16 +210,16 @@ class ParserBase {
     }
 
     [[nodiscard]] JsonValue buildArray() noexcept {
-        if (current_depth_ >= kMaxDepth) [[unlikely]] {
+        if (++current_depth_ > kMaxDepth) [[unlikely]] {
             status_ = core::JsonError::DepthLimitExceeded;
             return JsonValue::Null();
         }
-        models::DepthGuard guard(current_depth_);
 
         advance();
 
         if (current_token_.type_ == TokenType::RightSquareBracket) {
             advance();
+            --current_depth_;
             return JsonValue::Array(res_.sealArray(res_.getArrayOffset()));
         }
 
@@ -259,6 +258,7 @@ class ParserBase {
 
             if (current_token_.type_ == TokenType::RightSquareBracket) {
                 advance();
+                --current_depth_;
                 return JsonValue::Array(res_.sealArray(start_offset));
             }
 
@@ -268,16 +268,16 @@ class ParserBase {
     }
 
     [[nodiscard]] JsonValue buildObject() noexcept {
-        if (current_depth_ >= kMaxDepth) [[unlikely]] {
+        if (++current_depth_ > kMaxDepth) [[unlikely]] {
             status_ = core::JsonError::DepthLimitExceeded;
             return JsonValue::Null();
         }
-        models::DepthGuard guard(current_depth_);
 
         advance();
 
         if (current_token_.type_ == TokenType::RightCurlyBracket) {
             advance();
+            --current_depth_;
             return JsonValue::Object(res_.sealObject(res_.getObjectOffset()));
         }
 
@@ -350,6 +350,7 @@ class ParserBase {
 
             if (current_token_.type_ == TokenType::RightCurlyBracket) [[likely]] {
                 advance();
+                --current_depth_;
                 return JsonValue::Object(res_.sealObject(start_offset));
             }
 

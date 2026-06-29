@@ -24,6 +24,121 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
     using TokenizerBase<SwarEngine>::TokenizerBase;
 	static inline constexpr uint8_t kBlockSize = sizeof(uint64_t);
 
+    [[nodiscard]] Hint pre_scan() noexcept {
+        Hint hint{};
+        const char* ptr = this->begin_ptr_;
+        const char* end = this->end_;
+
+        const uint64_t v_obj = constants::repeat_byte<uint64_t>('{');
+        const uint64_t v_arr = constants::repeat_byte<uint64_t>('[');
+        const uint64_t v_com = constants::repeat_byte<uint64_t>(',');
+        const uint64_t v_quo = constants::swar8_doublequote;
+        const uint64_t v_esc = constants::swar8_escape;
+
+        while (ptr + 8 <= end) {
+            uint64_t chunk{};
+            std::memcpy(&chunk, ptr, 8);
+
+            uint64_t m_obj = utils::find_zero_byte_mask(chunk ^ v_obj);
+            uint64_t m_arr = utils::find_zero_byte_mask(chunk ^ v_arr);
+            uint64_t m_com = utils::find_zero_byte_mask(chunk ^ v_com);
+            uint64_t m_quo = utils::find_zero_byte_mask(chunk ^ v_quo);
+
+            uint64_t mask = m_obj | m_arr | m_com | m_quo;
+
+            while (mask != 0) {
+                uint32_t bit_pos = std::countr_zero(mask);
+                uint32_t byte_pos = bit_pos >> 3;
+                char c = ptr[byte_pos];
+
+                if (c == '"') {
+                    hint.string_count_++;
+                    const char* start = ptr + byte_pos;
+                    const char* s_ptr = start + 1;
+                    bool has_escape = false;
+
+                    // SWAR Fast String Skip
+                    while (s_ptr + 8 <= end) {
+                        uint64_t s_chunk{};
+                        std::memcpy(&s_chunk, s_ptr, 8);
+                        uint64_t sq = utils::find_zero_byte_mask(s_chunk ^ v_quo);
+                        uint64_t se = utils::find_zero_byte_mask(s_chunk ^ v_esc);
+                        
+                        if (se == 0) {
+                            if (sq != 0) {
+                                s_ptr += (std::countr_zero(sq) >> 3);
+                                goto string_ended;
+                            }
+                            s_ptr += 8;
+                        } else {
+                            has_escape = true;
+                            break;
+                        }
+                    }
+
+                    // Scalar fallback
+                    while (s_ptr < end) {
+                        if (*s_ptr == '"') break;
+                        if (*s_ptr == '\\') {
+                            has_escape = true;
+                            s_ptr += 2;
+                            continue;
+                        }
+                        s_ptr++;
+                    }
+                string_ended:
+                    if (has_escape) {
+                        hint.string_escape_bytes_ += (s_ptr - start);
+                    }
+                    ptr = s_ptr + 1;
+                    goto next_chunk; // Restart jendela dari posisi ini
+                } else if (c == '{') {
+                    hint.object_count_++;
+                } else if (c == '[') {
+                    hint.array_count_++;
+                } else if (c == ',') {
+                    hint.comma_count_++;
+                }
+                
+                mask &= (mask - 1); // Clear bit MSB yang diproses
+            }
+            ptr += 8;
+        next_chunk:;
+        }
+
+        // Tail / Fallback untuk sisa byte di ujung file
+        while (ptr < end) {
+            switch (*ptr) {
+                case '{': hint.object_count_++; break;
+                case '[': hint.array_count_++; break;
+                case ',': hint.comma_count_++; break;
+                case '"': {
+                    hint.string_count_++;
+                    const char* start = ptr;
+                    bool has_escape = false;
+                    ++ptr;
+                    while (ptr < end) {
+                        if (*ptr == '"') break;
+                        if (*ptr == '\\') {
+                            has_escape = true;
+                            ptr += 2;
+                            continue;
+                        }
+                        ptr++;
+                    }
+                    if (has_escape) {
+                        hint.string_escape_bytes_ += (ptr - start);
+                    }
+                    break;
+                }
+                default: break;
+            }
+            ptr++;
+        }
+        this->reset();
+        return hint;
+    }
+
     ZUU_HOT ZUU_ALWAYS_INLINE void skip_whitespace() noexcept {
         while (current_ + kBlockSize <= end_) {
             uint64_t block{};

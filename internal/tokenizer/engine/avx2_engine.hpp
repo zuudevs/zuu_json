@@ -50,6 +50,123 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
 	alignas(32) static inline const __m256i simd32_31         = _mm256_set1_epi8(0x1F);
 #endif // __AVX2__
 
+    [[nodiscard]] Hint pre_scan() noexcept {
+        Hint hint{};
+        const char* ptr = this->begin_ptr_;
+        const char* end = this->end_;
+
+#ifdef __AVX2__
+        const __m256i v_obj = _mm256_set1_epi8('{');
+        const __m256i v_arr = _mm256_set1_epi8('[');
+        const __m256i v_com = _mm256_set1_epi8(',');
+        const __m256i v_quo = _mm256_set1_epi8('"');
+        const __m256i v_esc = _mm256_set1_epi8('\\');
+
+        while (ptr + 32 <= end) {
+            __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(ptr));
+            
+            __m256i m_obj = _mm256_cmpeq_epi8(chunk, v_obj);
+            __m256i m_arr = _mm256_cmpeq_epi8(chunk, v_arr);
+            __m256i m_com = _mm256_cmpeq_epi8(chunk, v_com);
+            __m256i m_quo = _mm256_cmpeq_epi8(chunk, v_quo);
+
+            // Kombinasikan semua mask
+            __m256i match = _mm256_or_si256(_mm256_or_si256(m_obj, m_arr), 
+                                            _mm256_or_si256(m_com, m_quo));
+            uint32_t mask = _mm256_movemask_epi8(match);
+
+            while (mask != 0) {
+                uint32_t bit_pos = std::countr_zero(mask);
+                char c = ptr[bit_pos];
+
+                if (c == '"') {
+                    hint.string_count_++;
+                    const char* start = ptr + bit_pos;
+                    const char* s_ptr = start + 1;
+                    bool has_escape = false;
+
+                    // AVX2 Fast String Skip
+                    while (s_ptr + 32 <= end) {
+                        __m256i s_chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(s_ptr));
+                        uint32_t m_q = _mm256_movemask_epi8(_mm256_cmpeq_epi8(s_chunk, v_quo));
+                        uint32_t m_e = _mm256_movemask_epi8(_mm256_cmpeq_epi8(s_chunk, v_esc));
+
+                        if (m_e == 0) {
+                            if (m_q != 0) {
+                                s_ptr += std::countr_zero(m_q);
+                                goto string_ended;
+                            }
+                            s_ptr += 32;
+                        } else {
+                            has_escape = true;
+                            break;
+                        }
+                    }
+
+                    // Scalar fallback
+                    while (s_ptr < end) {
+                        if (*s_ptr == '"') break;
+                        if (*s_ptr == '\\') {
+                            has_escape = true;
+                            s_ptr += 2;
+                            continue;
+                        }
+                        s_ptr++;
+                    }
+                string_ended:
+                    if (has_escape) {
+                        hint.string_escape_bytes_ += (s_ptr - start);
+                    }
+                    ptr = s_ptr + 1;
+                    goto next_chunk; // Restart jendela 32-byte dari posisi ini
+                } else if (c == '{') {
+                    hint.object_count_++;
+                } else if (c == '[') {
+                    hint.array_count_++;
+                } else if (c == ',') {
+                    hint.comma_count_++;
+                }
+                
+                mask &= (mask - 1); // Clear set bit terendah
+            }
+            ptr += 32;
+        next_chunk:;
+        }
+#endif
+
+        // Tail / Fallback untuk sisa byte
+        while (ptr < end) {
+            switch (*ptr) {
+                case '{': hint.object_count_++; break;
+                case '[': hint.array_count_++; break;
+                case ',': hint.comma_count_++; break;
+                case '"': {
+                    hint.string_count_++;
+                    const char* start = ptr;
+                    bool has_escape = false;
+                    ++ptr;
+                    while (ptr < end) {
+                        if (*ptr == '"') break;
+                        if (*ptr == '\\') {
+                            has_escape = true;
+                            ptr += 2;
+                            continue;
+                        }
+                        ptr++;
+                    }
+                    if (has_escape) {
+                        hint.string_escape_bytes_ += (ptr - start);
+                    }
+                    break;
+                }
+                default: break;
+            }
+            ptr++;
+        }
+        this->reset();
+        return hint;
+    }
+
     ZUU_HOT ZUU_ALWAYS_INLINE void skip_whitespace() noexcept {
 #ifdef __AVX2__
         while (current_ + kBlockSize <= end_) {
