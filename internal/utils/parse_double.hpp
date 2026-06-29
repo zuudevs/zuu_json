@@ -4,14 +4,15 @@
  * @brief 100% Exact Two-Tier Float Parser (Clinger's Fast Path + Eisel-Lemire Fallback)
  * @version 1.6.0
  * @date 2026-06-30
- * * @copyright Copyright (c) 2026
+ * 
+ * @copyright Copyright (c) 2026
  */
 
 #pragma once
 
 #include <cstdint>
 #include <expected>
-#include <charconv> // Untuk std::from_chars (Eisel-Lemire Fallback)
+#include <charconv>
 #include "constants/general.hpp"
 #include "traits/lookup_trait.hpp"
 #include "traits/parser_trait.hpp"
@@ -41,25 +42,24 @@ struct ParserTrait<double> {
     
     [[nodiscard]] inline constexpr Result
     operator()(const char* first, const char* last) const noexcept {
-        if (first == last) return std::unexpected{Error::InvalidFormat};
+        if (first == last) {
+			return std::unexpected{Error::InvalidFormat};
+		}
 
-        const char* ptr = first;
+        const char* ptr  = first;
         bool is_negative = (*ptr == '-');
         ptr += is_negative;
 
-        uint64_t mantissa = 0;
-        int32_t decimal_shift = 0;
-        int digits = 0;
+        uint64_t mantissa     = constants::zero;
+        int32_t decimal_shift = constants::zero;
+        int digits            = constants::zero;
 
-        // 1. Baca bagian Integer
-        // PENGHAPUSAN OVERHEAD: Kita asumsikan token sudah valid dari Lexer
         while (ptr != last && *ptr != '.' && *ptr != 'e' && *ptr != 'E') {
             mantissa = mantissa * 10ULL + (*ptr - '0');
             digits++;
             ++ptr;
         }
 
-        // 2. Baca bagian Desimal (Pecahan)
         if (ptr != last && *ptr == '.') {
             ++ptr;
             while (ptr != last && *ptr != 'e' && *ptr != 'E') {
@@ -70,36 +70,35 @@ struct ParserTrait<double> {
             }
         }
 
-        // 3. Baca bagian Eksponen (e atau E)
         if (ptr != last && (*ptr == 'e' || *ptr == 'E')) {
             ++ptr;
             bool exp_negative = (*ptr == '-');
             ptr += (exp_negative || *ptr == '+');
-            int32_t exponent = 0;
+            int32_t exponent = constants::zero;
             while (ptr != last) {
-                exponent = exponent * 10 + (*ptr - '0');
+                exponent = exponent * constants::digit + (*ptr - '0');
                 ++ptr;
             }
             decimal_shift += exp_negative ? -exponent : exponent;
         }
 
-        // --- TIER 1: Clinger's Fast Path ---
-        // Maksimum digit sebelum uint64_t overflow adalah 19.
-        // Batas representasi mantissa 53-bit yang exact adalah 9007199254740991ULL.
-        // Angka "100000000000000.0" sekarang akan ditangkap oleh jalur ultra-cepat ini!
-        if (digits <= 19 && mantissa <= 9007199254740991ULL && decimal_shift >= -22 && decimal_shift <= 22) {
-            double result = static_cast<double>(mantissa);
+        if (
+			digits        <= 19 && 
+			mantissa      <= 9007199254740991ULL && 
+			decimal_shift >= -22 && 
+			decimal_shift <= 22
+		) {
+            auto result = static_cast<double>(mantissa);
             
-            if (decimal_shift > 0) {
+            if (decimal_shift > constants::zero) {
                 result *= LookupTrait<double>::pow10_positive[decimal_shift];
-            } else if (decimal_shift < 0) {
+            } else if (decimal_shift < constants::zero) {
                 result *= LookupTrait<double>::pow10_negative[-decimal_shift];
             }
             
             return is_negative ? -result : result;
         }
 
-        // --- TIER 2: Eisel-Lemire Fallback (Standard Library C++17) ---
         double result = 0.0;
         auto [end_ptr, ec] = std::from_chars(first, last, result);
         
