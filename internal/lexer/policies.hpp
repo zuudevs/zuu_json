@@ -10,10 +10,10 @@
 
 #pragma once
 
-#include "tokenizer/engine/swar_engine.hpp"
-#include "tokenizer/engine/avx2_engine.hpp"
+#include "lexer/engine/swar.hpp"
+#include "lexer/engine/avx2.hpp"
 
-namespace zuu::tokenizer {
+namespace zuu::lexer {
 
 /**
  * @brief Dummy allocator for future extensibility demonstration.
@@ -31,17 +31,17 @@ struct FastValidator {};
  * untuk memproses data secara paralel.
  */
 struct SwarPolicy {
-    using Engine   = SwarEngine;        // Inject Engine
+    using Engine    = engine::Swar;      // Inject Engine
     using Allocator = DefaultAllocator;  // Inject Allocator (future)
     using Validator = FastValidator;     // Inject Validator (future)
 };
 
 struct Avx2Policy {
-    using Engine   = Avx2Engine;
+    using Engine    = engine::Avx2;
     using Allocator = DefaultAllocator;
     using Validator = FastValidator;
 };
 
 using DefaultPolicy = SwarPolicy;
 
-} // namespace zuu::tokenizer
+} // namespace zuu::lexer
