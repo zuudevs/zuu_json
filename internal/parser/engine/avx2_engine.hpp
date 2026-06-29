@@ -1,9 +1,9 @@
 /**
  * @file avx2_engine.hpp
  * @author zuudevs (zuudevs@gmail.com)
- * @brief AVX2 implementation for Parser Backend (Dead Branch Pruned)
- * @version 1.4.0
- * @date 2026-06-28
+ * @brief AVX2 implementation for Parser Backend
+ * @version 1.5.0
+ * @date 2026-06-29
  *
  * @copyright Copyright (c) 2026
  */
@@ -21,9 +21,10 @@
 
 namespace zuu::parser {
 
-class Avx2Engine : public ParserBase<Avx2Engine> {
+template <typename TokenizerEngine>
+class Avx2Engine : public ParserBase<Avx2Engine<TokenizerEngine>, TokenizerEngine> {
   public:
-    using ParserBase<Avx2Engine>::ParserBase;
+    using ParserBase<Avx2Engine<TokenizerEngine>, TokenizerEngine>::ParserBase;
 
 #ifdef __AVX2__
     using block_t = __m256i;
@@ -48,7 +49,6 @@ class Avx2Engine : public ParserBase<Avx2Engine> {
                 out += offset;
                 ptr += offset;
                 
-                // Lempar ke fallback skalar sampai akhir string
                 this->finish_string_scalar(out, ptr, end);
                 if (this->has_error()) return {};
                 return {dest, static_cast<uint64_t>(out - dest)};
@@ -60,7 +60,6 @@ class Avx2Engine : public ParserBase<Avx2Engine> {
         }
 #endif // __AVX2__
 
-        // Sisa byte skalar (ekor) atau string tanpa escape di bawah 32 bytes
         this->finish_string_scalar(out, ptr, end);
         if (this->has_error()) {
 			return {};

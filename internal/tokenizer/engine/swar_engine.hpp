@@ -2,8 +2,8 @@
  * @file swar_engine.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief SWAR specific implementation for Tokenizer Backend
- * @version 1.1.0
- * @date 2026-06-26
+ * @version 1.2.0
+ * @date 2026-06-29
  *
  * @copyright Copyright (c) 2026
  */
@@ -44,7 +44,7 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
         }
     }
 
-    ZUU_HOT ZUU_ALWAYS_INLINE void read_string() noexcept {
+    ZUU_HOT ZUU_ALWAYS_INLINE Token read_string() noexcept {
         const char* begin = ++current_;
         const char* ptr = begin;
         const char* end = end_;
@@ -69,20 +69,10 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
 
                 if (static_cast<uint8_t>(c) < 0x20) {
                     status_ = Error::UnescapedCharacter; 
-                    return;
+                    return Token(Token::Type::Unknown);
                 } else if (c == '\"') {
-                    res_.emplace_back(
-                        Token::Type::String, 
-                        std::string_view(begin, (ptr + byte_idx) - begin), 
-                        has_escape
-                    );
-
-                    if (has_escape) {
-                        hint_.string_escape_bytes_ += ((ptr + byte_idx) - begin);
-                    }
-
                     current_ = ptr + byte_idx + 1;
-                    return;
+                    return Token(Token::Type::String, std::string_view(begin, (ptr + byte_idx) - begin), has_escape);
                 } else {
                     ptr += byte_idx;
                     break;
@@ -91,7 +81,7 @@ class SwarEngine : public TokenizerBase<SwarEngine> {
             ptr += sizeof(uint64_t);
         }
 
-        this->finish_string_scalar(ptr, begin, has_escape);
+        return this->finish_string_scalar(ptr, begin, has_escape);
     }
 };
 

@@ -1,9 +1,9 @@
 /**
  * @file policies.hpp
  * @author zuudevs (zuudevs@gmail.com)
- * @brief Policy definitions for Parser configuration (Compile-time DI)
- * @version 1.0.0
- * @date 2026-06-27
+ * @brief Policy definitions for Fused Parser configuration
+ * @version 1.1.0
+ * @date 2026-06-29
  *
  * @copyright Copyright (c) 2026
  */
@@ -19,13 +19,15 @@ struct DefaultAllocator {};
 struct FastValidator {};
 
 struct SwarPolicy {
-    using Engine    = SwarEngine;
+    template <typename TokenizerEngine>
+    using Engine    = SwarEngine<TokenizerEngine>;
     using Allocator = DefaultAllocator;
     using Validator = FastValidator;
 };
 
 struct Avx2Policy {
-    using Engine    = Avx2Engine;
+    template <typename TokenizerEngine>
+    using Engine    = Avx2Engine<TokenizerEngine>;
     using Allocator = DefaultAllocator;
     using Validator = FastValidator;
 };

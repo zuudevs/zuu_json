@@ -1,9 +1,9 @@
 /**
- * @file default_engine.hpp
+ * @file swar_engine.hpp
  * @author zuudevs (zuudevs@gmail.com)
- * @brief Default implementation for Parser Backend
- * @version 1.0.0
- * @date 2026-06-27
+ * @brief Default SWAR implementation for Parser Backend
+ * @version 1.1.0
+ * @date 2026-06-29
  *
  * @copyright Copyright (c) 2026
  */
@@ -16,11 +16,11 @@
 
 namespace zuu::parser {
 
-class SwarEngine : public ParserBase<SwarEngine> {
+template <typename TokenizerEngine>
+class SwarEngine : public ParserBase<SwarEngine<TokenizerEngine>, TokenizerEngine> {
   public:
-    using ParserBase<SwarEngine>::ParserBase;
+    using ParserBase<SwarEngine<TokenizerEngine>, TokenizerEngine>::ParserBase;
 
-    // Spesialisasi fungsi unescape untuk di handle engine ini
     [[nodiscard]] std::string_view unescapeString(std::string_view src) noexcept {
         char* dest = this->res_.allocateStringBuffer(src.size());
         char* out = dest;
@@ -71,7 +71,6 @@ class SwarEngine : public ParserBase<SwarEngine> {
                             return {};
                         }
                         
-                        // Perhatikan pemanggilan decodeUnicodeHex karena ini dari CRTP base
                         uint32_t cp = this->decodeUnicodeHex(ptr + 1);
                         ptr += constants::nibble;
                         if (cp >= 0xD800 && cp <= 0xDBFF) {

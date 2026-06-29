@@ -1,9 +1,9 @@
 /**
  * @file tokenizer_base.hpp
  * @author zuudevs (zuudevs@gmail.com)
- * @brief CRTP Base for Tokenizer Backends
- * @version 1.1.1
- * @date 2026-06-26
+ * @brief CRTP Base for Fused Streaming Tokenizer Backends
+ * @version 1.2.0
+ * @date 2026-06-29
  *
  * @copyright Copyright (c) 2026
  */
@@ -14,16 +14,14 @@
 #include "zuu_json/core/error.hpp"
 #include "constants/general.hpp"
 #include "utils/compiler.hpp"
-#include <expected>
 #include <span>
-#include <vector>
 #include <cstring>
 
 namespace zuu::tokenizer {
 
 /**
  * @brief TokenizerBase menggunakan Curiously Recurring Template Pattern (CRTP).
- * Ini memastikan delegasi fungsi ke `Derived` terjadi saat compile-time (Zero-Cost).
+ * Bertindak sebagai incremental lexer (streaming) tanpa menyimpan array token.
  */
 template <typename Derived>
 class TokenizerBase {
@@ -31,33 +29,104 @@ class TokenizerBase {
     using Token = models::Token;
     using Lookup = traits::LookupTrait<Token>;
     using Error = core::JsonError;
-    using Result = std::vector<Token>;
     using Hint = traits::HintTrait<Token>;
-    using Resource = std::pair<Result, Hint>;
-    using Expected = std::expected<Resource, Error>;
     using Raw = std::span<const char>;
 
     explicit TokenizerBase(Raw json_content) noexcept
-        : current_(json_content.data())
-        , end_(json_content.data() + json_content.size()) {
-        
-        res_.reserve((json_content.size() >> 1) + constants::word);
-    }
+        : begin_ptr_(json_content.data())
+        , current_(json_content.data())
+        , end_(json_content.data() + json_content.size()) {}
 
-    [[nodiscard]] Expected result() && noexcept {
-        if (is_error()) {
-            return std::unexpected{status_};
+    [[nodiscard]] Hint pre_scan() noexcept {
+        Hint hint{};
+        const char* ptr = begin_ptr_;
+        while (ptr < end_) {
+            switch (*ptr) {
+                case '{': hint.object_count_++; break;
+                case '[': hint.array_count_++; break;
+                case ',': hint.comma_count_++; break;
+                case '"': {
+                    hint.string_count_++;
+                    const char* start = ptr;
+                    bool has_escape = false;
+                    ++ptr;
+                    while (ptr < end_) {
+                        if (*ptr == '"') break;
+                        if (*ptr == '\\') {
+                            has_escape = true;
+                            ptr += 2;
+                            continue;
+                        }
+                        ptr++;
+                    }
+                    if (has_escape) {
+                        hint.string_escape_bytes_ += (ptr - start);
+                    }
+                    break;
+                }
+                default: break;
+            }
+            ptr++;
         }
-        return std::pair{std::move(res_), hint_};
+        reset();
+        return hint;
     }
 
-    void execute() noexcept {
-        tokenize_loop();
+    void reset() noexcept {
+        current_ = begin_ptr_;
+        status_ = Error::None;
+    }
+
+    [[nodiscard]] ZUU_HOT ZUU_ALWAYS_INLINE Token next_token() noexcept {
+        while (current_ < end_) {
+            auto actionType = Lookup{}[*current_];
+            switch (actionType) {
+                case Lookup::Type::WhiteSpace:
+                    derived().skip_whitespace();
+                    continue;
+                case Lookup::Type::LeftCurlyBracket:
+                    current_++;
+                    return Token(Token::Type::LeftCurlyBracket);
+                case Lookup::Type::RightCurlyBracket:
+                    current_++;
+                    return Token(Token::Type::RightCurlyBracket);
+                case Lookup::Type::LeftSquareBracket:
+                    current_++;
+                    return Token(Token::Type::LeftSquareBracket);
+                case Lookup::Type::RightSquareBracket:
+                    current_++;
+                    return Token(Token::Type::RightSquareBracket);
+                case Lookup::Type::Colon: [[likely]]
+                    current_++;
+                    return Token(Token::Type::Colon);
+                case Lookup::Type::Comma: [[likely]]
+                    current_++;
+                    return Token(Token::Type::Comma);
+                case Lookup::Type::DoubleQuote: [[likely]]
+                    return derived().read_string();
+                case Lookup::Type::Numeric:
+                    return read_numeric();
+                case Lookup::Type::Alphabet:
+                    return read_alphabet();
+                case Lookup::Type::SigleQuote:
+                    status_ = Error::SingleQuotedString;
+                    return Token(Token::Type::Unknown);
+                default:
+                    status_ = Error::Unknown;
+                    return Token(Token::Type::Unknown);
+            }
+        }
+        return Token(Token::Type::EndOfFile);
+    }
+
+    [[nodiscard]] Error get_error() const noexcept { return status_; }
+
+    [[nodiscard]] bool is_error() const noexcept {
+        return status_ != Error::None;
     }
 
   protected:
-    Result res_;
-    Hint hint_{};
+    const char* begin_ptr_;
     const char* current_;
     const char* end_;
     Error status_{Error::None};
@@ -66,11 +135,7 @@ class TokenizerBase {
         return *static_cast<Derived*>(this);
     }
 
-    [[nodiscard]] bool is_error() const noexcept {
-        return status_ != Error::None;
-    }
-
-    void read_numeric() noexcept {
+    Token read_numeric() noexcept {
         const char* begin = current_;
         auto type = Token::Type::Integer;
         auto skip_digits = [this]() noexcept {
@@ -83,7 +148,7 @@ class TokenizerBase {
             current_++;
             if (current_ == end_) { 
                 status_ = Error::InvalidValue; 
-                return; 
+                return Token(Token::Type::Unknown); 
             }
         }
 
@@ -91,13 +156,13 @@ class TokenizerBase {
             current_++;
             if (current_ < end_ && static_cast<unsigned char>(*current_ - '0') < constants::digit) {
                 status_ = Error::LeadingZero;
-                return;
+                return Token(Token::Type::Unknown);
             }
         } else if (static_cast<unsigned char>(*current_ - '0') < constants::digit) {
             skip_digits();
         } else {
             status_ = Error::InvalidValue;
-            return;
+            return Token(Token::Type::Unknown);
         }
 
         if (current_ < end_ && *current_ == '.') {
@@ -106,7 +171,7 @@ class TokenizerBase {
             
             if (current_ == end_ || static_cast<unsigned char>(*current_ - '0') >= constants::digit) {
                 status_ = Error::InvalidValue;
-                return;
+                return Token(Token::Type::Unknown);
             }
             skip_digits();
         }
@@ -121,17 +186,18 @@ class TokenizerBase {
             
             if (current_ == end_ || static_cast<unsigned char>(*current_ - '0') >= constants::digit) {
                 status_ = Error::InvalidValue;
-                return;
+                return Token(Token::Type::Unknown);
             }
             skip_digits();
         }
 
         if (!is_error()) [[likely]] {
-            res_.emplace_back(type, std::string_view(begin, current_ - begin));
+            return Token(type, std::string_view(begin, current_ - begin));
         }
+        return Token(Token::Type::Unknown);
     }
 
-    void read_alphabet() noexcept {
+    Token read_alphabet() noexcept {
         const auto rem = end_ - current_;
         
         if (rem >= constants::nibble) [[likely]] {
@@ -139,66 +205,49 @@ class TokenizerBase {
             std::memcpy(&val, current_, constants::nibble);
 
             switch (val) {
-                case constants::null_word:
-                    res_.emplace_back(
-                        Token::Type::Null, 
-                        std::string_view(current_, constants::nibble)
-                    );
+                case constants::null_word: {
+                    auto tok = Token(Token::Type::Null, std::string_view(current_, constants::nibble));
                     current_ += constants::nibble;
-                    return;
-                    
-                case constants::true_word:
-                    res_.emplace_back(
-                        Token::Type::Boolean, 
-                        std::string_view(current_, constants::nibble)
-                    );
+                    return tok;
+                }
+                case constants::true_word: {
+                    auto tok = Token(Token::Type::Boolean, std::string_view(current_, constants::nibble));
                     current_ += constants::nibble;
-                    return;
-                    
-                case constants::fals_word:
+                    return tok;
+                }
+                case constants::fals_word: {
                     if (rem >= 5 && current_[4] == 'e') {
-                        res_.emplace_back(
-                            Token::Type::Boolean, 
-                            std::string_view(current_, 5)
-                        );
+                        auto tok = Token(Token::Type::Boolean, std::string_view(current_, 5));
                         current_ += 5;
-                        return;
+                        return tok;
                     }
+                }
                 default:
                     break;
             }
         }
         status_ = Error::InvalidValue;
+        return Token(Token::Type::Unknown);
     }
 
-    ZUU_HOT void finish_string_scalar(const char* ptr, const char* begin, bool has_escape) noexcept {
+    ZUU_HOT Token finish_string_scalar(const char* ptr, const char* begin, bool has_escape) noexcept {
         while (ptr < end_) {
             char c = *ptr;
             if (static_cast<unsigned char>(c) < 0x20) {
                 status_ = Error::UnescapedCharacter;
-                return;
+                return Token(Token::Type::Unknown);
             }
 
             if (c == '\"') {
-                res_.emplace_back(
-                    Token::Type::String, 
-                    std::string_view(begin, ptr - begin), 
-                    has_escape
-                );
-
-                if (has_escape) {
-                    hint_.string_escape_bytes_ += (ptr - begin);
-                }
-
                 current_ = ptr + 1;
-                return;
+                return Token(Token::Type::String, std::string_view(begin, ptr - begin), has_escape);
             }
             if (c == '\\') [[unlikely]] {
                 has_escape = true;
                 ptr += 2;
                 if (ptr > end_) {
                     status_ = core::JsonError::InvalidValue;
-                    return;
+                    return Token(Token::Type::Unknown);
                 }
                 continue;
             }
@@ -206,76 +255,7 @@ class TokenizerBase {
         }
 
         status_ = core::JsonError::InvalidValue;
-    }
-
-    void tokenize_loop() noexcept {
-        while (current_ < end_) {
-            auto actionType = Lookup{}[*current_];
-            switch (actionType) {
-                case Lookup::Type::WhiteSpace: {
-                    derived().skip_whitespace();
-                    continue;
-                }
-                case Lookup::Type::LeftCurlyBracket: {
-                    res_.emplace_back(Token::Type::LeftCurlyBracket);
-                    hint_.object_count_++;
-                    current_++;
-                    continue;
-                }
-                case Lookup::Type::RightCurlyBracket: {
-                    res_.emplace_back(Token::Type::RightCurlyBracket);
-                    current_++;
-                    continue;
-                }
-                case Lookup::Type::LeftSquareBracket: {
-                    res_.emplace_back(Token::Type::LeftSquareBracket);
-                    hint_.array_count_++;
-                    current_++;
-                    continue;
-                }
-                case Lookup::Type::RightSquareBracket: {
-                    res_.emplace_back(Token::Type::RightSquareBracket);
-                    current_++;
-                    continue;
-                }
-                case Lookup::Type::Colon: [[likely]] {
-                    res_.emplace_back(Token::Type::Colon);
-                    current_++;
-                    continue;
-                }
-                case Lookup::Type::Comma: [[likely]] {
-                    res_.emplace_back(Token::Type::Comma);
-                    hint_.comma_count_++;
-                    current_++;
-                    continue;
-                }
-                case Lookup::Type::DoubleQuote: [[likely]] {
-                    derived().read_string();
-                    if (is_error()) return;
-                    hint_.string_count_++;
-                    continue;
-                }
-                case Lookup::Type::Numeric: {
-                    read_numeric();
-                    if (is_error()) return;
-                    continue;
-                }
-                case Lookup::Type::Alphabet: {
-                    read_alphabet();
-                    if (is_error()) return;
-                    continue;
-                }
-                case Lookup::Type::SigleQuote: {
-                    status_ = Error::SingleQuotedString;
-                    return;
-                }
-                default: {
-                    status_ = Error::Unknown;
-                    return;
-                }
-            }
-        }
-        res_.emplace_back(Token::Type::EndOfFile);
+        return Token(Token::Type::Unknown);
     }
 };
 
