@@ -12,7 +12,7 @@
 
 #include "models/token.hpp"
 #include "zuu_json/core/error.hpp"
-#include "constants/general.hpp"
+#include "constants/swar.hpp"
 #include "utils/compiler.hpp"
 #include <span>
 #include <cstring>
