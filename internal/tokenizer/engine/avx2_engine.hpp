@@ -2,8 +2,8 @@
  * @file avx2_engine.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief AVX2 specific implementation for Tokenizer Backend
- * @version 1.3.2
- * @date 2026-06-27
+ * @version 1.4.0
+ * @date 2026-06-29
  *
  * @copyright Copyright (c) 2026
  */
@@ -36,7 +36,7 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
 	alignas(32) static inline const __m256i simd32_cr         = _mm256_set1_epi8('\r');
 	alignas(32) static inline const __m256i simd32_ht         = _mm256_set1_epi8('\t');
 
-	// PSHUFB Lookup Table untuk Whitespace (Pemetaan 4-bit bawah -> nilai Hex aslinya)
+	// PSHUFB Lookup Table untuk Whitespace
 	alignas(32) static inline const __m256i simd32_lut_whitespace = _mm256_setr_epi8(
 		0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 		0x00, 0x09, 0x0A, 0x00, 0x00, 0x0D, 0x00, 0x00,
@@ -73,7 +73,7 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
         }
     }
 
-    ZUU_HOT ZUU_ALWAYS_INLINE void read_string() noexcept {
+    ZUU_HOT ZUU_ALWAYS_INLINE Token read_string() noexcept {
         const char* begin = ++current_;
         const char* ptr = begin;
         bool has_escape = false;
@@ -94,17 +94,11 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
                 auto c = ptr[byte_idx];
 
                 if (c == '\"') [[likely]] {
-                    res_.emplace_back(
-                        Token::Type::String, 
-                        std::string_view(begin, (ptr + byte_idx) - begin), 
-                        false 
-                    );
-
                     current_ = ptr + byte_idx + 1;
-                    return;
+                    return Token(Token::Type::String, std::string_view(begin, (ptr + byte_idx) - begin), false);
                 } else if (static_cast<uint8_t>(c) < 0x20) [[unlikely]] {
                     status_ = Error::UnescapedCharacter;
-                    return;
+                    return Token(Token::Type::Unknown);
                 } else { 
                     ptr += byte_idx;
                     break; 
@@ -114,7 +108,7 @@ class Avx2Engine : public TokenizerBase<Avx2Engine> {
         }
 #endif // __AVX2__
 
-        this->finish_string_scalar(ptr, begin, has_escape);
+        return this->finish_string_scalar(ptr, begin, has_escape);
     }
 };
 

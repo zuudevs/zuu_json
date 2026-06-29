@@ -2,8 +2,8 @@
  * @file json.cpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
- * @version 1.1.0
- * @date 2026-06-27
+ * @version 1.2.0
+ * @date 2026-06-29
  *
  * @copyright Copyright (c) 2026
  */
@@ -18,26 +18,21 @@
 #include "zuu_json/models/json.hpp"
 
 namespace {
-    [[nodiscard]] inline auto switch_tokenizer(std::span<const char> raw, const zuu::models::Policy& policy) noexcept {
-        switch (policy.tokenizer_engine) {
-            case zuu::core::TokenizerEngine::Avx2:
-                return zuu::tokenizer::Tokenizer<zuu::tokenizer::Avx2Policy>::Tokenize(raw);
-            default:
-                return zuu::tokenizer::Tokenizer<zuu::tokenizer::SwarPolicy>::Tokenize(raw);
-        }
-    }
-
-    [[nodiscard]] inline auto switch_parser(
-        std::span<const zuu::models::Token> tokens, 
-        const zuu::traits::HintTrait<zuu::models::Token>& hint, 
-        const zuu::models::Policy& policy) noexcept {
+    template <typename TokenizerPolicy, typename ParserPolicy>
+    [[nodiscard]] inline zuu::models::Json::Result<zuu::models::Storage> 
+    run_fused_parser(std::span<const char> raw) noexcept {
+        using TokenizerEngine = typename TokenizerPolicy::Engine;
         
-        switch (policy.parser_engine) {
-            case zuu::core::ParserEngine::Avx2:
-                return zuu::parser::Parser<zuu::parser::Avx2Policy>::Parse(tokens, hint);
-            default:
-                return zuu::parser::Parser<zuu::parser::DefaultPolicy>::Parse(tokens, hint);
+        TokenizerEngine tokenizer(raw);
+        
+        // Pass 1: Super fast pre-scan for generating memory arena hint
+        auto hint = tokenizer.pre_scan();
+        if (tokenizer.is_error()) {
+            return std::unexpected{tokenizer.get_error()};
         }
+        
+        // Pass 2: Fused parse loop
+        return zuu::parser::Parser<ParserPolicy>::template Parse<TokenizerEngine>(tokenizer, hint);
     }
 } // namespace
 
@@ -51,22 +46,29 @@ Json::Json(std::unique_ptr<Storage> storage) noexcept
     : storage_(std::move(storage)) {}
 
 Json::Result<Json> Json::parse(std::string_view content, Policy policy) noexcept {
-    const auto raw = std::span<const char>(
-        content.data(), 
-        content.size()
-    );
-    
-    auto tokens = switch_tokenizer(raw, policy);
-    if (!tokens) { 
-        return std::unexpected{tokens.error()}; 
+    const auto raw = std::span<const char>(content.data(), content.size());
+
+    Json::Result<Storage> parsed_storage = std::unexpected{Error::Unknown};
+
+    if (policy.tokenizer_engine == core::TokenizerEngine::Avx2) {
+        if (policy.parser_engine == core::ParserEngine::Avx2) {
+            parsed_storage = run_fused_parser<tokenizer::Avx2Policy, parser::Avx2Policy>(raw);
+        } else {
+            parsed_storage = run_fused_parser<tokenizer::Avx2Policy, parser::DefaultPolicy>(raw);
+        }
+    } else {
+        if (policy.parser_engine == core::ParserEngine::Avx2) {
+            parsed_storage = run_fused_parser<tokenizer::SwarPolicy, parser::Avx2Policy>(raw);
+        } else {
+            parsed_storage = run_fused_parser<tokenizer::SwarPolicy, parser::DefaultPolicy>(raw);
+        }
     }
 
-    auto parsed = switch_parser(tokens.value().first, tokens.value().second, policy);
-    if (!parsed) { 
-        return std::unexpected{parsed.error()}; 
+    if (!parsed_storage) {
+        return std::unexpected{parsed_storage.error()};
     }
 
-    return Json(std::make_unique<Storage>(std::move(parsed.value())));
+    return Json(std::make_unique<Storage>(std::move(parsed_storage.value())));
 }
 
 void Json::sort() noexcept {
