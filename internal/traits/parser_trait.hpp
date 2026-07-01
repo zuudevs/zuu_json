@@ -4,7 +4,7 @@
  * @brief Brief description
  * @version 0.1.0
  * @date 2026-06-17
- * 
+ *
  * @copyright Copyright (c) 2026
  */
 
@@ -12,9 +12,9 @@
 
 namespace zuu::traits {
 
-template <typename T> 
+template <typename T>
 struct ParserTrait {
-	static_assert(sizeof(T) == 0, "invalid size type specialized parser trait");
+    static_assert(sizeof(T) == 0, "invalid size type specialized parser trait");
 };
 
 } // namespace zuu::traits

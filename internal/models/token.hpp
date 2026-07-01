@@ -23,7 +23,8 @@ struct Token {
         , type_(type)
         , has_escape_(has_escape) {}
 
-    [[nodiscard]] inline constexpr std::string_view value() const noexcept {
+    [[nodiscard]] inline constexpr std::string_view
+        value() const noexcept {
         return {begin_, size_};
     }
 

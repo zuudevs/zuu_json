@@ -4,7 +4,7 @@
  * @brief Hex lookup table
  * @version 0.1.0
  * @date 2026-07-01
- * 
+ *
  * @copyright Copyright (c) 2026
  */
 

@@ -4,7 +4,7 @@
  * @brief Brief description
  * @version 0.1.0
  * @date 2026-06-21
- * 
+ *
  * @copyright Copyright (c) 2026
  */
 
@@ -13,7 +13,8 @@
 
 namespace zuu::models::views {
 
-Value Member::value() const noexcept {
+Value
+    Member::value() const noexcept {
     return Value::fromInternal(storage_, val_);
 }
 

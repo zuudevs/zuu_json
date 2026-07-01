@@ -35,13 +35,13 @@ constexpr uint8_t sso_tag = 0x80;
 constexpr uint8_t sso_max_len = 7;
 
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-	constexpr uint32_t null_word = 0x6c6c756e;
-	constexpr uint32_t true_word = 0x65757274;
-	constexpr uint32_t fals_word = 0x736c6166;
+constexpr uint32_t null_word = 0x6c6c756e;
+constexpr uint32_t true_word = 0x65757274;
+constexpr uint32_t fals_word = 0x736c6166;
 #else
-	constexpr uint32_t null_word = 0x6e756c6c;
-	constexpr uint32_t true_word = 0x74727565;
-	constexpr uint32_t fals_word = 0x66616c73;
+constexpr uint32_t null_word = 0x6e756c6c;
+constexpr uint32_t true_word = 0x74727565;
+constexpr uint32_t fals_word = 0x66616c73;
 #endif
 
 } // namespace zuu::constants

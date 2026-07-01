@@ -4,7 +4,7 @@
  * @brief Filesystem utilities for benchmark and testing.
  * @version 1.0.0
  * @date 2026-06-21
- * 
+ *
  * @copyright Copyright (c) 2026
  */
 
@@ -19,7 +19,8 @@
 
 namespace zuu::tests::utils {
 
-[[nodiscard]] inline std::string get_sample_path(std::string_view filename) {
+[[nodiscard]] inline std::string
+    get_sample_path(std::string_view filename) {
     std::filesystem::path cwd = std::filesystem::current_path();
 
     for (int i = 0; i < 4; ++i) {
@@ -33,7 +34,7 @@ namespace zuu::tests::utils {
 }
 
 [[nodiscard]] inline std::expected<std::string, std::errc>
-load_sample(std::string_view filename) noexcept {
+    load_sample(std::string_view filename) noexcept {
     std::string filepath = get_sample_path(filename);
     if (filepath.empty()) {
         return std::unexpected{std::errc::no_such_file_or_directory};

@@ -7,11 +7,11 @@
  * * @copyright Copyright (c) 2026
  */
 
-#include <benchmark/benchmark.h>
+#include "utils/fs_util.hpp"
 #include "zuu_json/core/engine.hpp"
 #include "zuu_json/json.hpp"
-#include "utils/fs_util.hpp"
 #include "zuu_json/models/policies.hpp"
+#include <benchmark/benchmark.h>
 
 using namespace zuu;
 
@@ -36,7 +36,7 @@ using namespace zuu;
     BENCHMARK(BM_SWAR_Pipeline_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);                \
     static void BM_AVX2_Pipeline_##Name(benchmark::State& state) {                                 \
         static std::string data = tests::utils::load_sample(Filename).value_or("");                \
-		auto avx2_policy = models::Policy{core::TokenizerEngine::Avx2, core::ParserEngine::Avx2};  \
+        auto avx2_policy = models::Policy{core::TokenizerEngine::Avx2, core::ParserEngine::Avx2};  \
         if (data.empty()) {                                                                        \
             state.SkipWithError("Gagal memuat file sampel.");                                      \
             return;                                                                                \

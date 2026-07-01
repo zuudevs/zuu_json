@@ -10,10 +10,10 @@
 
 #pragma once
 
-#include <expected>
-#include <memory>
 #include "policies.hpp"
 #include "zuu_json/models/value.hpp"
+#include <expected>
+#include <memory>
 
 namespace zuu::allocators {
 
@@ -42,17 +42,24 @@ class Json {
     using Result = std::expected<T, Error>;
 
     Json(Json&&) noexcept;
-    Json& operator=(Json&&) noexcept;
+    Json&
+        operator=(Json&&) noexcept;
     ~Json() noexcept;
 
     Json(const Json&) = delete;
-	Json& operator=(const Json&) = delete;
+    Json&
+        operator=(const Json&) = delete;
 
-    [[nodiscard]] static Result<Json> parse(std::string_view content, Policy policy = default_policy) noexcept;
-	void sort() noexcept;
-    [[nodiscard]] Value root() const noexcept;
-    [[nodiscard]] Result<Value> operator[](std::string_view key) const noexcept;
-	[[nodiscard]] std::string dump(int indent = -1) const noexcept;
+    [[nodiscard]] static Result<Json>
+        parse(std::string_view content, Policy policy = default_policy) noexcept;
+    void
+        sort() noexcept;
+    [[nodiscard]] Value
+        root() const noexcept;
+    [[nodiscard]] Result<Value>
+        operator[](std::string_view key) const noexcept;
+    [[nodiscard]] std::string
+        dump(int indent = -1) const noexcept;
 
   private:
     explicit Json(std::unique_ptr<allocators::Storage> storage) noexcept;

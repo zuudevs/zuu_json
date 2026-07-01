@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "parser/engine/swar.hpp"
 #include "parser/engine/avx2.hpp"
+#include "parser/engine/swar.hpp"
 
 namespace zuu::parser {
 
@@ -20,14 +20,14 @@ struct FastValidator {};
 
 struct SwarPolicy {
     template <typename LexerEngine>
-    using Engine    = engine::Swar<LexerEngine>;
+    using Engine = engine::Swar<LexerEngine>;
     using Allocator = DefaultAllocator;
     using Validator = FastValidator;
 };
 
 struct Avx2Policy {
     template <typename LexerEngine>
-    using Engine    = engine::Avx2<LexerEngine>;
+    using Engine = engine::Avx2<LexerEngine>;
     using Allocator = DefaultAllocator;
     using Validator = FastValidator;
 };

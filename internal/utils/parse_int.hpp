@@ -4,20 +4,20 @@
  * @brief Brief description
  * @version 0.1.0
  * @date 2026-06-18
- * 
+ *
  * @copyright Copyright (c) 2026
  */
 
-#pragma once 
+#pragma once
 
 #include "constants/swar.hpp"
+#include "traits/parser_trait.hpp"
+#include "utils/strings.hpp"
+#include "zuu_json/core/error.hpp"
 #include <bit>
 #include <cstdint>
 #include <cstring>
 #include <expected>
-#include "traits/parser_trait.hpp"
-#include "utils/strings.hpp"
-#include "zuu_json/core/error.hpp"
 
 namespace zuu::traits {
 
@@ -25,9 +25,9 @@ template <>
 struct ParserTrait<long long> {
     using Error = core::ParseError;
     using Result = std::expected<uint64_t, Error>;
-    
+
     [[nodiscard]] inline constexpr Result
-    operator()(const char* first, const char* last) const noexcept {
+        operator()(const char* first, const char* last) const noexcept {
         if (first == last) {
             return std::unexpected{Error::InvalidFormat};
         }
@@ -46,7 +46,8 @@ struct ParserTrait<long long> {
             std::memcpy(&block, first, sizeof(uint64_t));
 
             uint64_t val = block - constants::swar8_zero;
-            uint64_t non_digits = ((val + constants::swar8_digit_bias) | val) & constants::swar8_msb;
+            uint64_t non_digits =
+                ((val + constants::swar8_digit_bias) | val) & constants::swar8_msb;
 
             if (non_digits == 0) [[likely]] {
                 has_digits = true;
@@ -71,12 +72,11 @@ struct ParserTrait<long long> {
                 d = (d & 0x0000FFFF0000FFFFULL) * 10000 + ((d >> 32) & 0x0000FFFF0000FFFFULL);
 
                 static constexpr uint64_t pow10[8] = {
-                    1, 10, 100, 1000, 10000, 100000, 1000000, 10000000
-                };
+                    1, 10, 100, 1000, 10000, 100000, 1000000, 10000000};
 
                 value = value * pow10[valid_len] + static_cast<uint32_t>(d);
                 first += valid_len;
-                break; 
+                break;
             }
         }
 

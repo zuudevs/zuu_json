@@ -7,10 +7,10 @@
  * * @copyright Copyright (c) 2026
  */
 
-#include <benchmark/benchmark.h>
-#include <span>
 #include "lexer/lexer.hpp"
 #include "utils/fs_util.hpp"
+#include <benchmark/benchmark.h>
+#include <span>
 
 using namespace zuu;
 
@@ -24,13 +24,13 @@ using namespace zuu;
         }                                                                                          \
         std::span<const char> raw(data);                                                           \
         for (auto _ : state) {                                                                     \
-            auto tokens = lexer::Lexer<lexer::SwarPolicy>::Tokenize(raw);              \
+            auto tokens = lexer::Lexer<lexer::SwarPolicy>::Tokenize(raw);                          \
             if (!tokens) {                                                                         \
                 state.SkipWithError("Parse failed inside benchmark loop!");                        \
                 break;                                                                             \
             }                                                                                      \
             benchmark::DoNotOptimize(tokens);                                                      \
-            benchmark::ClobberMemory();												               \
+            benchmark::ClobberMemory();                                                            \
         }                                                                                          \
         state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * data.size());           \
     }                                                                                              \
@@ -44,13 +44,13 @@ using namespace zuu;
         }                                                                                          \
         std::span<const char> raw(data);                                                           \
         for (auto _ : state) {                                                                     \
-            auto tokens = lexer::Lexer<lexer::Avx2Policy>::Tokenize(raw);              \
+            auto tokens = lexer::Lexer<lexer::Avx2Policy>::Tokenize(raw);                          \
             if (!tokens) {                                                                         \
                 state.SkipWithError("Parse failed inside benchmark loop!");                        \
                 break;                                                                             \
             }                                                                                      \
             benchmark::DoNotOptimize(tokens);                                                      \
-            benchmark::ClobberMemory();												               \
+            benchmark::ClobberMemory();                                                            \
         }                                                                                          \
         state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * data.size());           \
     }                                                                                              \

@@ -21,12 +21,13 @@ template <typename LexerEngine>
 class Swar : public ParserBase<Swar<LexerEngine>, LexerEngine> {
   public:
     using ParserBase<Swar<LexerEngine>, LexerEngine>::ParserBase;
-	using block_t = uint64_t;
+    using block_t = uint64_t;
     static inline constexpr uint8_t kSimdBlockSize = sizeof(block_t);
 
-    [[nodiscard]] std::string_view unescapeString(std::string_view src) noexcept {
-        char* dest      = this->res_.allocateStringBuffer(src.size());
-        char* out       = dest;
+    [[nodiscard]] std::string_view
+        unescapeString(std::string_view src) noexcept {
+        char* dest = this->res_.allocateStringBuffer(src.size());
+        char* out = dest;
         const char* ptr = src.data();
         const char* end = ptr + src.size();
 
@@ -50,7 +51,7 @@ class Swar : public ParserBase<Swar<LexerEngine>, LexerEngine> {
             }
 
             if (ptr >= end) {
-                break; 
+                break;
             }
 
             if (*ptr == '\\') {
@@ -58,29 +59,46 @@ class Swar : public ParserBase<Swar<LexerEngine>, LexerEngine> {
                 if (ptr >= end) {
                     break;
                 }
-                
+
                 switch (*ptr) {
-                    case '\"' :  *out++ = '\"';  break;
-                    case '\\' : *out++ = '\\'; break;
-                    case '/'  :  *out++ = '/';  break;
-                    case 'b'  :  *out++ = '\b'; break;
-                    case 'f'  :  *out++ = '\f'; break;
-                    case 'n'  :  *out++ = '\n'; break;
-                    case 'r'  :  *out++ = '\r'; break;
-                    case 't'  :  *out++ = '\t'; break;
-                    case 'u'  : {
+                    case '\"':
+                        *out++ = '\"';
+                        break;
+                    case '\\':
+                        *out++ = '\\';
+                        break;
+                    case '/':
+                        *out++ = '/';
+                        break;
+                    case 'b':
+                        *out++ = '\b';
+                        break;
+                    case 'f':
+                        *out++ = '\f';
+                        break;
+                    case 'n':
+                        *out++ = '\n';
+                        break;
+                    case 'r':
+                        *out++ = '\r';
+                        break;
+                    case 't':
+                        *out++ = '\t';
+                        break;
+                    case 'u': {
                         if (ptr + 5 > end) {
                             this->status_ = core::JsonError::InvalidValue;
                             return {};
                         }
-                        
+
                         uint32_t cp = this->decodeUnicodeHex(ptr + 1);
                         ptr += constants::nibble;
                         if (cp >= 0xD800 && cp <= 0xDBFF) {
                             if (ptr + 6 <= end && ptr[1] == '\\' && ptr[2] == 'u') {
                                 uint32_t cp2 = this->decodeUnicodeHex(ptr + 3);
                                 if (cp2 >= 0xDC00 && cp2 <= 0xDFFF) {
-                                    cp = 0x10000 + (((cp - 0xD800) << constants::digit) | (cp2 - 0xDC00));
+                                    cp = 0x10000 +
+                                         (((cp - 0xD800) << constants::digit) | (cp2 - 0xDC00));
                                     ptr += 6;
                                 } else {
                                     this->status_ = core::JsonError::InvalidValue;

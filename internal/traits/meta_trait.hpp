@@ -11,10 +11,10 @@
 
 #include <cstdint>
 
-namespace zuu::models { 
-	struct JsonMember; 
-	class Storage; 
-}
+namespace zuu::models {
+struct JsonMember;
+class Storage;
+} // namespace zuu::models
 
 namespace zuu::traits {
 

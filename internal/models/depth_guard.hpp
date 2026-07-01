@@ -4,7 +4,7 @@
  * @brief Brief description
  * @version 0.1.0
  * @date 2026-06-21
- * 
+ *
  * @copyright Copyright (c) 2026
  */
 
@@ -16,8 +16,13 @@ namespace zuu::models {
 
 struct DepthGuard {
     uint32_t& depth_;
-    inline explicit DepthGuard(uint32_t& d) noexcept : depth_(d) { ++depth_; }
-    inline ~DepthGuard() noexcept { --depth_; }
+    inline explicit DepthGuard(uint32_t& d) noexcept
+        : depth_(d) {
+        ++depth_;
+    }
+    inline ~DepthGuard() noexcept {
+        --depth_;
+    }
 };
 
 } // namespace zuu::models

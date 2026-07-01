@@ -10,11 +10,11 @@
 
 #pragma once
 
+#include "enums/json_type.hpp"
+#include "utils/strings.hpp"
 #include <bit>
 #include <cstdint>
 #include <string_view>
-#include "utils/strings.hpp"
-#include "enums/json_type.hpp"
 
 namespace zuu::models {
 
@@ -35,55 +35,69 @@ struct JsonValue {
     uint64_t data_;
 
     // Encoding + Factory
-    [[nodiscard]] static inline constexpr JsonValue Null() noexcept {
+    [[nodiscard]] static inline constexpr JsonValue
+        Null() noexcept {
         return JsonValue(NAN_MASK | (TAG_NULL << TAG_SHIFT));
     }
-    [[nodiscard]] static inline constexpr JsonValue Boolean(bool value) noexcept {
+    [[nodiscard]] static inline constexpr JsonValue
+        Boolean(bool value) noexcept {
         return JsonValue(NAN_MASK | (TAG_BOOLEAN << TAG_SHIFT) | (value ? 1 : 0));
     }
-    [[nodiscard]] static inline constexpr JsonValue Integer(long long value) noexcept {
+    [[nodiscard]] static inline constexpr JsonValue
+        Integer(long long value) noexcept {
         return JsonValue(NAN_MASK | (TAG_INTEGER << TAG_SHIFT) |
                          (static_cast<uint64_t>(value) & PAYLOAD_MASK));
     }
-    [[nodiscard]] static inline constexpr JsonValue Double(long double value) noexcept {
+    [[nodiscard]] static inline constexpr JsonValue
+        Double(long double value) noexcept {
         return JsonValue(std::bit_cast<uint64_t>(static_cast<double>(value)));
     }
-    [[nodiscard]] static inline constexpr JsonValue String(unsigned long long index) noexcept {
+    [[nodiscard]] static inline constexpr JsonValue
+        String(unsigned long long index) noexcept {
         return JsonValue(NAN_MASK | (TAG_STRING << TAG_SHIFT) | (index & PAYLOAD_MASK));
     }
-    [[nodiscard]] static inline constexpr JsonValue Array(unsigned long long index) noexcept {
+    [[nodiscard]] static inline constexpr JsonValue
+        Array(unsigned long long index) noexcept {
         return JsonValue(NAN_MASK | (TAG_ARRAY << TAG_SHIFT) | (index & PAYLOAD_MASK));
     }
-    [[nodiscard]] static inline constexpr JsonValue Object(unsigned long long index) noexcept {
+    [[nodiscard]] static inline constexpr JsonValue
+        Object(unsigned long long index) noexcept {
         return JsonValue(NAN_MASK | (TAG_OBJECT << TAG_SHIFT) | (index & PAYLOAD_MASK));
     }
 
-    [[nodiscard]] inline constexpr auto is_double() const noexcept {
+    [[nodiscard]] inline constexpr auto
+        is_double() const noexcept {
         return (data_ & NAN_MASK) != NAN_MASK;
     }
 
-    [[nodiscard]] inline constexpr enums::JsonType get_type() const noexcept {
+    [[nodiscard]] inline constexpr enums::JsonType
+        get_type() const noexcept {
         if (is_double())
             return enums::JsonType::Double;
         return static_cast<enums::JsonType>((data_ >> TAG_SHIFT) & QUIET_NAN_MASK);
     }
 
-    [[nodiscard]] inline constexpr auto get_payload() const noexcept {
+    [[nodiscard]] inline constexpr auto
+        get_payload() const noexcept {
         return data_ & PAYLOAD_MASK;
     }
 
     // Decoding
-    [[nodiscard]] inline constexpr auto as_bool() const noexcept {
+    [[nodiscard]] inline constexpr auto
+        as_bool() const noexcept {
         return get_payload() != 0;
     }
-    [[nodiscard]] inline constexpr auto as_integer() const noexcept {
+    [[nodiscard]] inline constexpr auto
+        as_integer() const noexcept {
         uint64_t payload = get_payload();
         return static_cast<long long>(payload << SIGN_EXTENSION_MASK) >> SIGN_EXTENSION_MASK;
     }
-    [[nodiscard]] inline constexpr auto as_double() const noexcept {
+    [[nodiscard]] inline constexpr auto
+        as_double() const noexcept {
         return std::bit_cast<double>(data_);
     }
-    [[nodiscard]] inline constexpr auto as_index() const noexcept {
+    [[nodiscard]] inline constexpr auto
+        as_index() const noexcept {
         return get_payload();
     }
 };

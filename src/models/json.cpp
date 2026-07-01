@@ -8,37 +8,39 @@
  * @copyright Copyright (c) 2026
  */
 
-#include <algorithm>
-#include <expected>
+#include "zuu_json/models/json.hpp"
 #include "enums/json_type.hpp"
-#include "parser/parser.hpp"
 #include "lexer/lexer.hpp"
+#include "parser/parser.hpp"
 #include "utils/compiler.hpp"
 #include "zuu_json/core/engine.hpp"
-#include "zuu_json/models/json.hpp"
+#include <algorithm>
+#include <expected>
 
 namespace {
-    template <typename TokenizerPolicy, typename ParserPolicy>
-    [[nodiscard]] inline zuu::models::Json::Result<zuu::allocators::Storage> 
+template <typename TokenizerPolicy, typename ParserPolicy>
+[[nodiscard]] inline zuu::models::Json::Result<zuu::allocators::Storage>
     run_fused_parser(std::span<const char> raw) noexcept {
-        using TokenizerEngine = typename TokenizerPolicy::Engine;
+    using TokenizerEngine = typename TokenizerPolicy::Engine;
 
-        TokenizerEngine tokenizer(raw);
-        
-        return zuu::parser::Parser<ParserPolicy>::template Parse<TokenizerEngine>(tokenizer);
-    }
+    TokenizerEngine tokenizer(raw);
+
+    return zuu::parser::Parser<ParserPolicy>::template Parse<TokenizerEngine>(tokenizer);
+}
 } // namespace
 
 namespace zuu::models {
 
-Json::Json(Json&&) noexcept            = default;
-Json& Json::operator=(Json&&) noexcept = default;
-Json::~Json() noexcept                 = default;
+Json::Json(Json&&) noexcept = default;
+Json&
+    Json::operator=(Json&&) noexcept = default;
+Json::~Json() noexcept = default;
 
 Json::Json(std::unique_ptr<allocators::Storage> storage) noexcept
     : storage_(std::move(storage)) {}
 
-Json::Result<Json> Json::parse(std::string_view content, Policy policy) noexcept {
+Json::Result<Json>
+    Json::parse(std::string_view content, Policy policy) noexcept {
     const auto raw = std::span<const char>(content.data(), content.size());
 
     Json::Result<allocators::Storage> parsed_storage = std::unexpected{Error::Unknown};
@@ -64,21 +66,25 @@ Json::Result<Json> Json::parse(std::string_view content, Policy policy) noexcept
     return Json(std::make_unique<allocators::Storage>(std::move(parsed_storage.value())));
 }
 
-void Json::sort() noexcept {
-    if (storage_) { 
-		storage_->sortAllObjects(); 
-	}
+void
+    Json::sort() noexcept {
+    if (storage_) {
+        storage_->sortAllObjects();
+    }
 }
 
-Value Json::root() const noexcept {
+Value
+    Json::root() const noexcept {
     return Value::fromInternal(storage_.get(), storage_->root());
 }
 
-std::string Json::dump(int indent) const noexcept {
+std::string
+    Json::dump(int indent) const noexcept {
     return root().dump(indent);
 }
 
-ZUU_HOT ZUU_ALIGN(64) Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
+ZUU_HOT
+    ZUU_ALIGN(64) Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
     const auto& root_val = storage_->root();
 
     if (root_val.get_type() != enums::JsonType::Object) {
@@ -91,29 +97,24 @@ ZUU_HOT ZUU_ALIGN(64) Json::Result<Value> Json::operator[](std::string_view key)
 
     if (is_sorted) {
         auto it = std::ranges::lower_bound(
-            obj, 
-            key, 
+            obj,
+            key,
             [](std::string_view a, std::string_view b) {
-                if (a.size() != b.size()) return a.size() < b.size();
+                if (a.size() != b.size())
+                    return a.size() < b.size();
                 return a < b;
             },
-            [this](const JsonMember& member) { 
-                return storage_->resolveKey(member); 
-            }
-        );
+            [this](const JsonMember& member) { return storage_->resolveKey(member); });
         if (it != obj.end() && storage_->resolveKey(*it) == key) {
             return Value::fromInternal(storage_.get(), it->value_);
         }
     } else {
-        auto it = std::ranges::find_if(
-            obj, 
-            [this, key](const JsonMember& member) {
-                auto m_key = storage_->resolveKey(member);
-                return m_key.size() == key.size() && m_key == key;
-            }
-        );
-        if (it != obj.end()) { 
-            return Value::fromInternal(storage_.get(), it->value_); 
+        auto it = std::ranges::find_if(obj, [this, key](const JsonMember& member) {
+            auto m_key = storage_->resolveKey(member);
+            return m_key.size() == key.size() && m_key == key;
+        });
+        if (it != obj.end()) {
+            return Value::fromInternal(storage_.get(), it->value_);
         }
     }
 

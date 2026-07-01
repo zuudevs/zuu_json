@@ -4,13 +4,13 @@
  * @brief Micro-benchmark for JSON Serialization Engine
  * @version 1.0.0
  * @date 2026-06-21
- * 
+ *
  * @copyright Copyright (c) 2026
  */
 
-#include <benchmark/benchmark.h>
-#include "zuu_json/json.hpp"
 #include "utils/fs_util.hpp"
+#include "zuu_json/json.hpp"
+#include <benchmark/benchmark.h>
 
 using namespace zuu;
 

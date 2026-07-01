@@ -4,7 +4,7 @@
  * @brief Brief description
  * @version 0.1.0
  * @date 2026-06-21
- * 
+ *
  * @copyright Copyright (c) 2026
  */
 
@@ -29,7 +29,8 @@ struct Member {
     const allocators::Storage* storage_;
     JsonValue val_;
 
-    [[nodiscard]] Value value() const noexcept;
+    [[nodiscard]] Value
+        value() const noexcept;
 };
 
 } // namespace zuu::models::views

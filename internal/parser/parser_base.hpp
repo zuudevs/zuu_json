@@ -10,18 +10,18 @@
 
 #pragma once
 
-#include "constants/general.hpp"
+#include "allocators/fast_stack.hpp"
 #include "allocators/storage.hpp"
+#include "constants/general.hpp"
+#include "lookups/char.hpp"
 #include "models/token.hpp"
+#include "utils/compiler.hpp"
 #include "utils/parser.hpp"
 #include "utils/strings.hpp"
-#include "allocators/fast_stack.hpp"
 #include "zuu_json/core/error.hpp"
-#include <expected>
 #include <cstring>
+#include <expected>
 #include <vector>
-#include "utils/compiler.hpp"
-#include "lookups/char.hpp"
 
 namespace zuu::parser {
 
@@ -32,31 +32,34 @@ namespace zuu::parser {
 template <typename Derived, typename LexerEngine>
 class ParserBase {
   public:
-    using Token      = models::Token;
-    using TokenType  = enums::TokenType;
-    using Error      = core::JsonError;
-    using Storage    = allocators::Storage;
-    using JsonValue  = models::JsonValue;
+    using Token = models::Token;
+    using TokenType = enums::TokenType;
+    using Error = core::JsonError;
+    using Storage = allocators::Storage;
+    using JsonValue = models::JsonValue;
     using JsonMember = models::JsonMember;
-    using Expected   = std::expected<Storage, Error>;
+    using Expected = std::expected<Storage, Error>;
 
     explicit ParserBase(LexerEngine& tokenizer) noexcept
         : lexer_(tokenizer) {
         advance();
     }
 
-    [[nodiscard]] Expected result() && noexcept {
+    [[nodiscard]] Expected
+        result() && noexcept {
         if (has_error()) {
             return std::unexpected{status_};
         }
         return std::move(res_);
     }
 
-    [[nodiscard]] bool has_error() const noexcept {
+    [[nodiscard]] bool
+        has_error() const noexcept {
         return status_ != Error::None;
     }
 
-    void execute() noexcept {
+    void
+        execute() noexcept {
         derived().parse();
     }
 
@@ -67,69 +70,90 @@ class ParserBase {
     Error status_{core::JsonError::None};
     allocators::FastStack<JsonValue> array_stack_;
     allocators::FastStack<JsonMember> object_stack_;
-    
+
     uint32_t depth_{0};
     static constexpr uint32_t kMaxDepth = 512;
 
-    [[nodiscard]] inline Derived& derived() noexcept {
+    [[nodiscard]] inline Derived&
+        derived() noexcept {
         return *static_cast<Derived*>(this);
     }
 
-    ZUU_HOT ZUU_ALWAYS_INLINE void advance() noexcept {
+    ZUU_HOT ZUU_ALWAYS_INLINE void
+        advance() noexcept {
         current_token_ = lexer_.next_token();
         if (lexer_.is_error()) {
             status_ = lexer_.get_error();
         }
     }
 
-    [[nodiscard]] ZUU_HOT ZUU_ALWAYS_INLINE uint32_t decodeUnicodeHex(const char* ptr) noexcept {
-        uint32_t d0       = lookups::hex[static_cast<uint8_t>(ptr[0])];
-        uint32_t d1       = lookups::hex[static_cast<uint8_t>(ptr[1])];
-        uint32_t d2       = lookups::hex[static_cast<uint8_t>(ptr[2])];
-        uint32_t d3       = lookups::hex[static_cast<uint8_t>(ptr[3])];
+    [[nodiscard]] ZUU_HOT ZUU_ALWAYS_INLINE uint32_t
+        decodeUnicodeHex(const char* ptr) noexcept {
+        uint32_t d0 = lookups::hex[static_cast<uint8_t>(ptr[0])];
+        uint32_t d1 = lookups::hex[static_cast<uint8_t>(ptr[1])];
+        uint32_t d2 = lookups::hex[static_cast<uint8_t>(ptr[2])];
+        uint32_t d3 = lookups::hex[static_cast<uint8_t>(ptr[3])];
         uint32_t combined = d0 | d1 | d2 | d3;
-        uint32_t cp       = (d0 << 12) | (d1 << constants::byte) | (d2 << constants::nibble) | d3;
-		
+        uint32_t cp = (d0 << 12) | (d1 << constants::byte) | (d2 << constants::nibble) | d3;
+
         return cp | ((combined & 0xF0) << 24);
     }
 
-    ZUU_HOT void finish_string_scalar(char*& out, const char*& ptr, const char* end) noexcept {
+    ZUU_HOT void
+        finish_string_scalar(char*& out, const char*& ptr, const char* end) noexcept {
         while (ptr < end) {
             while (ptr < end && *ptr != '\\') {
                 *out++ = *ptr++;
             }
 
             if (ptr >= end) {
-				break;
-			}
+                break;
+            }
 
-            ++ptr; 
+            ++ptr;
             if (ptr >= end) {
-				break;
-			}
+                break;
+            }
 
             switch (*ptr) {
-                case '\"': *out++ = '\"'; break;
-                case '\\': *out++ = '\\'; break;
-                case '/' : *out++ = '/';  break;
-                case 'b' : *out++ = '\b'; break;
-                case 'f' : *out++ = '\f'; break;
-                case 'n' : *out++ = '\n'; break;
-                case 'r' : *out++ = '\r'; break;
-                case 't' : *out++ = '\t'; break;
+                case '\"':
+                    *out++ = '\"';
+                    break;
+                case '\\':
+                    *out++ = '\\';
+                    break;
+                case '/':
+                    *out++ = '/';
+                    break;
+                case 'b':
+                    *out++ = '\b';
+                    break;
+                case 'f':
+                    *out++ = '\f';
+                    break;
+                case 'n':
+                    *out++ = '\n';
+                    break;
+                case 'r':
+                    *out++ = '\r';
+                    break;
+                case 't':
+                    *out++ = '\t';
+                    break;
                 case 'u': {
                     if (ptr + 5 > end) {
                         status_ = core::JsonError::InvalidValue;
                         return;
                     }
-                    
+
                     uint32_t cp = decodeUnicodeHex(ptr + 1);
                     ptr += constants::nibble;
                     if (cp >= 0xD800 && cp <= 0xDBFF) {
                         if (ptr + 6 <= end && ptr[1] == '\\' && ptr[2] == 'u') {
                             uint32_t cp2 = decodeUnicodeHex(ptr + 3);
                             if (cp2 >= 0xDC00 && cp2 <= 0xDFFF) {
-                                cp = 0x10000 + (((cp - 0xD800) << constants::digit) | (cp2 - 0xDC00));
+                                cp = 0x10000 +
+                                     (((cp - 0xD800) << constants::digit) | (cp2 - 0xDC00));
                                 ptr += 6;
                             } else {
                                 status_ = core::JsonError::InvalidValue;
@@ -169,19 +193,24 @@ class ParserBase {
         }
     }
 
-    [[nodiscard]] JsonValue buildNull() noexcept {
+    [[nodiscard]] JsonValue
+        buildNull() noexcept {
         advance();
         return JsonValue::Null();
     }
 
-    [[nodiscard]] JsonValue buildBoolean() noexcept {
+    [[nodiscard]] JsonValue
+        buildBoolean() noexcept {
         const auto value = current_token_.begin_[0] == 't';
         advance();
         return JsonValue::Boolean(value);
     }
 
-    [[nodiscard]] JsonValue buildInteger() noexcept {
-        if (auto res = utils::parse<long long>(current_token_.begin_, current_token_.begin_ + current_token_.size_); res) {
+    [[nodiscard]] JsonValue
+        buildInteger() noexcept {
+        if (auto res = utils::parse<long long>(current_token_.begin_,
+                                               current_token_.begin_ + current_token_.size_);
+            res) {
             advance();
             return JsonValue::Integer(*res);
         } else {
@@ -190,8 +219,11 @@ class ParserBase {
         }
     }
 
-    [[nodiscard]] JsonValue buildDouble() noexcept {
-        if (auto res = utils::parse<double>(current_token_.begin_, current_token_.begin_ + current_token_.size_); res) {
+    [[nodiscard]] JsonValue
+        buildDouble() noexcept {
+        if (auto res = utils::parse<double>(current_token_.begin_,
+                                            current_token_.begin_ + current_token_.size_);
+            res) {
             advance();
             return JsonValue::Double(*res);
         } else {
@@ -200,12 +232,14 @@ class ParserBase {
         }
     }
 
-    [[nodiscard]] JsonValue buildString() noexcept {
+    [[nodiscard]] JsonValue
+        buildString() noexcept {
         std::string_view val = current_token_.value();
 
         if (current_token_.has_escape_) {
             val = derived().unescapeString(val);
-            if (has_error()) return JsonValue::Null();
+            if (has_error())
+                return JsonValue::Null();
         }
 
         const auto index = res_.commitString(val);
@@ -213,7 +247,8 @@ class ParserBase {
         return JsonValue::String(index);
     }
 
-    [[nodiscard]] JsonValue buildArray() noexcept {
+    [[nodiscard]] JsonValue
+        buildArray() noexcept {
         advance();
 
         if (current_token_.type_ == TokenType::RightSquareBracket) {
@@ -231,20 +266,35 @@ class ParserBase {
         while (true) {
             JsonValue value;
             switch (current_token_.type_) {
-                case TokenType::String            : value = derived().buildString(); break;
-                case TokenType::Integer           : value = derived().buildInteger(); break;
-                case TokenType::Boolean           : value = derived().buildBoolean(); break;
-                case TokenType::Double            : value = derived().buildDouble(); break;
-                case TokenType::Null              : value = derived().buildNull(); break;
-                case TokenType::LeftCurlyBracket  : value = derived().buildObject(); break;
-                case TokenType::LeftSquareBracket : value = derived().buildArray(); break;
-                case TokenType::EndOfFile         :
-                default                           :
+                case TokenType::String:
+                    value = derived().buildString();
+                    break;
+                case TokenType::Integer:
+                    value = derived().buildInteger();
+                    break;
+                case TokenType::Boolean:
+                    value = derived().buildBoolean();
+                    break;
+                case TokenType::Double:
+                    value = derived().buildDouble();
+                    break;
+                case TokenType::Null:
+                    value = derived().buildNull();
+                    break;
+                case TokenType::LeftCurlyBracket:
+                    value = derived().buildObject();
+                    break;
+                case TokenType::LeftSquareBracket:
+                    value = derived().buildArray();
+                    break;
+                case TokenType::EndOfFile:
+                default:
                     status_ = core::JsonError::InvalidValue;
                     return JsonValue::Null();
             }
 
-            if (has_error()) [[unlikely]] return JsonValue::Null();
+            if (has_error()) [[unlikely]]
+                return JsonValue::Null();
 
             array_stack_.push_back(value);
 
@@ -271,7 +321,8 @@ class ParserBase {
         }
     }
 
-    [[nodiscard]] JsonValue buildObject() noexcept {
+    [[nodiscard]] JsonValue
+        buildObject() noexcept {
         advance();
 
         if (current_token_.type_ == TokenType::RightCurlyBracket) {
@@ -295,11 +346,12 @@ class ParserBase {
             std::string_view key_val = current_token_.value();
             if (current_token_.has_escape_) {
                 key_val = derived().unescapeString(key_val);
-                if (has_error()) [[unlikely]] return JsonValue::Null();
+                if (has_error()) [[unlikely]]
+                    return JsonValue::Null();
             }
 
             JsonMember member{};
-            
+
             if (key_val.size() <= constants::sso_max_len) {
                 uint64_t sso_block = 0;
                 std::memcpy(&sso_block, key_val.data(), key_val.size());
@@ -307,9 +359,9 @@ class ParserBase {
                 std::memcpy(&member.key_, &sso_block, 8);
             } else {
                 member.key_.ref_.length_ = static_cast<uint32_t>(key_val.size());
-                member.key_.ref_.index_  = res_.commitString(key_val);
+                member.key_.ref_.index_ = res_.commitString(key_val);
             }
-            
+
             advance();
 
             if (current_token_.type_ != TokenType::Colon) [[unlikely]] {
@@ -320,20 +372,35 @@ class ParserBase {
 
             JsonValue value;
             switch (current_token_.type_) {
-                case TokenType::String            : value = derived().buildString(); break;
-                case TokenType::Integer           : value = derived().buildInteger(); break;
-                case TokenType::Boolean           : value = derived().buildBoolean(); break;
-                case TokenType::Double            : value = derived().buildDouble(); break;
-                case TokenType::Null              : value = derived().buildNull(); break;
-                case TokenType::LeftCurlyBracket  : value = derived().buildObject(); break;
-                case TokenType::LeftSquareBracket : value = derived().buildArray(); break;
-                case TokenType::EndOfFile         :
-                default                           :
+                case TokenType::String:
+                    value = derived().buildString();
+                    break;
+                case TokenType::Integer:
+                    value = derived().buildInteger();
+                    break;
+                case TokenType::Boolean:
+                    value = derived().buildBoolean();
+                    break;
+                case TokenType::Double:
+                    value = derived().buildDouble();
+                    break;
+                case TokenType::Null:
+                    value = derived().buildNull();
+                    break;
+                case TokenType::LeftCurlyBracket:
+                    value = derived().buildObject();
+                    break;
+                case TokenType::LeftSquareBracket:
+                    value = derived().buildArray();
+                    break;
+                case TokenType::EndOfFile:
+                default:
                     status_ = core::JsonError::InvalidValue;
                     return JsonValue::Null();
             }
 
-            if (has_error()) [[unlikely]] return JsonValue::Null();
+            if (has_error()) [[unlikely]]
+                return JsonValue::Null();
 
             member.value_ = value;
             object_stack_.push_back(member);
@@ -361,20 +428,28 @@ class ParserBase {
         }
     }
 
-    [[nodiscard]] JsonValue buildValue() noexcept {
+    [[nodiscard]] JsonValue
+        buildValue() noexcept {
         switch (current_token_.type_) {
-            case TokenType::Null               : return derived().buildNull();
-            case TokenType::Boolean            : return derived().buildBoolean();
-            case TokenType::Integer            : return derived().buildInteger();
-            case TokenType::Double             : return derived().buildDouble();
-            case TokenType::String             : return derived().buildString();
-            case TokenType::LeftSquareBracket  : return derived().buildArray();
-            case TokenType::LeftCurlyBracket   : return derived().buildObject();
-            case TokenType::EndOfFile          :
-            case TokenType::RightSquareBracket :
-            case TokenType::RightCurlyBracket  :
-            case TokenType::Comma              :
-            case TokenType::Colon              :
+            case TokenType::Null:
+                return derived().buildNull();
+            case TokenType::Boolean:
+                return derived().buildBoolean();
+            case TokenType::Integer:
+                return derived().buildInteger();
+            case TokenType::Double:
+                return derived().buildDouble();
+            case TokenType::String:
+                return derived().buildString();
+            case TokenType::LeftSquareBracket:
+                return derived().buildArray();
+            case TokenType::LeftCurlyBracket:
+                return derived().buildObject();
+            case TokenType::EndOfFile:
+            case TokenType::RightSquareBracket:
+            case TokenType::RightCurlyBracket:
+            case TokenType::Comma:
+            case TokenType::Colon:
                 status_ = core::JsonError::EmptyValue;
                 return JsonValue::Null();
             default:
@@ -383,14 +458,17 @@ class ParserBase {
         }
     }
 
-    void parse() noexcept {
+    void
+        parse() noexcept {
         if (current_token_.type_ == TokenType::EndOfFile || has_error()) {
-            if (!has_error()) status_ = core::JsonError::EmptyValue;
+            if (!has_error())
+                status_ = core::JsonError::EmptyValue;
             return;
         }
 
         auto root = derived().buildValue();
-        if (has_error()) return;
+        if (has_error())
+            return;
 
         res_.setRoot(root);
         if (current_token_.type_ != TokenType::EndOfFile) {

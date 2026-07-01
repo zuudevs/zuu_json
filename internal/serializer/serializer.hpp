@@ -24,11 +24,10 @@ class Serializer {
      * @param indent Tingkat indentasi spasi (-1 untuk minified / tanpa spasi).
      * @return std::string JSON hasil akhir.
      */
-    [[nodiscard]] static std::string dump(
-		const allocators::Storage* storage, 
-		const models::JsonValue& root, 
-		int indent
-	) noexcept;
+    [[nodiscard]] static std::string
+        dump(const allocators::Storage* storage,
+             const models::JsonValue& root,
+             int indent) noexcept;
 
   private:
     std::string out_;
@@ -38,13 +37,20 @@ class Serializer {
 
     Serializer(const allocators::Storage* storage, int indent) noexcept;
 
-    void serializeValue(const models::JsonValue& value) noexcept;
-    void serializeObject(const models::JsonValue& value) noexcept;
-    void serializeArray(const models::JsonValue& value) noexcept;
-    void serializeString(std::string_view str) noexcept;
-    void serializeInteger(long long val) noexcept;
-    void serializeDouble(double val) noexcept;
-    void writeIndent() noexcept;
+    void
+        serializeValue(const models::JsonValue& value) noexcept;
+    void
+        serializeObject(const models::JsonValue& value) noexcept;
+    void
+        serializeArray(const models::JsonValue& value) noexcept;
+    void
+        serializeString(std::string_view str) noexcept;
+    void
+        serializeInteger(long long val) noexcept;
+    void
+        serializeDouble(double val) noexcept;
+    void
+        writeIndent() noexcept;
 };
 
 } // namespace zuu::serializer

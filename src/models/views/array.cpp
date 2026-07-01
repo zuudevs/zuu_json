@@ -4,7 +4,7 @@
  * @brief Brief description
  * @version 0.1.0
  * @date 2026-06-21
- * 
+ *
  * @copyright Copyright (c) 2026
  */
 
@@ -14,15 +14,18 @@
 
 namespace zuu::models::views {
 
-Value Array::Iterator::operator*() const noexcept {
+Value
+    Array::Iterator::operator*() const noexcept {
     return Value::fromInternal(storage_, *ptr_);
 }
 
-Value Array::Iterator::operator[](difference_type n) const noexcept {
+Value
+    Array::Iterator::operator[](difference_type n) const noexcept {
     return Value::fromInternal(storage_, *(ptr_ + n));
 }
 
-Value Array::operator[](std::size_t index) const noexcept {
+Value
+    Array::operator[](std::size_t index) const noexcept {
     return Value::fromInternal(storage_, span_[index]);
 }
 
