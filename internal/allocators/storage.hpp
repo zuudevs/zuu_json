@@ -10,21 +10,22 @@
 
 #pragma once
 
-#include "models/json_member.hpp"
 #include <cstdint>
 #include <memory>
 #include <span>
 #include <string_view>
 #include <vector>
-#include "traits/meta_trait.hpp"
 
-namespace zuu::models {
+#include "models/json_member.hpp"
+#include "models/specs/storage.hpp"
+
+namespace zuu::allocators {
 
 class Storage {
   public:
-    using Type       = JsonValue::Type;
-    using JsonArray  = std::span<const JsonValue>;
-    using JsonObject = std::span<const JsonMember>;
+    using Type       = enums::JsonType;
+    using JsonArray  = std::span<const models::JsonValue>;
+    using JsonObject = std::span<const models::JsonMember>;
 
     Storage() noexcept;
     Storage(Storage&& other) noexcept;
@@ -35,14 +36,14 @@ class Storage {
 	Storage& operator=(const Storage&) = delete;
 
     [[nodiscard]] bool hasRoot() const noexcept;
-    void setRoot(JsonValue value) noexcept;
-    [[nodiscard]] const JsonValue& root() const noexcept;
+    void setRoot(models::JsonValue value) noexcept;
+    [[nodiscard]] const models::JsonValue& root() const noexcept;
 
     [[nodiscard]] uint64_t commitString(std::string_view value) noexcept;
     [[nodiscard]] char* allocateStringBuffer(uint64_t length) noexcept;
 
-    [[nodiscard]] uint64_t sealArray(const JsonValue* elements, uint32_t count) noexcept;
-    [[nodiscard]] uint64_t sealObject(const JsonMember* members, uint32_t count) noexcept;
+    [[nodiscard]] uint64_t sealArray(const models::JsonValue* elements, uint32_t count) noexcept;
+    [[nodiscard]] uint64_t sealObject(const models::JsonMember* members, uint32_t count) noexcept;
     
     [[nodiscard]] bool isObjectSorted(uint64_t index) const noexcept;
     void sortAllObjects() noexcept;
@@ -50,7 +51,7 @@ class Storage {
     [[nodiscard]] JsonArray array(uint64_t index) const noexcept;
     [[nodiscard]] JsonObject object(uint64_t index) const noexcept;
     [[nodiscard]] std::string_view string(uint64_t index) const noexcept;
-    [[nodiscard]] std::string_view resolveKey(const JsonMember& member) const noexcept;
+    [[nodiscard]] std::string_view resolveKey(const models::JsonMember& member) const noexcept;
 
     // Untuk mengestimasi ukuran serialisasi
     [[nodiscard]] uint64_t getArrayElementsCount() const noexcept { return total_array_elements_; }
@@ -74,14 +75,14 @@ class Storage {
     [[nodiscard]] void* allocate(uint32_t size, uint32_t alignment) noexcept;
 
     std::vector<std::string_view> strings_;
-    std::vector<std::pair<const JsonValue*, uint32_t>> arrays_;
-    std::vector<traits::MetaTrait<Storage>> objects_;
+    std::vector<std::pair<const models::JsonValue*, uint32_t>> arrays_;
+    std::vector<models::specs::Storage> objects_;
 
     uint32_t total_array_elements_{0};
     uint32_t total_object_elements_{0};
 
-    JsonValue root_{};
+    models::JsonValue root_{};
     bool root_set_{false};
 };
 
-} // namespace zuu::models
+} // namespace zuu::allocators

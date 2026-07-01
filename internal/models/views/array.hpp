@@ -1,5 +1,5 @@
 /**
- * @file array_view.hpp
+ * @file array.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
  * @version 0.1.0
@@ -10,24 +10,28 @@
 
 #pragma once
 
-#include "models/storage.hpp"
+#include "allocators/storage.hpp"
 
 namespace zuu::models {
 
 class Value;
 
-class ArrayView {
+} // namespace zuu::models
+
+namespace zuu::models::views {
+
+class Array {
   private:
-    const Storage* storage_{nullptr};
+    const allocators::Storage* storage_{nullptr};
     std::span<const JsonValue> span_{};
 
   public:
-    ArrayView() = default;
-    ArrayView(const Storage* storage, std::span<const JsonValue> span) noexcept
+    Array() = default;
+    Array(const allocators::Storage* storage, std::span<const JsonValue> span) noexcept
         : storage_(storage), span_(span) {}
 
     class Iterator {
-        const Storage* storage_{nullptr};
+        const allocators::Storage* storage_{nullptr};
         const JsonValue* ptr_{nullptr};
 
       public:
@@ -39,7 +43,7 @@ class ArrayView {
         using reference = Value;
 
         Iterator() = default;
-        Iterator(const Storage* storage, const JsonValue* ptr) noexcept
+        Iterator(const allocators::Storage* storage, const JsonValue* ptr) noexcept
             : storage_(storage), ptr_(ptr) {}
 
         [[nodiscard]] Value operator*() const noexcept;
@@ -69,4 +73,4 @@ class ArrayView {
     [[nodiscard]] Value operator[](std::size_t index) const noexcept;
 };
 
-} // namespace zuu::models
+} // namespace zuu::models::views

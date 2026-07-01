@@ -11,16 +11,17 @@
 #pragma once
 
 #include "constants/general.hpp"
-#include "models/storage.hpp"
+#include "allocators/storage.hpp"
 #include "models/token.hpp"
 #include "utils/parser.hpp"
 #include "utils/strings.hpp"
-#include "models/fast_stack.hpp"
+#include "allocators/fast_stack.hpp"
 #include "zuu_json/core/error.hpp"
 #include <expected>
 #include <cstring>
 #include <vector>
 #include "utils/compiler.hpp"
+#include "lookups/char.hpp"
 
 namespace zuu::parser {
 
@@ -32,9 +33,9 @@ template <typename Derived, typename LexerEngine>
 class ParserBase {
   public:
     using Token      = models::Token;
-    using TokenType  = Token::Type;
+    using TokenType  = enums::TokenType;
     using Error      = core::JsonError;
-    using Storage    = models::Storage;
+    using Storage    = allocators::Storage;
     using JsonValue  = models::JsonValue;
     using JsonMember = models::JsonMember;
     using Expected   = std::expected<Storage, Error>;
@@ -61,11 +62,11 @@ class ParserBase {
 
   protected:
     LexerEngine& lexer_;
-    Token current_token_{Token::Type::Unknown};
-    Storage res_;
+    Token current_token_{enums::TokenType::Unknown};
+    allocators::Storage res_;
     Error status_{core::JsonError::None};
-    models::FastStack<JsonValue> array_stack_;
-    models::FastStack<JsonMember> object_stack_;
+    allocators::FastStack<JsonValue> array_stack_;
+    allocators::FastStack<JsonMember> object_stack_;
     
     uint32_t depth_{0};
     static constexpr uint32_t kMaxDepth = 512;
@@ -82,10 +83,10 @@ class ParserBase {
     }
 
     [[nodiscard]] ZUU_HOT ZUU_ALWAYS_INLINE uint32_t decodeUnicodeHex(const char* ptr) noexcept {
-        uint32_t d0       = traits::LookupTrait<char>::hex.datas_[static_cast<uint8_t>(ptr[0])];
-        uint32_t d1       = traits::LookupTrait<char>::hex.datas_[static_cast<uint8_t>(ptr[1])];
-        uint32_t d2       = traits::LookupTrait<char>::hex.datas_[static_cast<uint8_t>(ptr[2])];
-        uint32_t d3       = traits::LookupTrait<char>::hex.datas_[static_cast<uint8_t>(ptr[3])];
+        uint32_t d0       = lookups::hex[static_cast<uint8_t>(ptr[0])];
+        uint32_t d1       = lookups::hex[static_cast<uint8_t>(ptr[1])];
+        uint32_t d2       = lookups::hex[static_cast<uint8_t>(ptr[2])];
+        uint32_t d3       = lookups::hex[static_cast<uint8_t>(ptr[3])];
         uint32_t combined = d0 | d1 | d2 | d3;
         uint32_t cp       = (d0 << 12) | (d1 << constants::byte) | (d2 << constants::nibble) | d3;
 		

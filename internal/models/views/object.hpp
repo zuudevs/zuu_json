@@ -1,5 +1,5 @@
 /**
- * @file object_view.hpp
+ * @file object.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
  * @version 0.1.0
@@ -11,40 +11,40 @@
 #pragma once
 
 #include "models/json_member.hpp"
-#include "models/member_view.hpp"
-#include "models/storage.hpp"
+#include "models/views/member.hpp"
+#include "allocators/storage.hpp"
 #include <span>
 
-namespace zuu::models {
+namespace zuu::models::views {
 
-class ObjectView {
+class Object {
   private:
-    const Storage* storage_{nullptr};
+    const allocators::Storage* storage_{nullptr};
     std::span<const JsonMember> span_{};
 
   public:
-    ObjectView() = default;
-    ObjectView(const Storage* storage, std::span<const JsonMember> span) noexcept
+    Object() = default;
+    Object(const allocators::Storage* storage, std::span<const JsonMember> span) noexcept
         : storage_(storage), span_(span) {}
 
     class Iterator {
-        const Storage* storage_{nullptr};
+        const allocators::Storage* storage_{nullptr};
         const JsonMember* ptr_{nullptr};
 
       public:
         using iterator_concept = std::random_access_iterator_tag;
         using iterator_category = std::random_access_iterator_tag;
-        using value_type = MemberView;
+        using value_type = Member;
         using difference_type = std::ptrdiff_t;
         using pointer = void;
-        using reference = MemberView;
+        using reference = Member;
 
         Iterator() = default;
-        Iterator(const Storage* storage, const JsonMember* ptr) noexcept
+        Iterator(const allocators::Storage* storage, const JsonMember* ptr) noexcept
             : storage_(storage), ptr_(ptr) {}
 
-        [[nodiscard]] MemberView operator*() const noexcept;
-        [[nodiscard]] MemberView operator[](difference_type n) const noexcept;
+        [[nodiscard]] Member operator*() const noexcept;
+        [[nodiscard]] Member operator[](difference_type n) const noexcept;
 
         Iterator& operator++() noexcept { ++ptr_; return *this; }
         Iterator operator++(int) noexcept { auto tmp = *this; ++ptr_; return tmp; }
@@ -63,10 +63,10 @@ class ObjectView {
         [[nodiscard]] bool operator==(const Iterator& other) const noexcept { return ptr_ == other.ptr_; }
     };
 
-    [[nodiscard]] Iterator begin() const noexcept { return Iterator(storage_, span_.data()); }
-    [[nodiscard]] Iterator end() const noexcept { return Iterator(storage_, span_.data() + span_.size()); }
+    [[nodiscard]] Iterator begin() const noexcept { return {storage_, span_.data()}; }
+    [[nodiscard]] Iterator end() const noexcept { return {storage_, span_.data() + span_.size()}; }
     [[nodiscard]] std::size_t size() const noexcept { return span_.size(); }
     [[nodiscard]] bool empty() const noexcept { return span_.empty(); }
 };
 
-} // namespace zuu::models
+} // namespace zuu::models::views

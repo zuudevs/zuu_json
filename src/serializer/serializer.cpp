@@ -16,7 +16,7 @@
 
 namespace zuu::serializer {
 
-Serializer::Serializer(const models::Storage* storage, int indent) noexcept
+Serializer::Serializer(const allocators::Storage* storage, int indent) noexcept
     : indent_(indent), storage_(storage) {
     
     std::size_t estimated_size = 4096; 
@@ -27,7 +27,7 @@ Serializer::Serializer(const models::Storage* storage, int indent) noexcept
     out_.reserve(estimated_size);
 }
 
-std::string Serializer::dump(const models::Storage* storage, const models::JsonValue& root, int indent) noexcept {
+std::string Serializer::dump(const allocators::Storage* storage, const models::JsonValue& root, int indent) noexcept {
     Serializer s(storage, indent);
     s.serializeValue(root);
     return std::move(s.out_);
@@ -42,16 +42,16 @@ void Serializer::writeIndent() noexcept {
 
 void Serializer::serializeValue(const models::JsonValue& value) noexcept {
     switch (value.get_type()) {
-        case models::JsonValue::Type::Null:    out_.append("null", 4); break;
-        case models::JsonValue::Type::Boolean: 
+        case enums::JsonType::Null:    out_.append("null", 4); break;
+        case enums::JsonType::Boolean: 
             if (value.as_bool()) out_.append("true", 4);
             else out_.append("false", 5);
             break;
-        case models::JsonValue::Type::Integer: serializeInteger(value.as_integer()); break;
-        case models::JsonValue::Type::Double:  serializeDouble(value.as_double()); break;
-        case models::JsonValue::Type::String:  serializeString(storage_->string(value.as_index())); break;
-        case models::JsonValue::Type::Array:   serializeArray(value); break;
-        case models::JsonValue::Type::Object:  serializeObject(value); break;
+        case enums::JsonType::Integer: serializeInteger(value.as_integer()); break;
+        case enums::JsonType::Double:  serializeDouble(value.as_double()); break;
+        case enums::JsonType::String:  serializeString(storage_->string(value.as_index())); break;
+        case enums::JsonType::Array:   serializeArray(value); break;
+        case enums::JsonType::Object:  serializeObject(value); break;
     }
 }
 

@@ -1,5 +1,5 @@
 /**
- * @file member_view.hpp
+ * @file member.hpp
  * @author zuudevs (zuudevs@gmail.com)
  * @brief Brief description
  * @version 0.1.0
@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "allocators/storage.hpp"
 #include "models/json_value.hpp"
 #include <string_view>
 
@@ -17,17 +18,18 @@ namespace zuu::models {
 
 class Json;
 class Storage;
-class Value; // Forward declaration
+class Value;
 
-// ── Object Member View (Structured Binding Support) ──
+} // namespace zuu::models
 
-struct MemberView {
+namespace zuu::models::views {
+
+struct Member {
     std::string_view key_;
-    const Storage* storage_;
+    const allocators::Storage* storage_;
     JsonValue val_;
 
-    // Konstruksi Value hanya dilakukan secara lazy saat dipanggil
     [[nodiscard]] Value value() const noexcept;
 };
 
-} // namespace zuu::models
+} // namespace zuu::models::views

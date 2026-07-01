@@ -18,7 +18,7 @@
 #include <utility>
 #include <cstddef>
 
-namespace zuu::models {
+namespace zuu::allocators {
 
 template <typename T, uint32_t InlineCapacity = 512>
 class FastStack {
@@ -109,4 +109,4 @@ class FastStack {
     alignas(T) std::byte inline_buffer_[InlineCapacity * sizeof(T)];
 };
 
-} // namespace zuu::models
+} // namespace zuu::allocators

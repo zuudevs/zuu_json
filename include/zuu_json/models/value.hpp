@@ -10,9 +10,9 @@
 
 #pragma once
 
-#include "models/array_view.hpp"
-#include "models/member_view.hpp"
-#include "models/object_view.hpp"
+#include "models/views/array.hpp"
+#include "models/views/member.hpp"
+#include "models/views/object.hpp"
 #include "models/json_value.hpp"
 #include <expected>
 #include <string_view>
@@ -40,7 +40,7 @@ class Value {
   public:
     template <typename T>
     using Result = std::expected<T, core::JsonError>;
-    using Type = models::JsonValue::Type;
+    using Type = enums::JsonType;
 
     // ── Inspeksi Tipe ──
     [[nodiscard]] Type type() const noexcept;
@@ -69,52 +69,56 @@ class Value {
     [[nodiscard]] bool contains(std::string_view key) const noexcept;
 
 	// ── Iterators & Views ──
-    [[nodiscard]] Result<ArrayView> as_array() const noexcept;
-    [[nodiscard]] Result<ObjectView> as_object() const noexcept;
-    [[nodiscard]] ArrayView get_array() const noexcept;
-    [[nodiscard]] ObjectView get_object() const noexcept;
-
+    [[nodiscard]] Result<views::Array> as_array() const noexcept;
+    [[nodiscard]] Result<views::Object> as_object() const noexcept;
+    [[nodiscard]] views::Array get_array() const noexcept;
+    [[nodiscard]] views::Object get_object() const noexcept;
+	
 	// ── Serializer / Emitter ──
-    [[nodiscard]] std::string dump(int indent = -1) const noexcept;
-
-    // Strict traversal
-    [[nodiscard]] Result<Value> at(unsigned long long index) const noexcept;
-    [[nodiscard]] Result<Value> at(std::string_view key) const noexcept;
-
-    // Fluent traversal (Optional Chaining - mengembalikan Value Null jika tidak ditemukan)
-    [[nodiscard]] Value operator[](unsigned long long index) const noexcept;
-    [[nodiscard]] Value operator[](std::string_view key) const noexcept;
-
+	[[nodiscard]] std::string dump(int indent = -1) const noexcept;
+	
+	// Strict traversal
+	[[nodiscard]] Result<Value> at(unsigned long long index) const noexcept;
+	[[nodiscard]] Result<Value> at(std::string_view key) const noexcept;
+	
+	// Fluent traversal (Optional Chaining - mengembalikan Value Null jika tidak ditemukan)
+	[[nodiscard]] Value operator[](unsigned long long index) const noexcept;
+	[[nodiscard]] Value operator[](std::string_view key) const noexcept;
+	
   private:
-    friend class Json;
-    friend class ArrayView;
-    friend class ObjectView;
-	friend struct MemberView;
-
-    const Storage* storage_{nullptr};
-    JsonValue value_;
-
-    explicit Value(const Storage* storage, JsonValue value) noexcept;
-
-    [[nodiscard]] static Value fromInternal(const Storage* storage, const JsonValue& v) noexcept;
-    [[nodiscard]] static Value createNull(const Storage* storage) noexcept;
+	friend class Json;
+	friend class views::Array;
+	friend class views::Object;
+	friend struct views::Member;
+	
+	const allocators::Storage* storage_{nullptr};
+	JsonValue value_;
+	
+	explicit Value(const allocators::Storage* storage, JsonValue value) noexcept;
+	
+	[[nodiscard]] static Value fromInternal(const allocators::Storage* storage, const JsonValue& v) noexcept;
+	[[nodiscard]] static Value createNull(const allocators::Storage* storage) noexcept;
 };
 
+} // namespace zuu::models
+
+namespace zuu::models::views {
+
 template <std::size_t N>
-[[nodiscard]] decltype(auto) get(const MemberView& m) noexcept {
+[[nodiscard]] decltype(auto) get(const Member& m) noexcept {
     if constexpr (N == 0) { return m.key_; }
     else if constexpr (N == 1) { return m.value(); }
 }
 
-} // namespace zuu::models
+} // namespace zuu::models::views
 
 namespace std {
     template <>
-    struct tuple_size<zuu::models::MemberView> : std::integral_constant<std::size_t, 2> {};
-
+	struct tuple_size<zuu::models::views::Member> : std::integral_constant<std::size_t, 2> {};
+	
     template <>
-    struct tuple_element<0, zuu::models::MemberView> { using type = std::string_view; };
-
+	struct tuple_element<0, zuu::models::views::Member> { using type = std::string_view; };
+	
     template <>
-    struct tuple_element<1, zuu::models::MemberView> { using type = zuu::models::Value; };
+	struct tuple_element<1, zuu::models::views::Member> { using type = zuu::models::Value; };
 }

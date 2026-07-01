@@ -37,7 +37,7 @@ class Lexer {
         
         while(true) {
             auto tok = engine.next_token();
-            if (tok.type_ == models::Token::Type::EndOfFile || engine.is_error()) {
+            if (tok.type_ == enums::TokenType::EndOfFile || engine.is_error()) {
 				break;
 			}
             res.push_back(tok);

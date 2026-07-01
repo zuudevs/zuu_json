@@ -8,13 +8,13 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "models/member_view.hpp"
+#include "models/views/member.hpp"
 #include "zuu_json/models/value.hpp"
 
-namespace zuu::models {
+namespace zuu::models::views {
 
-Value MemberView::value() const noexcept {
+Value Member::value() const noexcept {
     return Value::fromInternal(storage_, val_);
 }
 
-} // namespace zuu::models
+} // namespace zuu::models::views

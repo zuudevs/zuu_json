@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "models/storage.hpp"
+#include "allocators/storage.hpp"
 #include <string>
 
 namespace zuu::serializer {
@@ -25,7 +25,7 @@ class Serializer {
      * @return std::string JSON hasil akhir.
      */
     [[nodiscard]] static std::string dump(
-		const models::Storage* storage, 
+		const allocators::Storage* storage, 
 		const models::JsonValue& root, 
 		int indent
 	) noexcept;
@@ -34,9 +34,9 @@ class Serializer {
     std::string out_;
     int indent_;
     int current_indent_{0};
-    const models::Storage* storage_;
+    const allocators::Storage* storage_;
 
-    Serializer(const models::Storage* storage, int indent) noexcept;
+    Serializer(const allocators::Storage* storage, int indent) noexcept;
 
     void serializeValue(const models::JsonValue& value) noexcept;
     void serializeObject(const models::JsonValue& value) noexcept;

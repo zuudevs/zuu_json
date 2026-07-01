@@ -13,37 +13,6 @@
 #include "constants/general.hpp"
 #include <cstdint>
 #include <string>
-#include "traits/lookup_trait.hpp"
-
-namespace zuu::traits {
-
-namespace detail {
-    struct HexTable {
-        uint8_t datas_[256]{};
-        
-        constexpr HexTable() noexcept {
-            for (auto& data_ : datas_) {
-				data_ = UINT8_MAX;
-			};
-            for (int i = '0'; i <= '9'; ++i) {
-				datas_[i] = i - '0';
-			}
-            for (int i = 'A'; i <= 'F'; ++i) {
-				datas_[i] = i - 'A' + constants::digit;
-			}
-            for (int i = 'a'; i <= 'f'; ++i) {
-				datas_[i] = i - 'a' + constants::digit;
-			}
-        }
-    };
-}
-
-template <>
-struct LookupTrait<char> {
-    alignas(64) static inline constexpr detail::HexTable hex{};
-};
-
-} // namespace zuu::traits
 
 namespace zuu::utils {
 

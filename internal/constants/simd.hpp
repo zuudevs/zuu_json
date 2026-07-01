@@ -34,14 +34,4 @@ alignas(32) static inline const __m256i simd32_rcb         = _mm256_set1_epi8('}
 alignas(32) static inline const __m256i simd32_rsb         = _mm256_set1_epi8(']');
 alignas(32) static inline const __m256i simd32_com         = _mm256_set1_epi8(',');
 
-// clang-format off
-// PSHUFB Lookup Table untuk Whitespace
-alignas(32) static inline const __m256i simd32_lut_whitespace = _mm256_setr_epi8(
-	0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-	0x00, 0x09, 0x0A, 0x00, 0x00, 0x0D, 0x00, 0x00,
-	0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-	0x00, 0x09, 0x0A, 0x00, 0x00, 0x0D, 0x00, 0x00
-);
-// clang-format on
-
 } // namespace zuu::constants

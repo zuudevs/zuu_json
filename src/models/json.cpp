@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <expected>
+#include "enums/json_type.hpp"
 #include "parser/parser.hpp"
 #include "lexer/lexer.hpp"
 #include "utils/compiler.hpp"
@@ -18,7 +19,7 @@
 
 namespace {
     template <typename TokenizerPolicy, typename ParserPolicy>
-    [[nodiscard]] inline zuu::models::Json::Result<zuu::models::Storage> 
+    [[nodiscard]] inline zuu::models::Json::Result<zuu::allocators::Storage> 
     run_fused_parser(std::span<const char> raw) noexcept {
         using TokenizerEngine = typename TokenizerPolicy::Engine;
 
@@ -34,13 +35,13 @@ Json::Json(Json&&) noexcept            = default;
 Json& Json::operator=(Json&&) noexcept = default;
 Json::~Json() noexcept                 = default;
 
-Json::Json(std::unique_ptr<Storage> storage) noexcept
+Json::Json(std::unique_ptr<allocators::Storage> storage) noexcept
     : storage_(std::move(storage)) {}
 
 Json::Result<Json> Json::parse(std::string_view content, Policy policy) noexcept {
     const auto raw = std::span<const char>(content.data(), content.size());
 
-    Json::Result<Storage> parsed_storage = std::unexpected{Error::Unknown};
+    Json::Result<allocators::Storage> parsed_storage = std::unexpected{Error::Unknown};
 
     if (policy.tokenizer_engine == core::TokenizerEngine::Avx2) {
         if (policy.parser_engine == core::ParserEngine::Avx2) {
@@ -60,7 +61,7 @@ Json::Result<Json> Json::parse(std::string_view content, Policy policy) noexcept
         return std::unexpected{parsed_storage.error()};
     }
 
-    return Json(std::make_unique<Storage>(std::move(parsed_storage.value())));
+    return Json(std::make_unique<allocators::Storage>(std::move(parsed_storage.value())));
 }
 
 void Json::sort() noexcept {
@@ -80,7 +81,7 @@ std::string Json::dump(int indent) const noexcept {
 ZUU_HOT ZUU_ALIGN(64) Json::Result<Value> Json::operator[](std::string_view key) const noexcept {
     const auto& root_val = storage_->root();
 
-    if (root_val.get_type() != JsonValue::Type::Object) {
+    if (root_val.get_type() != enums::JsonType::Object) {
         return std::unexpected{Error::IsNotObject};
     }
 

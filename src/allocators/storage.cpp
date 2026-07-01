@@ -8,13 +8,13 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "models/storage.hpp"
+#include "allocators/storage.hpp"
 #include "constants/general.hpp"
 #include <algorithm>
 #include <utility>
 #include <cstring>
 
-namespace zuu::models {
+namespace zuu::allocators {
 
 Storage::Storage() noexcept {
     head_ = new Chunk(default_chunk_size_);
@@ -89,12 +89,12 @@ bool Storage::hasRoot() const noexcept {
     return root_set_;
 }
 
-void Storage::setRoot(JsonValue value) noexcept {
+void Storage::setRoot(models::JsonValue value) noexcept {
     root_ = value;
     root_set_ = true;
 }
 
-const JsonValue& Storage::root() const noexcept {
+const models::JsonValue& Storage::root() const noexcept {
     return root_;
 }
 
@@ -107,31 +107,31 @@ char* Storage::allocateStringBuffer(uint64_t length) noexcept {
     return static_cast<char*>(allocate(length, 1));
 }
 
-uint64_t Storage::sealArray(const JsonValue* elements, uint32_t count) noexcept {
+uint64_t Storage::sealArray(const models::JsonValue* elements, uint32_t count) noexcept {
     total_array_elements_ += count;
     if (count == 0) {
         arrays_.push_back({nullptr, 0});
         return arrays_.size() - 1;
     }
     
-    auto* ptr = static_cast<JsonValue*>(allocate(count * sizeof(JsonValue), alignof(JsonValue)));
+    auto* ptr = static_cast<models::JsonValue*>(allocate(count * sizeof(models::JsonValue), alignof(models::JsonValue)));
     
-    std::memcpy(ptr, elements, count * sizeof(JsonValue));
+    std::memcpy(ptr, elements, count * sizeof(models::JsonValue));
     
     arrays_.push_back({ptr, count});
     return arrays_.size() - 1;
 }
 
-uint64_t Storage::sealObject(const JsonMember* members, uint32_t count) noexcept {
+uint64_t Storage::sealObject(const models::JsonMember* members, uint32_t count) noexcept {
     total_object_elements_ += count;
     if (count == 0) {
         objects_.push_back({nullptr, 0, false});
         return objects_.size() - 1;
     }
     
-    auto ptr = static_cast<JsonMember*>(allocate(count * sizeof(JsonMember), alignof(JsonMember)));
+    auto ptr = static_cast<models::JsonMember*>(allocate(count * sizeof(models::JsonMember), alignof(models::JsonMember)));
     
-    std::memcpy(ptr, members, count * sizeof(JsonMember));
+    std::memcpy(ptr, members, count * sizeof(models::JsonMember));
     
     objects_.push_back({ptr, count, false});
     return objects_.size() - 1;
@@ -144,7 +144,7 @@ bool Storage::isObjectSorted(uint64_t index) const noexcept {
 void Storage::sortAllObjects() noexcept {
     for (auto& meta : objects_) {
         if (!meta.is_sorted && meta.size > 1) {
-            auto ptr = const_cast<JsonMember*>(meta.ptr);
+            auto ptr = const_cast<models::JsonMember*>(meta.ptr);
             std::ranges::sort(
                 ptr, ptr + meta.size,
                 [](std::string_view a, std::string_view b) {
@@ -153,7 +153,7 @@ void Storage::sortAllObjects() noexcept {
                     }
                     return a < b;
                 },
-                [this](const JsonMember& member) { 
+                [this](const models::JsonMember& member) { 
                     return resolveKey(member); 
                 }
             );
@@ -176,7 +176,7 @@ std::string_view Storage::string(uint64_t index) const noexcept {
     return strings_[index];
 }
 
-std::string_view Storage::resolveKey(const JsonMember& member) const noexcept {
+std::string_view Storage::resolveKey(const models::JsonMember& member) const noexcept {
     if ((member.key_.sso_.tag_ & constants::sso_tag) != 0) {
         const uint8_t len = member.key_.sso_.tag_ & ~constants::sso_tag;
         return {member.key_.sso_.chars_, len};
@@ -184,4 +184,4 @@ std::string_view Storage::resolveKey(const JsonMember& member) const noexcept {
     return strings_[member.key_.ref_.index_];
 }
 
-} // namespace zuu::models
+} // namespace zuu::allocators

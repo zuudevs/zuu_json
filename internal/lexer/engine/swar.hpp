@@ -11,7 +11,10 @@
 #pragma once
 
 #include "constants/swar.hpp"
+#include "enums/token_kind.hpp"
+#include "enums/token_type.hpp"
 #include "lexer/lexer_base.hpp"
+#include "lookups/token.hpp"
 #include "utils/compiler.hpp"
 #include "utils/swar.hpp"
 #include <bit>
@@ -41,7 +44,10 @@ class Swar : public LexerBase<Swar> {
             }
         }
 
-        while (current_ < end_ && Lookup{}[*current_] == Lookup::Type::WhiteSpace) {
+        while (
+			current_ < end_ && 
+			static_cast<enums::TokenKind>(lookups::token_kind[*current_]) == enums::TokenKind::WhiteSpace
+		) {
             ++current_;
         }
     }
@@ -72,13 +78,13 @@ class Swar : public LexerBase<Swar> {
                 if (c == '\"') [[likely]] {
                     this->current_ = ptr + byte_idx + 1;
                     return {
-                        Token::Type::String, 
+                        enums::TokenType::String, 
                         std::string_view(begin, (ptr + byte_idx) - begin), 
                         has_escape
                     };
                 } else if (static_cast<uint8_t>(c) < 0x20) [[unlikely]] {
                     this->status_ = Error::UnescapedCharacter; 
-                    return Token::Type::Unknown;
+                    return enums::TokenType::Unknown;
                 } else {
                     has_escape = true;
                     ptr += byte_idx + 2;

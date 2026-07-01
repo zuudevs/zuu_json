@@ -15,9 +15,13 @@
 #include "policies.hpp"
 #include "zuu_json/models/value.hpp"
 
-namespace zuu::models {
+namespace zuu::allocators {
 
 class Storage;
+
+} // namespace zuu::allocators
+
+namespace zuu::models {
 
 /**
  * @brief A fully-parsed JSON document.  Move-only.
@@ -51,8 +55,8 @@ class Json {
 	[[nodiscard]] std::string dump(int indent = -1) const noexcept;
 
   private:
-    explicit Json(std::unique_ptr<Storage> storage) noexcept;
-    std::unique_ptr<Storage> storage_;
+    explicit Json(std::unique_ptr<allocators::Storage> storage) noexcept;
+    std::unique_ptr<allocators::Storage> storage_;
 };
 
 } // namespace zuu::models

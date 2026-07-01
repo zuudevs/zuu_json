@@ -11,6 +11,7 @@
 #include <benchmark/benchmark.h>
 #include <string>
 #include <span>
+#include "enums/token_type.hpp"
 #include "parser/parser.hpp"
 #include "lexer/lexer.hpp"
 
@@ -43,7 +44,7 @@ static void BM_SWAR_String_Tokenizer_Plain(benchmark::State& state) {
         lexer::SwarPolicy::Engine lexer(raw);
         while (true) {
             auto tok = lexer.next_token();
-            if (tok.type_ == models::Token::Type::EndOfFile || lexer.is_error()) break;
+            if (tok.type_ == enums::TokenType::EndOfFile || lexer.is_error()) break;
             benchmark::DoNotOptimize(tok);
         }
         benchmark::ClobberMemory();
@@ -58,7 +59,7 @@ static void BM_SWAR_String_Tokenizer_Escaped(benchmark::State& state) {
         lexer::SwarPolicy::Engine lexer(raw);
         while (true) {
             auto tok = lexer.next_token();
-            if (tok.type_ == models::Token::Type::EndOfFile || lexer.is_error()) break;
+            if (tok.type_ == enums::TokenType::EndOfFile || lexer.is_error()) break;
             benchmark::DoNotOptimize(tok);
         }
         benchmark::ClobberMemory();
@@ -105,7 +106,7 @@ static void BM_AVX2_String_Tokenizer_Plain(benchmark::State& state) {
         lexer::Avx2Policy::Engine lexer(raw);
         while (true) {
             auto tok = lexer.next_token();
-            if (tok.type_ == models::Token::Type::EndOfFile || lexer.is_error()) break;
+            if (tok.type_ == enums::TokenType::EndOfFile || lexer.is_error()) break;
             benchmark::DoNotOptimize(tok);
         }
         benchmark::ClobberMemory();
@@ -120,7 +121,7 @@ static void BM_AVX2_String_Tokenizer_Escaped(benchmark::State& state) {
         lexer::Avx2Policy::Engine lexer(raw);
         while (true) {
             auto tok = lexer.next_token();
-            if (tok.type_ == models::Token::Type::EndOfFile || lexer.is_error()) break;
+            if (tok.type_ == enums::TokenType::EndOfFile || lexer.is_error()) break;
             benchmark::DoNotOptimize(tok);
         }
         benchmark::ClobberMemory();

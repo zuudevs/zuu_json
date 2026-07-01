@@ -10,13 +10,18 @@
 
 #pragma once
 
-#include "models/token.hpp"
-#include "zuu_json/core/error.hpp"
-#include "constants/swar.hpp"
-#include "utils/compiler.hpp"
 #include <span>
 #include <cstring>
 #include <bit>
+
+#include "enums/token_type.hpp"
+#include "models/token.hpp"
+#include "constants/swar.hpp"
+#include "utils/compiler.hpp"
+#include "enums/token_kind.hpp"
+#include "lookups/token.hpp"
+
+#include "zuu_json/core/error.hpp"
 
 namespace zuu::lexer {
 
@@ -28,7 +33,6 @@ template <typename Derived>
 class LexerBase {
   public:
     using Token  = models::Token;
-    using Lookup = traits::LookupTrait<Token>;
     using Error  = core::JsonError;
     using Raw    = std::span<const char>;
 
@@ -44,56 +48,56 @@ class LexerBase {
 
     [[nodiscard]] ZUU_HOT ZUU_ALWAYS_INLINE Token next_token() noexcept {
         while (current_ < end_) {
-            auto actionType = Lookup{}[*current_];
+            auto actionType = static_cast<enums::TokenKind>(lookups::token_kind[*current_]);
             switch (actionType) {
-                case Lookup::Type::WhiteSpace: {
+                case enums::TokenKind::WhiteSpace: {
                     derived().skip_whitespace();
                     continue;
 				}
-                case Lookup::Type::LeftCurlyBracket: {
+                case enums::TokenKind::LeftCurlyBracket: {
                     current_++;
-                    return Token::Type::LeftCurlyBracket;
+                    return enums::TokenType::LeftCurlyBracket;
 				}
-                case Lookup::Type::RightCurlyBracket: {
+                case enums::TokenKind::RightCurlyBracket: {
                     current_++;
-                    return Token::Type::RightCurlyBracket;
+                    return enums::TokenType::RightCurlyBracket;
 				}
-                case Lookup::Type::LeftSquareBracket: {
+                case enums::TokenKind::LeftSquareBracket: {
                     current_++;
-                    return Token::Type::LeftSquareBracket;
+                    return enums::TokenType::LeftSquareBracket;
 				}
-                case Lookup::Type::RightSquareBracket: {
+                case enums::TokenKind::RightSquareBracket: {
                     current_++;
-                    return Token::Type::RightSquareBracket;
+                    return enums::TokenType::RightSquareBracket;
 				}
-                case Lookup::Type::Colon: [[likely]] {
+                case enums::TokenKind::Colon: [[likely]] {
                     current_++;
-                    return Token::Type::Colon;
+                    return enums::TokenType::Colon;
 				}
-                case Lookup::Type::Comma: [[likely]] {
+                case enums::TokenKind::Comma: [[likely]] {
                     current_++;
-                    return Token::Type::Comma;
+                    return enums::TokenType::Comma;
 				}
-                case Lookup::Type::DoubleQuote: [[likely]] {
+                case enums::TokenKind::DoubleQuote: [[likely]] {
                     return derived().read_string();
 				}
-                case Lookup::Type::Numeric: {
+                case enums::TokenKind::Numeric: {
                     return read_numeric();
 				}
-                case Lookup::Type::Alphabet: {
+                case enums::TokenKind::Alphabet: {
                     return read_alphabet();
 				}
-                case Lookup::Type::SigleQuote: {
+                case enums::TokenKind::SigleQuote: {
                     status_ = Error::SingleQuotedString;
-                    return Token::Type::Unknown;
+                    return enums::TokenType::Unknown;
 				}
                 default: {
                     status_ = Error::Unknown;
-                    return Token::Type::Unknown;
+                    return enums::TokenType::Unknown;
 				}
             }
         }
-        return Token::Type::EndOfFile;
+        return enums::TokenType::EndOfFile;
     }
 
     [[nodiscard]] Error get_error() const noexcept { 
@@ -116,7 +120,7 @@ class LexerBase {
 
     Token read_numeric() noexcept {
         const char* begin = current_;
-        auto type = Token::Type::Integer;
+        auto type = enums::TokenType::Integer;
         auto skip_digits = [this]() noexcept {
             while (current_ + sizeof(uint64_t) <= end_) {
                 uint64_t block{};
@@ -141,7 +145,7 @@ class LexerBase {
             current_++;
             if (current_ == end_) { 
                 status_ = Error::InvalidValue; 
-                return Token::Type::Unknown;
+                return enums::TokenType::Unknown;
             }
         }
 
@@ -149,28 +153,28 @@ class LexerBase {
             current_++;
             if (current_ < end_ && static_cast<unsigned char>(*current_ - '0') < constants::digit) {
                 status_ = Error::LeadingZero;
-                return Token::Type::Unknown;
+                return enums::TokenType::Unknown;
             }
         } else if (static_cast<unsigned char>(*current_ - '0') < constants::digit) {
             skip_digits();
         } else {
             status_ = Error::InvalidValue;
-            return Token::Type::Unknown;
+            return enums::TokenType::Unknown;
         }
 
         if (current_ < end_ && *current_ == '.') {
-            type = Token::Type::Double;
+            type = enums::TokenType::Double;
             current_++;
             
             if (current_ == end_ || static_cast<unsigned char>(*current_ - '0') >= constants::digit) {
                 status_ = Error::InvalidValue;
-                return Token::Type::Unknown;
+                return enums::TokenType::Unknown;
             }
             skip_digits();
         }
 
         if (current_ < end_ && (*current_ == 'e' || *current_ == 'E')) {
-            type = Token::Type::Double;
+            type = enums::TokenType::Double;
             current_++;
             
             if (current_ < end_ && (*current_ == '+' || *current_ == '-')) {
@@ -179,7 +183,7 @@ class LexerBase {
             
             if (current_ == end_ || static_cast<unsigned char>(*current_ - '0') >= constants::digit) {
                 status_ = Error::InvalidValue;
-                return Token::Type::Unknown;
+                return enums::TokenType::Unknown;
             }
             skip_digits();
         }
@@ -190,7 +194,7 @@ class LexerBase {
 				std::string_view(begin, current_ - begin)
 			};
         }
-        return Token::Type::Unknown;
+        return enums::TokenType::Unknown;
     }
 
     Token read_alphabet() noexcept {
@@ -203,7 +207,7 @@ class LexerBase {
             switch (val) {
                 case constants::null_word: {
                     auto tok = Token{
-						Token::Type::Null, 
+						enums::TokenType::Null, 
 						std::string_view(current_, constants::nibble)
 					};
                     current_ += constants::nibble;
@@ -211,7 +215,7 @@ class LexerBase {
                 }
                 case constants::true_word: {
                     auto tok = Token{
-						Token::Type::Boolean, 
+						enums::TokenType::Boolean, 
 						std::string_view(current_, constants::nibble)
 					};
                     current_ += constants::nibble;
@@ -220,7 +224,7 @@ class LexerBase {
                 case constants::fals_word: {
                     if (rem >= 5 && current_[4] == 'e') {
                         auto tok = Token{
-							Token::Type::Boolean, 
+							enums::TokenType::Boolean, 
 							std::string_view(current_, 5)
 						};
                         current_ += 5;
@@ -232,7 +236,7 @@ class LexerBase {
             }
         }
         status_ = Error::InvalidValue;
-        return Token::Type::Unknown;
+        return enums::TokenType::Unknown;
     }
 
     ZUU_HOT Token finish_string_scalar(const char* ptr, const char* begin, bool has_escape) noexcept {
@@ -240,13 +244,13 @@ class LexerBase {
             char c = *ptr;
             if (static_cast<unsigned char>(c) < 0x20) {
                 status_ = Error::UnescapedCharacter;
-                return Token::Type::Unknown;
+                return enums::TokenType::Unknown;
             }
 
             if (c == '\"') {
                 current_ = ptr + 1;
                 return {
-					Token::Type::String, 
+					enums::TokenType::String, 
 					std::string_view(begin, ptr - begin), 
 					has_escape
 				};
@@ -256,7 +260,7 @@ class LexerBase {
                 ptr += 2;
                 if (ptr > end_) {
                     status_ = core::JsonError::InvalidValue;
-                    return Token::Type::Unknown;
+                    return enums::TokenType::Unknown;
                 }
                 continue;
             }
@@ -264,7 +268,7 @@ class LexerBase {
         }
 
         status_ = core::JsonError::InvalidValue;
-        return Token::Type::Unknown;
+        return enums::TokenType::Unknown;
     }
 };
 

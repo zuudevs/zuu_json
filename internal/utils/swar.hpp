@@ -23,8 +23,6 @@ static_assert(std::endian::native == std::endian::little, "SWAR implementation c
  */
 template <typename T>
 [[nodiscard]] inline constexpr T find_zero_byte_mask(T v) noexcept {
-    constexpr T ones = constants::repeat_byte<T>(0x01);
-    constexpr T msb  = constants::repeat_byte<T>(0x80);
     return (v - constants::swar8_one) & ~v & constants::swar8_msb;
 }
 

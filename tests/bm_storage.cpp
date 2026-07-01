@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-#include "models/storage.hpp"
+#include "allocators/storage.hpp"
 #include "models/json_value.hpp"
 
 using namespace zuu;
@@ -25,7 +25,7 @@ static void BM_Arena_Allocation(benchmark::State& state) {
     const size_t num_elements = state.range(0);
     
     for (auto _ : state) {
-        models::Storage storage;
+        allocators::Storage storage;
         
         // Stack sementara yang mensimulasikan array_stack_ di ParserBase
         std::vector<models::JsonValue> local_stack;

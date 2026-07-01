@@ -14,32 +14,23 @@
 #include <cstdint>
 #include <string_view>
 #include "utils/strings.hpp"
+#include "enums/json_type.hpp"
 
 namespace zuu::models {
 
 struct JsonValue {
-    enum class Type : uint64_t {
-        Null,
-        Boolean,
-        Integer,
-        Double,
-        String,
-        Array,
-        Object,
-    };
-
     static constexpr uint64_t NAN_MASK = 0x7FF8000000000000ULL;
     static constexpr uint64_t PAYLOAD_MASK = 0x0000FFFFFFFFFFFFULL;
     static constexpr uint64_t QUIET_NAN_MASK = 0x7;
     static constexpr uint64_t SIGN_EXTENSION_MASK = 0x10;
     static constexpr uint64_t TAG_SHIFT = 0x30;
 
-    static constexpr uint64_t TAG_NULL = static_cast<uint64_t>(Type::Null);
-    static constexpr uint64_t TAG_BOOLEAN = static_cast<uint64_t>(Type::Boolean);
-    static constexpr uint64_t TAG_INTEGER = static_cast<uint64_t>(Type::Integer);
-    static constexpr uint64_t TAG_STRING = static_cast<uint64_t>(Type::String);
-    static constexpr uint64_t TAG_ARRAY = static_cast<uint64_t>(Type::Array);
-    static constexpr uint64_t TAG_OBJECT = static_cast<uint64_t>(Type::Object);
+    static constexpr uint64_t TAG_NULL = static_cast<uint64_t>(enums::JsonType::Null);
+    static constexpr uint64_t TAG_BOOLEAN = static_cast<uint64_t>(enums::JsonType::Boolean);
+    static constexpr uint64_t TAG_INTEGER = static_cast<uint64_t>(enums::JsonType::Integer);
+    static constexpr uint64_t TAG_STRING = static_cast<uint64_t>(enums::JsonType::String);
+    static constexpr uint64_t TAG_ARRAY = static_cast<uint64_t>(enums::JsonType::Array);
+    static constexpr uint64_t TAG_OBJECT = static_cast<uint64_t>(enums::JsonType::Object);
 
     uint64_t data_;
 
@@ -71,10 +62,10 @@ struct JsonValue {
         return (data_ & NAN_MASK) != NAN_MASK;
     }
 
-    [[nodiscard]] inline constexpr Type get_type() const noexcept {
+    [[nodiscard]] inline constexpr enums::JsonType get_type() const noexcept {
         if (is_double())
-            return Type::Double;
-        return static_cast<Type>((data_ >> TAG_SHIFT) & QUIET_NAN_MASK);
+            return enums::JsonType::Double;
+        return static_cast<enums::JsonType>((data_ >> TAG_SHIFT) & QUIET_NAN_MASK);
     }
 
     [[nodiscard]] inline constexpr auto get_payload() const noexcept {

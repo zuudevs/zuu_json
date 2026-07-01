@@ -9,23 +9,23 @@
  */
 
 #include <algorithm>
-#include "models/array_view.hpp"
-#include "models/object_view.hpp"
-#include "models/storage.hpp"
+#include "models/views/array.hpp"
+#include "models/views/object.hpp"
+#include "allocators/storage.hpp"
 #include "serializer/serializer.hpp"
 #include "utils/compiler.hpp"
 #include "zuu_json/models/value.hpp"
 
 namespace zuu::models {
 
-Value::Value(const Storage* storage, JsonValue value) noexcept
+Value::Value(const allocators::Storage* storage, JsonValue value) noexcept
     : storage_(storage), value_(value) {}
 
-Value Value::fromInternal(const Storage* storage, const JsonValue& v) noexcept {
+Value Value::fromInternal(const allocators::Storage* storage, const JsonValue& v) noexcept {
     return Value(storage, v);
 }
 
-Value Value::createNull(const Storage* storage) noexcept {
+Value Value::createNull(const allocators::Storage* storage) noexcept {
     return Value(storage, JsonValue::Null());
 }
 
@@ -175,41 +175,41 @@ bool Value::contains(std::string_view key) const noexcept {
     }
 }
 
-Value::Result<ArrayView> Value::as_array() const noexcept {
+Value::Result<views::Array> Value::as_array() const noexcept {
     if (value_.get_type() != Type::Array) { 
 		return std::unexpected{core::JsonError::IsNotArray}; 
 	}
-    return ArrayView(storage_, storage_->array(value_.as_index()));
+    return views::Array(storage_, storage_->array(value_.as_index()));
 }
 
-Value::Result<ObjectView> Value::as_object() const noexcept {
+Value::Result<views::Object> Value::as_object() const noexcept {
     if (value_.get_type() != Type::Object) { 
 		return std::unexpected{core::JsonError::IsNotObject}; 
 	}
-    return ObjectView(storage_, storage_->object(value_.as_index()));
+    return views::Object(storage_, storage_->object(value_.as_index()));
 }
 
-ArrayView Value::get_array() const noexcept {
+views::Array Value::get_array() const noexcept {
     if (value_.get_type() != Type::Array) { 
-		return ArrayView{
+		return views::Array{
 			storage_, 
 			{}
 		}; 
 	}
-    return ArrayView{
+    return views::Array{
 		storage_, 
 		storage_->array(value_.as_index())
 	};
 }
 
-ObjectView Value::get_object() const noexcept {
+views::Object Value::get_object() const noexcept {
     if (value_.get_type() != Type::Object) { 
-		return ObjectView{
+		return views::Object{
 			storage_, 
 			{}
 		}; 
 	}
-    return ObjectView{
+    return views::Object{
 		storage_, 
 		storage_->object(value_.as_index())
 	};
@@ -248,7 +248,6 @@ Value::Result<Value> Value::at(std::string_view key) const noexcept {
         auto it = std::lower_bound(
             obj.begin(), obj.end(), key,
             [this](const JsonMember& member, std::string_view search_key) {
-                // Ekstrak panjang langsung dari union
                 uint32_t mem_len = (member.key_.sso_.tag_ & constants::sso_tag) 
                     ? (member.key_.sso_.tag_ & ~constants::sso_tag) 
                     : member.key_.ref_.length_;

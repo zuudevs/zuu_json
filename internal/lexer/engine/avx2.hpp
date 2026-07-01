@@ -11,13 +11,16 @@
 #pragma once
 
 #ifdef __AVX2__
+#include <cstdint>
 #include <bit>
 #include "constants/simd.hpp"
+#include "lookups/avx2.hpp"
 #endif // __AVX2__
 
+#include "enums/token_kind.hpp"
+#include "lookups/token.hpp"
 #include "lexer/lexer_base.hpp"
 #include "utils/compiler.hpp"
-#include <cstdint>
 
 namespace zuu::lexer::engine {
 
@@ -33,7 +36,7 @@ class Avx2 : public LexerBase<Avx2> {
 #ifdef __AVX2__
         while (current_ + kBlockSize <= end_) {
             __m256i chunk  = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(current_));
-            __m256i mapped = _mm256_shuffle_epi8(constants::simd32_lut_whitespace, chunk);
+            __m256i mapped = _mm256_shuffle_epi8(lookups::simd32_whitespace, chunk);
             __m256i match  = _mm256_cmpeq_epi8(mapped, chunk);
             uint32_t mask  = _mm256_movemask_epi8(match);
 
@@ -46,7 +49,7 @@ class Avx2 : public LexerBase<Avx2> {
             }
         }
 #endif // __AVX2__
-        while (current_ < end_ && Lookup{}[*current_] == Lookup::Type::WhiteSpace) {
+        while (current_ < end_ && static_cast<enums::TokenKind>(lookups::token_kind[*current_]) == enums::TokenKind::WhiteSpace) {
             ++current_;
         }
     }
@@ -73,13 +76,13 @@ class Avx2 : public LexerBase<Avx2> {
                 if (c == '\"') [[likely]] {
                     this->current_ = ptr + byte_idx + 1;
                     return {
-                        Token::Type::String, 
+                        enums::TokenType::String, 
                         std::string_view(begin, (ptr + byte_idx) - begin), 
                         has_escape
 					};
                 } else if (static_cast<uint8_t>(c) < 0x20) [[unlikely]] {
                     this->status_ = Error::UnescapedCharacter;
-                    return Token::Type::Unknown;
+                    return enums::TokenType::Unknown;
                 } else {
                     has_escape = true;
                     ptr += byte_idx + 2;
