@@ -11,9 +11,9 @@
 #pragma once
 
 #ifdef __AVX2__
-#include "constants/simd.hpp"
-#include <cstring>
-#include <bit>
+    #include "constants/simd.hpp"
+    #include <bit>
+    #include <cstring>
 #endif
 
 #include "parser/parser_base.hpp"
@@ -31,9 +31,10 @@ class Avx2 : public ParserBase<Avx2<LexerEngine>, LexerEngine> {
     static inline constexpr uint8_t kSimdBlockSize = sizeof(block_t);
 #endif // __AVX2__
 
-    [[nodiscard]] std::string_view unescapeString(std::string_view src) noexcept {
-        char* dest      = this->res_.allocateStringBuffer(src.size());
-        char* out       = dest;
+    [[nodiscard]] std::string_view
+        unescapeString(std::string_view src) noexcept {
+        char* dest = this->res_.allocateStringBuffer(src.size());
+        char* out = dest;
         const char* ptr = src.data();
         const char* end = ptr + src.size();
 
@@ -41,7 +42,8 @@ class Avx2 : public ParserBase<Avx2<LexerEngine>, LexerEngine> {
 #ifdef __AVX2__
             while (ptr + kSimdBlockSize <= end) {
                 __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(ptr));
-                uint32_t mask = _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunk, constants::simd32_esc));
+                uint32_t mask =
+                    _mm256_movemask_epi8(_mm256_cmpeq_epi8(chunk, constants::simd32_esc));
 
                 if (mask != constants::zero) {
                     auto offset = static_cast<uint32_t>(std::countr_zero(mask));
@@ -57,24 +59,41 @@ class Avx2 : public ParserBase<Avx2<LexerEngine>, LexerEngine> {
             }
 #endif // __AVX2__
 
-            if (ptr >= end) break;
+            if (ptr >= end)
+                break;
 
             if (*ptr == '\\') {
                 ++ptr;
                 if (ptr >= end) {
-					break;
-				}
-                
+                    break;
+                }
+
                 switch (*ptr) {
-                    case '\"' :  *out++ = '\"';  break;
-                    case '\\' : *out++ = '\\'; break;
-                    case '/'  :  *out++ = '/';  break;
-                    case 'b'  :  *out++ = '\b'; break;
-                    case 'f'  :  *out++ = '\f'; break;
-                    case 'n'  :  *out++ = '\n'; break;
-                    case 'r'  :  *out++ = '\r'; break;
-                    case 't'  :  *out++ = '\t'; break;
-                    case 'u'  : {
+                    case '\"':
+                        *out++ = '\"';
+                        break;
+                    case '\\':
+                        *out++ = '\\';
+                        break;
+                    case '/':
+                        *out++ = '/';
+                        break;
+                    case 'b':
+                        *out++ = '\b';
+                        break;
+                    case 'f':
+                        *out++ = '\f';
+                        break;
+                    case 'n':
+                        *out++ = '\n';
+                        break;
+                    case 'r':
+                        *out++ = '\r';
+                        break;
+                    case 't':
+                        *out++ = '\t';
+                        break;
+                    case 'u': {
                         if (ptr + 5 > end) {
                             this->status_ = core::JsonError::InvalidValue;
                             return {};
@@ -85,7 +104,8 @@ class Avx2 : public ParserBase<Avx2<LexerEngine>, LexerEngine> {
                             if (ptr + 6 <= end && ptr[1] == '\\' && ptr[2] == 'u') {
                                 uint32_t cp2 = this->decodeUnicodeHex(ptr + 3);
                                 if (cp2 >= 0xDC00 && cp2 <= 0xDFFF) {
-                                    cp = 0x10000 + (((cp - 0xD800) << constants::digit) | (cp2 - 0xDC00));
+                                    cp = 0x10000 +
+                                         (((cp - 0xD800) << constants::digit) | (cp2 - 0xDC00));
                                     ptr += 6;
                                 } else {
                                     this->status_ = core::JsonError::InvalidValue;

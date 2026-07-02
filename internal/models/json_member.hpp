@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include <cstdint>
 #include "models/json_value.hpp"
+#include <cstdint>
 
 namespace zuu::models {
 
@@ -22,7 +22,7 @@ struct JsonMember {
                 uint32_t index_;
                 uint32_t length_;
             } ref_;
-            
+
             struct {
                 char chars_[7];
                 uint8_t tag_;

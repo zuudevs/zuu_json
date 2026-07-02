@@ -14,8 +14,8 @@
 
 namespace zuu::utils {
 
-[[nodiscard]] inline constexpr const char* 
-TranslateError(core::JsonError errc) noexcept {
+[[nodiscard]] inline constexpr const char*
+    TranslateError(core::JsonError errc) noexcept {
     switch (errc) {
         case core::JsonError::None:
             return "No error";

@@ -32,15 +32,15 @@ enum class JsonError : unsigned char {
     RootNotObjectType,
     InvalidUnicode,
     InvalidSurrogate,
-	DepthLimitExceeded,
+    DepthLimitExceeded,
     Unknown
 };
 
 enum class ParseError : unsigned char {
-	None,
-	InvalidFormat,
-	OutOfBound,
-	Unknown,
+    None,
+    InvalidFormat,
+    OutOfBound,
+    Unknown,
 };
 
 } // namespace zuu::core

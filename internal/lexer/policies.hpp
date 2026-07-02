@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "lexer/engine/swar.hpp"
 #include "lexer/engine/avx2.hpp"
+#include "lexer/engine/swar.hpp"
 
 namespace zuu::lexer {
 
@@ -31,13 +31,13 @@ struct FastValidator {};
  * untuk memproses data secara paralel.
  */
 struct SwarPolicy {
-    using Engine    = engine::Swar;      // Inject Engine
-    using Allocator = DefaultAllocator;  // Inject Allocator (future)
-    using Validator = FastValidator;     // Inject Validator (future)
+    using Engine = engine::Swar;        // Inject Engine
+    using Allocator = DefaultAllocator; // Inject Allocator (future)
+    using Validator = FastValidator;    // Inject Validator (future)
 };
 
 struct Avx2Policy {
-    using Engine    = engine::Avx2;
+    using Engine = engine::Avx2;
     using Allocator = DefaultAllocator;
     using Validator = FastValidator;
 };

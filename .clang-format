@@ -25,7 +25,7 @@ PointerAlignment: Left
 ReferenceAlignment: Left
 DerivePointerAlignment: false
 
-SortIncludes: true
+SortIncludes: CaseInsensitive
 IncludeBlocks: Preserve
 
 ReflowComments: true
@@ -37,9 +37,9 @@ NamespaceIndentation: None
 RemoveBracesLLVM: false
 
 AllowShortLoopsOnASingleLine: false
-AlwaysBreakAfterReturnType: None
+BreakAfterReturnType: All
 AlwaysBreakTemplateDeclarations: Yes
-IndentWrappedFunctionNames: false
+IndentWrappedFunctionNames: true
 PackConstructorInitializers: Never
 ConstructorInitializerIndentWidth: 4
 BreakConstructorInitializers: BeforeComma

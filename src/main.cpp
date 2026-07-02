@@ -11,7 +11,8 @@
 #include "zuu_json/json.hpp"
 #include <iostream>
 
-int main() {
+int
+    main() {
     constexpr std::string_view json_input = R"({
         "name"    : "zuu",
         "active"  : true,
@@ -49,13 +50,14 @@ int main() {
     }
 
     // Penanganan key yang tidak ada secara aman (tidak akan crash/throw exception)
-    std::cout << "missing : " << root["invalid_key"]["deep_key"].get_string("default_string") << '\n';
+    std::cout << "missing : " << root["invalid_key"]["deep_key"].get_string("default_string")
+              << '\n';
 
     // Iterasi Array (menggunakan size() secara aman)
     auto colors = root["colors"];
-    std::cout << "colors  : "<< colors.size() <<" item(s)\n";
+    std::cout << "colors  : " << colors.size() << " item(s)\n";
     for (unsigned long long i = 0; i < colors.size(); ++i) {
-        std::cout << "  ["<< i <<"]   : " << colors[i].get_string() << '\n';
+        std::cout << "  [" << i << "]   : " << colors[i].get_string() << '\n';
     }
 
     return 0;

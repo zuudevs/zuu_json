@@ -110,7 +110,7 @@ The benchmark binary pulls in sample fixtures from `samples/` via `internal/util
 Filter by benchmark name with `--benchmark_filter`. Example: only the DOM and end-to-end pipeline runs:
 
 ```bash
-./bin/zuu_json_benchmark --benchmark_filter='BM_DOM_|BM_Pipeline_'
+./bin/zuu_json_benchmark --benchmark_filter='DOM_|Pipeline_'
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md#benchmark-layout) for a list of the per-domain files.

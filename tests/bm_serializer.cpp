@@ -4,18 +4,18 @@
  * @brief Micro-benchmark for JSON Serialization Engine
  * @version 1.0.0
  * @date 2026-06-21
- * 
+ *
  * @copyright Copyright (c) 2026
  */
 
-#include <benchmark/benchmark.h>
-#include "zuu_json/json.hpp"
 #include "utils/fs_util.hpp"
+#include "zuu_json/json.hpp"
+#include <benchmark/benchmark.h>
 
 using namespace zuu;
 
 #define ZUU_BENCHMARK_SERIALIZER(Name, Filename)                                                   \
-    static void BM_Serializer_##Name(benchmark::State& state) {                                    \
+    static void Serializer_##Name(benchmark::State& state) {                                       \
         static std::string data = tests::utils::load_sample(Filename).value_or("");                \
         static auto doc_opt = Json::parse(data);                                                   \
         if (!doc_opt) {                                                                            \
@@ -31,7 +31,7 @@ using namespace zuu;
         }                                                                                          \
         state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * data.size());           \
     }                                                                                              \
-    BENCHMARK(BM_Serializer_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);
+    BENCHMARK(Serializer_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);
 
 // Registrasi
 ZUU_BENCHMARK_SERIALIZER(Small, "github_events.json")

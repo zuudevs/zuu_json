@@ -12,8 +12,8 @@
 
 #include "lexer/policies.hpp"
 #include <expected>
-#include <vector>
 #include <span>
+#include <vector>
 
 namespace zuu::lexer {
 
@@ -25,28 +25,29 @@ namespace zuu::lexer {
 template <typename Policy = DefaultPolicy>
 class Lexer {
   public:
-    using Engine   = typename Policy::Engine;
+    using Engine = typename Policy::Engine;
     using Expected = std::expected<std::vector<models::Token>, core::JsonError>;
-    using Raw      = std::span<const char>;
+    using Raw = std::span<const char>;
 
-    [[nodiscard]] static Expected Tokenize(Raw json_content) noexcept {
+    [[nodiscard]] static Expected
+        Tokenize(Raw json_content) noexcept {
         Engine engine(json_content);
-        
+
         std::vector<models::Token> res;
         res.reserve(json_content.size() >> 1);
-        
-        while(true) {
+
+        while (true) {
             auto tok = engine.next_token();
-            if (tok.type_ == models::Token::Type::EndOfFile || engine.is_error()) {
-				break;
-			}
+            if (tok.type_ == enums::TokenType::EndOfFile || engine.is_error()) {
+                break;
+            }
             res.push_back(tok);
         }
 
         if (engine.is_error()) {
             return std::unexpected{engine.get_error()};
         }
-        
+
         return res;
     }
 };

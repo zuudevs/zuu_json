@@ -11,23 +11,16 @@
 
 #include <cstdint>
 
-namespace zuu::models { 
-	struct JsonMember; 
-	class Storage; 
-}
+namespace zuu::models {
+struct JsonMember;
+class Storage;
+} // namespace zuu::models
 
 namespace zuu::traits {
 
 template <typename T>
 struct MetaTrait {
     static_assert(sizeof(T) == 0, "invalid size type specialized meta trait");
-};
-
-template <>
-struct MetaTrait<models::Storage> {
-    const models::JsonMember* ptr{};
-    uint32_t size{};
-    bool is_sorted{};
 };
 
 } // namespace zuu::traits
