@@ -45,41 +45,41 @@ static const std::string deep_json = generate_deep_nesting(1000); // 1000 level 
 // --- Benchmark ---
 
 static void
-    BM_ErrorPath_ValidBaseline(benchmark::State& state) {
+    ErrorPath_Valid_Baseline(benchmark::State& state) {
     for (auto _ : state) {
         auto doc = Json::parse(valid_json);
         benchmark::DoNotOptimize(doc);
         benchmark::ClobberMemory();
     }
 }
-BENCHMARK(BM_ErrorPath_ValidBaseline)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+BENCHMARK(ErrorPath_Valid_Baseline)->Unit(benchmark::kNanosecond)->MinTime(1.0);
 
 static void
-    BM_ErrorPath_TrailingComma(benchmark::State& state) {
+    ErrorPath_Trailing_Comma(benchmark::State& state) {
     for (auto _ : state) {
         auto doc = Json::parse(err_trailing_comma);
         benchmark::DoNotOptimize(doc);
         benchmark::ClobberMemory();
     }
 }
-BENCHMARK(BM_ErrorPath_TrailingComma)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+BENCHMARK(ErrorPath_Trailing_Comma)->Unit(benchmark::kNanosecond)->MinTime(1.0);
 
 static void
-    BM_ErrorPath_UnquotedKey(benchmark::State& state) {
+    ErrorPath_Unquoted_Key(benchmark::State& state) {
     for (auto _ : state) {
         auto doc = Json::parse(err_unquoted_key);
         benchmark::DoNotOptimize(doc);
         benchmark::ClobberMemory();
     }
 }
-BENCHMARK(BM_ErrorPath_UnquotedKey)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+BENCHMARK(ErrorPath_Unquoted_Key)->Unit(benchmark::kNanosecond)->MinTime(1.0);
 
 static void
-    BM_Adversarial_DeepNesting(benchmark::State& state) {
+    Adversarial_Deep_Nesting(benchmark::State& state) {
     for (auto _ : state) {
         auto doc = Json::parse(deep_json);
         benchmark::DoNotOptimize(doc);
         benchmark::ClobberMemory();
     }
 }
-BENCHMARK(BM_Adversarial_DeepNesting)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+BENCHMARK(Adversarial_Deep_Nesting)->Unit(benchmark::kNanosecond)->MinTime(1.0);

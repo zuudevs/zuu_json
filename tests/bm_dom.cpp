@@ -4,7 +4,8 @@
  * @brief Deep profiling for DOM Traversal and Data Retrieval
  * @version 1.0.0
  * @date 2026-06-21
- * * @copyright Copyright (c) 2026
+ * 
+ * @copyright Copyright (c) 2026
  */
 
 #include "utils/fs_util.hpp"
@@ -14,7 +15,7 @@
 using namespace zuu;
 
 static void
-    BM_DOM_ArrayAccess(benchmark::State& state) {
+    DOM_Array_Access(benchmark::State& state) {
     static std::string data = tests::utils::load_sample("jeopardy.json").value_or("");
     static auto doc_opt = Json::parse(data);
     if (!doc_opt) {
@@ -30,10 +31,10 @@ static void
     state.counters["Lookups/s"] =
         benchmark::Counter(static_cast<double>(state.iterations()), benchmark::Counter::kIsRate);
 }
-BENCHMARK(BM_DOM_ArrayAccess)->Unit(benchmark::kNanosecond)->MinTime(2.0);
+BENCHMARK(DOM_Array_Access)->Unit(benchmark::kNanosecond)->MinTime(2.0);
 
 static void
-    BM_DOM_ObjectLookup(benchmark::State& state) {
+    DOM_Object_Lookup(benchmark::State& state) {
     static std::string data = tests::utils::load_sample("citm_catalog.json").value_or("");
     static auto doc_opt = Json::parse(data);
     if (!doc_opt) {
@@ -52,10 +53,10 @@ static void
     state.counters["Lookups/s"] = benchmark::Counter(static_cast<double>(state.iterations()) * 2,
                                                      benchmark::Counter::kIsRate);
 }
-BENCHMARK(BM_DOM_ObjectLookup)->Unit(benchmark::kNanosecond)->MinTime(2.0);
+BENCHMARK(DOM_Object_Lookup)->Unit(benchmark::kNanosecond)->MinTime(2.0);
 
 static void
-    BM_DOM_DeepTraversal(benchmark::State& state) {
+    DOM_Deep_Traversal(benchmark::State& state) {
     static std::string data = tests::utils::load_sample("twitter.json").value_or("");
     static auto doc_opt = Json::parse(data);
     if (!doc_opt) {
@@ -73,4 +74,4 @@ static void
     state.counters["Lookups/s"] = benchmark::Counter(static_cast<double>(state.iterations()) * 4,
                                                      benchmark::Counter::kIsRate);
 }
-BENCHMARK(BM_DOM_DeepTraversal)->Unit(benchmark::kNanosecond)->MinTime(2.0);
+BENCHMARK(DOM_Deep_Traversal)->Unit(benchmark::kNanosecond)->MinTime(2.0);

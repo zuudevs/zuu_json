@@ -16,7 +16,7 @@
 using namespace zuu;
 
 #define ZUU_BENCHMARK_PIPELINE(Name, Filename)                                                     \
-    static void BM_SWAR_Pipeline_##Name(benchmark::State& state) {                                 \
+    static void SWAR_Pipeline_##Name(benchmark::State& state) {                                    \
         static std::string data = tests::utils::load_sample(Filename).value_or("");                \
         if (data.empty()) {                                                                        \
             state.SkipWithError("Gagal memuat file sampel.");                                      \
@@ -33,8 +33,8 @@ using namespace zuu;
         }                                                                                          \
         state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * data.size());           \
     }                                                                                              \
-    BENCHMARK(BM_SWAR_Pipeline_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);                \
-    static void BM_AVX2_Pipeline_##Name(benchmark::State& state) {                                 \
+    BENCHMARK(SWAR_Pipeline_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);                   \
+    static void AVX2_Pipeline_##Name(benchmark::State& state) {                                    \
         static std::string data = tests::utils::load_sample(Filename).value_or("");                \
         auto avx2_policy = models::Policy{core::TokenizerEngine::Avx2, core::ParserEngine::Avx2};  \
         if (data.empty()) {                                                                        \
@@ -52,7 +52,7 @@ using namespace zuu;
         }                                                                                          \
         state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * data.size());           \
     }                                                                                              \
-    BENCHMARK(BM_AVX2_Pipeline_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);
+    BENCHMARK(AVX2_Pipeline_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);
 
 // Registrasi
 ZUU_BENCHMARK_PIPELINE(Small, "github_events.json")

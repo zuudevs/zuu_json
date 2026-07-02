@@ -60,13 +60,13 @@ flowchart TD
     I --> K
 ```
 
-| Layer | Files | Notes |
-| --- | --- | --- |
-| **Public surface** | `include/zuu_json/**` | Installed for downstream users. Only `Json`, `Value`, `JsonError`, and `TranslateError` are exported. |
-| **Internal models** | `internal/models/**` | Plain data: `JsonValue`, `JsonMember`, `Token`, `Hint`, `Lookup<Token>`. Not installed. |
-| **Tokenizer** | `internal/tokenizer/**` + `src/tokenizer.cpp` | Lexer; emits a `std::vector<Token>` and a `Hint<Token>`. |
-| **Parser** | `internal/parser/**` + `src/parser.cpp` | Recursive-descent parser; fills a `Storage`. |
-| **Storage** | `internal/models/storage.hpp` + `src/storage.cpp` + `src/models/json.cpp` + `src/models/value.cpp` | The arena-backed DOM and the access logic. |
+| Layer               | Files                                                                                              | Notes                                                                                                 |
+| ------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Public surface**  | `include/zuu_json/**`                                                                              | Installed for downstream users. Only `Json`, `Value`, `JsonError`, and `TranslateError` are exported. |
+| **Internal models** | `internal/models/**`                                                                               | Plain data: `JsonValue`, `JsonMember`, `Token`, `Hint`, `Lookup<Token>`. Not installed.               |
+| **Tokenizer**       | `internal/tokenizer/**` + `src/tokenizer.cpp`                                                      | Lexer; emits a `std::vector<Token>` and a `Hint<Token>`.                                              |
+| **Parser**          | `internal/parser/**` + `src/parser.cpp`                                                            | Recursive-descent parser; fills a `Storage`.                                                          |
+| **Storage**         | `internal/models/storage.hpp` + `src/storage.cpp` + `src/models/json.cpp` + `src/models/value.cpp` | The arena-backed DOM and the access logic.                                                            |
 
 ## The type-tagged value (`JsonValue`)
 
@@ -112,14 +112,14 @@ flowchart TB
     classDef root fill:#dbeafe,stroke:#1d4ed8
 ```
 
-| Sub-region | Contents | Growth policy |
-| --- | --- | --- |
-| `strings_` | One `std::string_view` per interned string (zero-copy pointers into the source text or the `string_buffer_`). | Hint-driven reservation. |
-| `array_elements_` | Sequential `JsonValue`s for each array being built. | Bump. |
-| `arrays_` | Pairs of `(offset, length)` into `array_elements_`. | One per array. |
-| `object_elements_` | `JsonMember` = `(key_index, value)`. **Sorted by key on seal.** | Bump; sorted in `sealObject` for `size > 1`. |
-| `objects_` | Pairs of `(offset, length)` into `object_elements_`. | One per object. |
-| `string_buffer_` | Mutable scratch for unescaped string contents. | Bump. |
+| Sub-region         | Contents                                                                                                      | Growth policy                                |
+| ------------------ | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| `strings_`         | One `std::string_view` per interned string (zero-copy pointers into the source text or the `string_buffer_`). | Hint-driven reservation.                     |
+| `array_elements_`  | Sequential `JsonValue`s for each array being built.                                                           | Bump.                                        |
+| `arrays_`          | Pairs of `(offset, length)` into `array_elements_`.                                                           | One per array.                               |
+| `object_elements_` | `JsonMember` = `(key_index, value)`. **Sorted by key on seal.**                                               | Bump; sorted in `sealObject` for `size > 1`. |
+| `objects_`         | Pairs of `(offset, length)` into `object_elements_`.                                                          | One per object.                              |
+| `string_buffer_`   | Mutable scratch for unescaped string contents.                                                                | Bump.                                        |
 
 The hint computed by the tokenizer (`Hint<Token>`: string/array/object/comma counts + escape byte count) lets the arena pre-reserve all six sub-regions up front, so parsing does no reallocation.
 
@@ -179,28 +179,28 @@ Recursive-descent. Owns a `Storage`, a `current_` pointer into the token stream,
 
 `JsonError` is an `enum class : unsigned char`. Every fallible call returns `std::expected<T, JsonError>`. There are no exceptions on the library side, so a malformed document cannot crash the caller via a missed handler.
 
-| Category | Examples |
-| --- | --- |
-| Lexical | `SingleQuotedString`, `UnquotedKey`, `LeadingZero` |
-| Structural | `MissingComma`, `TrailingComma`, `EmptyValue` |
-| Type | `IsNotArray`, `IsNotObject`, `InvalidType` |
-| Escape | `UnescapedCharacter`, `InvalidUnicode`, `InvalidSurrogate` |
-| Lookup | `InvalidValue` (also returned for a missing object key) |
+| Category   | Examples                                                   |
+| ---------- | ---------------------------------------------------------- |
+| Lexical    | `SingleQuotedString`, `UnquotedKey`, `LeadingZero`         |
+| Structural | `MissingComma`, `TrailingComma`, `EmptyValue`              |
+| Type       | `IsNotArray`, `IsNotObject`, `InvalidType`                 |
+| Escape     | `UnescapedCharacter`, `InvalidUnicode`, `InvalidSurrogate` |
+| Lookup     | `InvalidValue` (also returned for a missing object key)    |
 
 `zuu::utils::TranslateError` provides a `const char*` description for each value.
 
 ## Performance techniques
 
-| Technique | Where | Why it helps |
-| --- | --- | --- |
-| Lookup table (`Lookup<Token>`) | Tokenizer dispatch | One table load per byte; no branch. |
-| SWAR whitespace scan | Tokenizer loop | Skips up to 8 bytes per iteration. |
-| Bump-allocated arena | `Storage` | No per-token allocation; arena grows in big chunks. |
-| Hint-driven reservation | `Storage` ctor | Eliminates reallocations during parsing. |
-| Cache-line aligned sub-regions | `Storage` ctor | Over-allocates `cache_line_size - 1` bytes so the cast to `std::string_view*` / `JsonValue*` etc. lands on a cache line. Avoids misaligned-load UB and false sharing between regions. |
-| Type-tagged 64-bit `JsonValue` | Everywhere | Single-word values; type checks are bit ops. |
-| **Sorted object members + `std::lower_bound`** | `Json::operator[]`, `Value::operator[]`, `Value::contains` | **O(log N) object key lookups.** |
-| `-O3 -march=native` + IPO/LTO | Release build | Whole-program optimization. |
+| Technique                                      | Where                                                      | Why it helps                                                                                                                                                                          |
+| ---------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lookup table (`Lookup<Token>`)                 | Tokenizer dispatch                                         | One table load per byte; no branch.                                                                                                                                                   |
+| SWAR whitespace scan                           | Tokenizer loop                                             | Skips up to 8 bytes per iteration.                                                                                                                                                    |
+| Bump-allocated arena                           | `Storage`                                                  | No per-token allocation; arena grows in big chunks.                                                                                                                                   |
+| Hint-driven reservation                        | `Storage` ctor                                             | Eliminates reallocations during parsing.                                                                                                                                              |
+| Cache-line aligned sub-regions                 | `Storage` ctor                                             | Over-allocates `cache_line_size - 1` bytes so the cast to `std::string_view*` / `JsonValue*` etc. lands on a cache line. Avoids misaligned-load UB and false sharing between regions. |
+| Type-tagged 64-bit `JsonValue`                 | Everywhere                                                 | Single-word values; type checks are bit ops.                                                                                                                                          |
+| **Sorted object members + `std::lower_bound`** | `Json::operator[]`, `Value::operator[]`, `Value::contains` | **O(log N) object key lookups.**                                                                                                                                                      |
+| `-O3 -march=native` + IPO/LTO                  | Release build                                              | Whole-program optimization.                                                                                                                                                           |
 
 ## Concurrency
 
@@ -225,16 +225,16 @@ The library is delivered as a single static archive, `cpp_json_lib`. The demo an
 
 The benchmark suite is split into per-domain files under `tests/`:
 
-| File | Concern |
-| --- | --- |
-| `bm_main.cpp` | `main()` — Google Benchmark `Initialize` / `RunSpecifiedBenchmarks` / `Shutdown`. |
-| `bm_tokenizer.cpp` | Lexical analysis: `BM_Tokenizer_<Sample>` over every sample fixture. |
-| `bm_parser.cpp` | Recursive-descent parser: `BM_Parser_<Sample>` over real samples. |
-| `bm_pipeline.cpp` | End-to-end `Json::parse` throughput: `BM_Pipeline_<Sample>`. |
-| `bm_storage.cpp` | Micro-benchmark: arena vs `std::vector`-based storage, ranged over element counts. |
-| `bm_dom.cpp` | DOM traversal / object-lookup / deep-chained access. |
-| `bm_strings.cpp` | String-heavy samples: tokenizer and parser runs on escaped / plain string data. |
-| `bm_number.cpp` | Number parsing: `BM_ParseInt_Zuu` vs `BM_ParseInt_StdFromChars`, same for `Double`. |
+| File                | Concern                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| `bm_main.cpp`       | `main()` — Google Benchmark `Initialize` / `RunSpecifiedBenchmarks` / `Shutdown`.       |
+| `bm_tokenizer.cpp`  | Lexical analysis: `Tokenizer_<Sample>` over every sample fixture.                       |
+| `bm_parser.cpp`     | Recursive-descent parser: `Parser_<Sample>` over real samples.                          |
+| `bm_pipeline.cpp`   | End-to-end `Json::parse` throughput: `Pipeline_<Sample>`.                               |
+| `bm_storage.cpp`    | Micro-benchmark: arena vs `std::vector`-based storage, ranged over element counts.      |
+| `bm_dom.cpp`        | DOM traversal / object-lookup / deep-chained access.                                    |
+| `bm_strings.cpp`    | String-heavy samples: tokenizer and parser runs on escaped / plain string data.         |
+| `bm_number.cpp`     | Number parsing: `ParseInt_Zuu` vs `ParseInt_StdFromChars`, same for `Double`.           |
 | `bm_error_path.cpp` | Adversarial inputs (deep nesting, trailing commas, unquoted keys) and a valid baseline. |
 
 Sample loading is centralised in `internal/utils/fs_util.hpp` (`zuu::tests::utils::get_sample_path`, `load_sample`). The helper walks up to four parent directories looking for `samples/<filename>` so the benchmark works regardless of the build directory.

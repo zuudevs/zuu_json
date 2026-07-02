@@ -22,7 +22,7 @@ using namespace zuu;
 // stack lokal temporer dan menyalinnya sekaligus ke Chunked Arena saat di-seal.
 
 static void
-    BM_Arena_Allocation(benchmark::State& state) {
+    Arena_Allocation(benchmark::State& state) {
     const size_t num_elements = state.range(0);
 
     for (auto _ : state) {
@@ -45,7 +45,7 @@ static void
     }
     state.SetItemsProcessed(state.iterations() * num_elements);
 }
-BENCHMARK(BM_Arena_Allocation)
+BENCHMARK(Arena_Allocation)
     ->RangeMultiplier(4)
     ->Range(1024, 65536)
     ->Unit(benchmark::kNanosecond)
@@ -54,7 +54,7 @@ BENCHMARK(BM_Arena_Allocation)
 // --- Skenario Standar Allocation (Baseline) ---
 
 static void
-    BM_Standard_Allocation(benchmark::State& state) {
+    Standard_Allocation(benchmark::State& state) {
     const size_t num_elements = state.range(0);
 
     for (auto _ : state) {
@@ -75,7 +75,7 @@ static void
     }
     state.SetItemsProcessed(state.iterations() * num_elements);
 }
-BENCHMARK(BM_Standard_Allocation)
+BENCHMARK(Standard_Allocation)
     ->RangeMultiplier(4)
     ->Range(1024, 65536)
     ->Unit(benchmark::kNanosecond)

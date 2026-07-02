@@ -35,7 +35,7 @@ const std::vector<std::string_view> int_strings = {
 // --- Benchmark Double ---
 
 static void
-    BM_ParseDouble_Zuu(benchmark::State& state) {
+    ParseDouble_Zuu(benchmark::State& state) {
     for (auto _ : state) {
         for (const auto& str : double_strings) {
             auto res = utils::parse<double>(str);
@@ -47,10 +47,10 @@ static void
         benchmark::Counter(static_cast<double>(state.iterations() * double_strings.size()),
                            benchmark::Counter::kIsRate);
 }
-BENCHMARK(BM_ParseDouble_Zuu)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+BENCHMARK(ParseDouble_Zuu)->Unit(benchmark::kNanosecond)->MinTime(1.0);
 
 static void
-    BM_ParseDouble_StdFromChars(benchmark::State& state) {
+    Parse_Double_Std(benchmark::State& state) {
     for (auto _ : state) {
         for (const auto& str : double_strings) {
             double value;
@@ -64,12 +64,12 @@ static void
         benchmark::Counter(static_cast<double>(state.iterations() * double_strings.size()),
                            benchmark::Counter::kIsRate);
 }
-BENCHMARK(BM_ParseDouble_StdFromChars)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+BENCHMARK(Parse_Double_Std)->Unit(benchmark::kNanosecond)->MinTime(1.0);
 
 // --- Benchmark Integer ---
 
 static void
-    BM_ParseInt_Zuu(benchmark::State& state) {
+    Parse_Int_Zuu(benchmark::State& state) {
     for (auto _ : state) {
         for (const auto& str : int_strings) {
             auto res = utils::parse<long long>(str);
@@ -80,10 +80,10 @@ static void
     state.counters["Parsed/s"] = benchmark::Counter(
         static_cast<double>(state.iterations() * int_strings.size()), benchmark::Counter::kIsRate);
 }
-BENCHMARK(BM_ParseInt_Zuu)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+BENCHMARK(Parse_Int_Zuu)->Unit(benchmark::kNanosecond)->MinTime(1.0);
 
 static void
-    BM_ParseInt_StdFromChars(benchmark::State& state) {
+    Parse_Int_Std(benchmark::State& state) {
     for (auto _ : state) {
         for (const auto& str : int_strings) {
             long long value;
@@ -96,4 +96,4 @@ static void
     state.counters["Parsed/s"] = benchmark::Counter(
         static_cast<double>(state.iterations() * int_strings.size()), benchmark::Counter::kIsRate);
 }
-BENCHMARK(BM_ParseInt_StdFromChars)->Unit(benchmark::kNanosecond)->MinTime(1.0);
+BENCHMARK(Parse_Int_Std)->Unit(benchmark::kNanosecond)->MinTime(1.0);

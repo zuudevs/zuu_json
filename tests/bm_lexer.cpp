@@ -16,7 +16,7 @@ using namespace zuu;
 
 // Macro untuk mengotomatisasi pembuatan benchmark Lexer
 #define ZUU_BENCHMARK_TOKENIZER(Name, Filename)                                                    \
-    static void BM_SWAR_Tokenizer_##Name(benchmark::State& state) {                                \
+    static void SWAR_Tokenizer_##Name(benchmark::State& state) {                                   \
         static std::string data = tests::utils::load_sample(Filename).value_or("");                \
         if (data.empty()) {                                                                        \
             state.SkipWithError("Gagal memuat file sampel atau file kosong.");                     \
@@ -34,9 +34,9 @@ using namespace zuu;
         }                                                                                          \
         state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * data.size());           \
     }                                                                                              \
-    BENCHMARK(BM_SWAR_Tokenizer_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);               \
+    BENCHMARK(SWAR_Tokenizer_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);                  \
                                                                                                    \
-    static void BM_AVX2_Tokenizer_##Name(benchmark::State& state) {                                \
+    static void AVX2_Tokenizer_##Name(benchmark::State& state) {                                   \
         static std::string data = tests::utils::load_sample(Filename).value_or("");                \
         if (data.empty()) {                                                                        \
             state.SkipWithError("Gagal memuat file sampel atau file kosong.");                     \
@@ -54,7 +54,7 @@ using namespace zuu;
         }                                                                                          \
         state.SetBytesProcessed(static_cast<int64_t>(state.iterations()) * data.size());           \
     }                                                                                              \
-    BENCHMARK(BM_AVX2_Tokenizer_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);
+    BENCHMARK(AVX2_Tokenizer_##Name)->Unit(benchmark::kNanosecond)->MinTime(2.0);
 
 // Registrasi
 ZUU_BENCHMARK_TOKENIZER(Small, "github_events.json")
